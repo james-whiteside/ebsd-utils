@@ -10,6 +10,7 @@ from itertools import permutations
 import numpy
 from scipy import special, constants, optimize
 import utilities
+from progress_bar import ProgressBar
 import fileloader
 
 def get_base(lattice):
@@ -274,10 +275,9 @@ def genCritData(beamZ, targetID, E, maxRange, maxIndex):
 		for j in range(i + 1):
 			for k in range(j + 1):
 				total += 1
-	
-	step = 0
-	startTime = datetime.datetime.now()
-	length = utilities.printProgress(step, total, startTime, startTime)
+
+	progress_bar = ProgressBar(total)
+	progress_bar.print()
 	
 	for i in range(max_miller + 1):
 		for j in range(i + 1):
@@ -285,8 +285,7 @@ def genCritData(beamZ, targetID, E, maxRange, maxIndex):
 			
 			for k in range(j + 1):
 				if math.gcd(ggT, k) != 1:
-					step += 1
-					length = utilities.printProgress(step, total, startTime, datetime.datetime.now(), length)
+					progress_bar.increment_print()
 					continue
 				
 				miller = (i, j, k)
@@ -426,10 +425,10 @@ def genCritData(beamZ, targetID, E, maxRange, maxIndex):
 					
 					line += '\n'
 					file_uper_p.write(line)
-				
-				step += 1
-				length = utilities.printProgress(step, total, startTime, datetime.datetime.now(), length)
-	
+
+				progress_bar.increment_print()
+
+	progress_bar.terminate_print()
 	file_emin_a.close()
 	file_emin_p.close()
 	file_psicrit_a.close()

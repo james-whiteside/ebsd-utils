@@ -1333,7 +1333,7 @@ def analyse(path):
 				output.write(str(metadata[fileref]['epsilon']) + ',')
 				output.write(str(metadata[fileref]['k']) + '\n')
 		
-		print('Analysis completed in ' + utilities.formatTime(int(round((datetime.datetime.now() - startTime).total_seconds()))) + '.')
+		print('Analysis completed in ' + utilities.format_time(int(round((datetime.datetime.now() - startTime).total_seconds()))) + '.')
 	
 	print()
 	print('All analyses complete.')

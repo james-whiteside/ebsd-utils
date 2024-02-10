@@ -77,7 +77,17 @@ def formatTime(time):
 	time = int(round((time - seconds) / 60))
 	minutes = time % 60
 	hours = int(round((time - minutes) / 60))
+
+def format_time(time_seconds: int | float) -> str:
+	if type(time_seconds) is float:
+		time_seconds = int(round(time_seconds))
+
+	seconds = time_seconds % 60
+	time_minutes = int(round((time_seconds - seconds) / 60))
+	minutes = time_minutes % 60
+	hours = int(round((time_seconds - minutes) / 60))
 	return str(hours).zfill(2) + ':' + str(minutes).zfill(2) + ':' + str(seconds).zfill(2)
+
 
 def decodeIDs(string):
 
@@ -153,27 +163,6 @@ def getFile(path, extension, getSubDirs=False, getMany=False, prompt='Files foun
 		return files[int(input('Enter file ID to read from: '))]
 	
 	return list(files[fileID] for fileID in decodeIDs(input('Enter file IDs to read from separated by commas/hyphens: ')))
-
-def printProgress(step, total, startTime=None, currentTime=None, length=0, sf=2):
-	
-	bar = '|' + '█' * int(50 * step // total) + '-' * (50 - int(50 * step // total)) + '|'
-	progress = str(intSigFig(100 * step / total, sf)) + '%'
-	
-	if startTime == None or currentTime == None or startTime == currentTime:
-		output = '\rProgress: ' + bar + ' ' + progress
-		print(output + ' ' * max(0, length - len(output)), end = '\r')
-		length = max(length, len(output))
-	else:
-		elapsedTime = formatTime(int(round((currentTime - startTime).total_seconds())))
-		remainingTime = formatTime(int(round((total - step) * (currentTime - startTime).total_seconds() / step)))
-		output = '\rProgress: ' + bar + ' ' + progress + '   Elapsed: ' + elapsedTime + '   Remaining: ' + remainingTime
-		print(output + ' ' * max(0, length - len(output)), end = '\r')
-		length = max(length, len(output))
-	
-	if step == total: 
-		print()
-	
-	return length
 
 def colourWheel(i, n):
 	
