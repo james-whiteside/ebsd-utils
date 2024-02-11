@@ -1,16 +1,15 @@
-#-*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 
-# Modified version of code written by Gerhard Hobler (gerhard.hobler@tuwien.ac.at)
+# Modified version of code written by Dr Gerhard Höbler (gerhard.hobler@tuwien.ac.at).
 # Original code was used to generate figures in his paper DOI: 10.1103/PhysRevB.94.214109
 
 import math
-import datetime
 import copy
 from itertools import permutations
 import numpy
 from scipy import special, constants, optimize
 import utilities
-from progress_bar import ProgressBar
+from utilities import ProgressBar
 import fileloader
 
 def get_base(lattice):
@@ -566,7 +565,7 @@ def run(beamZ, targetID, E, maxRange=10, maxIndex=10):
 	print('Material ID: ' + str(targetID))
 	print('Beam species atomic number: ' + str(beamZ))
 	print('Beam energy: ' + str(E) + ' eV')
-	print('Maximum range from origin: ' + str(utilities.intSigFig(0.1 * maxRange, 3)) + ' nm')
+	print('Maximum range from origin: ' + utilities.format_sig_figs_or_int(0.1 * maxRange, 3) + ' nm')
 	print('Maximum Miller index: ' + str(maxIndex))
 	genCritData(beamZ, targetID, E, maxRange=maxRange, maxIndex=maxIndex)
 	print()

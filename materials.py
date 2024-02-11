@@ -38,7 +38,7 @@ def decodeType(ID):
 def add(database):
 	
 	print()
-	IDs = utilities.decodeIDs(input('Enter material IDs to add separated by commas/hyphens: '))
+	IDs = utilities.parse_ids(input('Enter material IDs to add separated by commas/hyphens: '))
 	materials = fileloader.getMaterials()
 	
 	for ID in IDs:

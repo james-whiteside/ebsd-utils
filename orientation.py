@@ -25,7 +25,7 @@ def formatIndices(hkl, iType):
 
 def genFamily(hkl):
 	
-	hcf = utilities.hcf(hkl)
+	hcf = utilities.highest_common_factor(hkl)
 	
 	if hcf != 0:
 		hkl = list(index // hcf for index in hkl)

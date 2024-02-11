@@ -958,7 +958,7 @@ def mapSGP(data, metadata, size, plot, phaseID=None, trim=True):
 				elif pID[Y][X] == -1:
 					SGP[Y][X] = list((1, 1, 1))
 				else:
-					SGP[Y][X] = utilities.colourWheel(pID[Y][X] - 1, len(phaseIDs))
+					SGP[Y][X] = utilities.colour_wheel(pID[Y][X] - 1, len(phaseIDs))
 	
 	if plot == 'cluster':
 		cID = list()
@@ -996,7 +996,7 @@ def mapSGP(data, metadata, size, plot, phaseID=None, trim=True):
 				elif cID[Y][X] == -1:
 					SGP[Y][X] = list((1, 1, 1))
 				else:
-					SGP[Y][X] = utilities.colourWheel(cID[Y][X] - 1, metadata[data['fileref']]['k'])
+					SGP[Y][X] = utilities.colour_wheel(cID[Y][X] - 1, metadata[data['fileref']]['k'])
 	
 	if trim:
 		for Y in range(size):
@@ -1057,7 +1057,7 @@ def mapP(data, phaseID=None):
 			elif phaseID != None and data['phases'][data['data']['phase'][y][x]]['ID'] != phaseID:
 				P[y].append(list((0.5, 0.5, 0.5)))
 			else:
-				P[y].append(utilities.colourWheel(phaseIDs.index(data['phases'][data['data']['phase'][y][x]]['ID']), len(phaseIDs)))
+				P[y].append(utilities.colour_wheel(phaseIDs.index(data['phases'][data['data']['phase'][y][x]]['ID']), len(phaseIDs)))
 	
 	return P
 
@@ -1074,7 +1074,7 @@ def mapG(data, k, phaseID=None):
 			elif phaseID != None and data['phases'][data['data']['phase'][y][x]]['ID'] != phaseID:
 				G[y].append(list((0.5, 0.5, 0.5)))
 			else:
-				G[y].append(utilities.colourWheel(data['data']['cID'][y][x] - 1, k))
+				G[y].append(utilities.colour_wheel(data['data']['cID'][y][x] - 1, k))
 	
 	return G
 
@@ -1093,7 +1093,7 @@ def keyG(k):
 			if i >= k:
 				G[y].append(list((0, 0, 0)))
 			else:
-				G[y].append(utilities.colourWheel(i, k))
+				G[y].append(utilities.colour_wheel(i, k))
 	
 	return G
 
@@ -1170,14 +1170,15 @@ def misorientation():
 	R1 = symT(R3('zxz', euler1))
 	R2 = symT(R3('zxz', euler2))
 	dR = numpy.dot(numpy.linalg.inv(R1), R2)
-	theta = utilities.intSigFig(math.degrees(dTheta(dR)), 6)
-	print('Misorientation is: ' + str(theta) + ' deg')
+	theta = utilities.format_sig_figs_or_int(math.degrees(dTheta(dR)), 6)
+	print('Misorientation is: ' + theta + ' deg')
 	input('Press ENTER to close: ')
 	
 
 def analyse(path):
 	
-	filepaths = utilities.getFile(path=utilities.getDir(path + '/data'), extension='csv', getSubDirs=True, getMany=True)
+	filepaths = utilities.get_file_paths(directory_path=utilities.get_directory_path(path + '/data'), recursive=True,
+                                         extension='csv')
 	metadata = fileloader.getNyeMetadata(path + '/metadata.csv')
 	cNum = -1
 	aType = 'q'
@@ -1333,7 +1334,7 @@ def analyse(path):
 				output.write(str(metadata[fileref]['epsilon']) + ',')
 				output.write(str(metadata[fileref]['k']) + '\n')
 		
-		print('Analysis completed in ' + utilities.format_time(int(round((datetime.datetime.now() - startTime).total_seconds()))) + '.')
+		print('Analysis completed in ' + utilities.format_time_interval(int(round((datetime.datetime.now() - startTime).total_seconds()))) + '.')
 	
 	print()
 	print('All analyses complete.')
@@ -1341,7 +1342,8 @@ def analyse(path):
 
 def summarise(path):
 	
-	filepaths = utilities.getFile(path=utilities.getDir(path + '/analyses'), extension='csv', getSubDirs=True, getMany=True)
+	filepaths = utilities.get_file_paths(directory_path=utilities.get_directory_path(path + '/analyses'),
+                                         recursive=True, extension='csv')
 	metadata = fileloader.getNyeMetadata(path + '/metadata.csv')
 	print()
 	
@@ -1670,7 +1672,8 @@ def summarise(path):
 
 def makeMaps(path, size=None):
 	
-	filepaths = utilities.getFile(path=utilities.getDir(path + '/analyses'), extension='csv', getSubDirs=True, getMany=True)
+	filepaths = utilities.get_file_paths(directory_path=utilities.get_directory_path(path + '/analyses'),
+                                         recursive=True, extension='csv')
 	metadata = fileloader.getNyeMetadata(path + '/metadata.csv')
 	sizeOverride = size
 	print()
@@ -1726,136 +1729,141 @@ def makeMaps(path, size=None):
 		except FileExistsError:
 			pass
 		
-		utilities.makeImage(mapP(data), data['width'], data['height'], 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/P.png')
-		utilities.makeImage(data['data']['PQ'], data['width'], data['height'], 100, 'L').save(path + '/maps/' + data['fileref'] + '/PQ.png')
-		utilities.makeImage(data['data']['IQ'], data['width'], data['height'], 100, 'L').save(path + '/maps/' + data['fileref'] + '/IQ.png')
-		utilities.makeImage(mapRGB(data), data['width'], data['height'], 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/RGB.png')
-		utilities.makeImage(mapIPF(data, 'x'), data['width'], data['height'], 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/OX.png')
-		utilities.makeImage(mapIPF(data, 'y'), data['width'], data['height'], 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/OY.png')
-		utilities.makeImage(mapIPF(data, 'z'), data['width'], data['height'], 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/OZ.png')
+		utilities.make_image(mapP(data), data['width'], data['height'], 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/P.png')
+		utilities.make_image(data['data']['PQ'], data['width'], data['height'], 100, 'L').save(path + '/maps/' + data['fileref'] + '/PQ.png')
+		utilities.make_image(data['data']['IQ'], data['width'], data['height'], 100, 'L').save(path + '/maps/' + data['fileref'] + '/IQ.png')
+		utilities.make_image(mapRGB(data), data['width'], data['height'], 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/RGB.png')
+		utilities.make_image(mapIPF(data, 'x'), data['width'], data['height'], 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/OX.png')
+		utilities.make_image(mapIPF(data, 'y'), data['width'], data['height'], 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/OY.png')
+		utilities.make_image(mapIPF(data, 'z'), data['width'], data['height'], 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/OZ.png')
 		# utilities.makeImage(mapIPF(data, 'z', phaseID=60696), data['width'], data['height'], 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/OZ[60696].png') # temporary
 		
 		if 'g' in metadata[data['fileref']]['aType']:
-			utilities.makeImage(mapKAM(data), data['width'], data['height'], maxKAM, 'RGB').save(path + '/maps/' + data['fileref'] + '/KAM.png')
-			utilities.makeImage(mapGND(data), data['width'], data['height'], maxGND - minGND, 'RGB').save(path + '/maps/' + data['fileref'] + '/GND.png')
+			utilities.make_image(mapKAM(data), data['width'], data['height'], maxKAM, 'RGB').save(path + '/maps/' + data['fileref'] + '/KAM.png')
+			utilities.make_image(mapGND(data), data['width'], data['height'], maxGND - minGND, 'RGB').save(path + '/maps/' + data['fileref'] + '/GND.png')
 		
 		if 'c' in metadata[data['fileref']]['aType']:
-			utilities.makeImage(mapCF(data), data['width'], data['height'], 100, 'RGB').save(path + '/maps/' + data['fileref'] + '/CF.png')
+			utilities.make_image(mapCF(data), data['width'], data['height'], 100, 'RGB').save(path + '/maps/' + data['fileref'] + '/CF.png')
 		
 		if 'd' in metadata[data['fileref']]['aType']:
-			utilities.makeImage(mapG(data, metadata[data['fileref']]['k']), data['width'], data['height'], 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/C.png')
+			utilities.make_image(mapG(data, metadata[data['fileref']]['k']), data['width'], data['height'], 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/C.png')
 			# utilities.makeImage(mapG(data, metadata[data['fileref']]['k'], phaseID=60696), data['width'], data['height'], 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/C[60696].png') # temporary
-			utilities.makeImage(keyG(metadata[data['fileref']]['k']), data['keyWidth'], data['keyHeight'], 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/C-key.png')
+			utilities.make_image(keyG(metadata[data['fileref']]['k']), data['keyWidth'], data['keyHeight'], 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/C-key.png')
 		
-		utilities.makeImage(mapSGP(data, metadata, size, 'colour'), size, size, 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/IPF.png')
-		utilities.makeImage(mapSGP(data, metadata, size, 'count'), size, size, 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/IPF-Q.png')
-		utilities.makeImage(mapSGP(data, metadata, size, 'phase'), size, size, 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/IPF-P.png')
-		utilities.makeImage(mapSGP(data, metadata, size, 'PQ'), size, size, 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/IPF-PQ.png')
-		utilities.makeImage(mapSGP(data, metadata, size, 'IQ'), size, size, 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/IPF-IQ.png')
+		utilities.make_image(mapSGP(data, metadata, size, 'colour'), size, size, 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/IPF.png')
+		utilities.make_image(mapSGP(data, metadata, size, 'count'), size, size, 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/IPF-Q.png')
+		utilities.make_image(mapSGP(data, metadata, size, 'phase'), size, size, 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/IPF-P.png')
+		utilities.make_image(mapSGP(data, metadata, size, 'PQ'), size, size, 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/IPF-PQ.png')
+		utilities.make_image(mapSGP(data, metadata, size, 'IQ'), size, size, 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/IPF-IQ.png')
 		
 		if 'g' in metadata[data['fileref']]['aType']:
-			utilities.makeImage(mapSGP(data, metadata, size, 'KAM'), size, size, 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/IPF-KAM.png')
-			utilities.makeImage(mapSGP(data, metadata, size, 'GND'), size, size, 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/IPF-GND.png')
+			utilities.make_image(mapSGP(data, metadata, size, 'KAM'), size, size, 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/IPF-KAM.png')
+			utilities.make_image(mapSGP(data, metadata, size, 'GND'), size, size, 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/IPF-GND.png')
 		
 		if 'c' in metadata[data['fileref']]['aType']:
-			utilities.makeImage(mapSGP(data, metadata, size, 'CF'), size, size, 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/IPF-CF.png')
+			utilities.make_image(mapSGP(data, metadata, size, 'CF'), size, size, 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/IPF-CF.png')
 		
 		if 'd' in metadata[data['fileref']]['aType']:
-			utilities.makeImage(mapSGP(data, metadata, size, 'cluster'), size, size, 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/IPF-C.png')
+			utilities.make_image(mapSGP(data, metadata, size, 'cluster'), size, size, 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/IPF-C.png')
 		
 		for localID in data['phases']:
 			if data['phases'][localID]['ID'] == 0:
 				continue
 			else:
 				phaseID = data['phases'][localID]['ID']
-				utilities.makeImage(mapSGP(data, metadata, size, 'colour', phaseID=phaseID), size, size, 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/IPF[' + str(phaseID) + '].png')
-				utilities.makeImage(mapSGP(data, metadata, size, 'count', phaseID=phaseID), size, size, 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/IPF-Q[' + str(phaseID) + '].png')
-				utilities.makeImage(mapSGP(data, metadata, size, 'phase', phaseID=phaseID), size, size, 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/IPF-P[' + str(phaseID) + '].png')
-				utilities.makeImage(mapSGP(data, metadata, size, 'PQ', phaseID=phaseID), size, size, 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/IPF-PQ[' + str(phaseID) + '].png')
-				utilities.makeImage(mapSGP(data, metadata, size, 'IQ', phaseID=phaseID), size, size, 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/IPF-IQ[' + str(phaseID) + '].png')
+				utilities.make_image(mapSGP(data, metadata, size, 'colour', phaseID=phaseID), size, size, 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/IPF[' + str(phaseID) + '].png')
+				utilities.make_image(mapSGP(data, metadata, size, 'count', phaseID=phaseID), size, size, 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/IPF-Q[' + str(phaseID) + '].png')
+				utilities.make_image(mapSGP(data, metadata, size, 'phase', phaseID=phaseID), size, size, 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/IPF-P[' + str(phaseID) + '].png')
+				utilities.make_image(mapSGP(data, metadata, size, 'PQ', phaseID=phaseID), size, size, 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/IPF-PQ[' + str(phaseID) + '].png')
+				utilities.make_image(mapSGP(data, metadata, size, 'IQ', phaseID=phaseID), size, size, 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/IPF-IQ[' + str(phaseID) + '].png')
 				
 				if 'g' in metadata[data['fileref']]['aType']:
-					utilities.makeImage(mapSGP(data, metadata, size, 'KAM', phaseID=phaseID), size, size, 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/IPF-KAM[' + str(phaseID) + '].png')
-					utilities.makeImage(mapSGP(data, metadata, size, 'GND', phaseID=phaseID), size, size, 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/IPF-GND[' + str(phaseID) + '].png')
+					utilities.make_image(mapSGP(data, metadata, size, 'KAM', phaseID=phaseID), size, size, 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/IPF-KAM[' + str(phaseID) + '].png')
+					utilities.make_image(mapSGP(data, metadata, size, 'GND', phaseID=phaseID), size, size, 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/IPF-GND[' + str(phaseID) + '].png')
 				
 				if 'c' in metadata[data['fileref']]['aType']:
-					utilities.makeImage(mapSGP(data, metadata, size, 'CF', phaseID=phaseID), size, size, 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/IPF-CF[' + str(phaseID) + '].png')
+					utilities.make_image(mapSGP(data, metadata, size, 'CF', phaseID=phaseID), size, size, 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/IPF-CF[' + str(phaseID) + '].png')
 				
 				if 'd' in metadata[data['fileref']]['aType']:
-					utilities.makeImage(mapSGP(data, metadata, size, 'cluster', phaseID=phaseID), size, size, 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/IPF-C[' + str(phaseID) + '].png')
+					utilities.make_image(mapSGP(data, metadata, size, 'cluster', phaseID=phaseID), size, size, 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/IPF-C[' + str(phaseID) + '].png')
 	
 	print()
 	print('All maps complete.')
 	input('Press ENTER to close: ')
 
-def makeComparison(path, border=10, schemes=None):
-	
-	data1 = fileloader.getNyeAnalysis(utilities.getFile(path=utilities.getDir(path + '/analyses'), extension='csv', getSubDirs=True, prompt='Select source data for first map set:'))
-	print()
-	data2 = fileloader.getNyeAnalysis(utilities.getFile(path=utilities.getDir(path + '/analyses'), extension='csv', getSubDirs=True, prompt='Select source data for second map set:'))
-	print()
-	
-	if schemes == None:
-		schemes = ''
-		print('Available map types:')
-		print(' - ID: P,       Description: Phase map')
-		print(' - ID: PQ,      Description: Pattern quality map')
-		print(' - ID: IQ,      Description: Index quality map')
-		print(' - ID: RGB,     Description: Euler angle map')
-		print(' - ID: OX,      Description: Orientation map (x-axis)')
-		print(' - ID: OY,      Description: Orientation map (y-axis)')
-		print(' - ID: OZ,      Description: Orientation map (z-axis)')
-		print(' - ID: KAM,     Description: Kernel average misorientation map')
-		print(' - ID: GND,     Description: Geometrically necessary dislocation density map')
-		print(' - ID: CF,      Description: Channelling fraction map')
-		print(' - ID: IPF,     Description: Inverse pole figure (colour key)')
-		print(' - ID: IPF-C,   Description: Inverse pole figure (pixel count density)')
-		print(' - ID: IPF-PQ,  Description: Inverse pole figure (average PQ)')
-		print(' - ID: IPF-IQ,  Description: Inverse pole figure (average IQ)')
-		print(' - ID: IPF-KAM, Description: Inverse pole figure (average KAM)')
-		print(' - ID: IPF-GND, Description: Inverse pole figure (average GND density)')
-		print(' - ID: IPF-CF,  Description: Inverse pole figure (average channelling fraction)')
-		
-		while True:
-			if schemes == '':
-				schemes += input('Enter ID for first map: ')
-			else:
-				item = input('Enter ID for next map or leave blank to stop adding maps: ')
-				
-				if item == '':
-					break
-				
-				schemes += ',' + item
-		
-		name = input('Enter file name for output: ')
-		schemes = name + ':' + schemes
-	
-	for scheme in schemes.split(';'):
-		name = scheme.split(':')[0]
-		mTypes = scheme.split(':')[1].split(',')
-		maps = list()
-		print('Making comparison \'' + name + '.png\'.')
-
-		for i in range(len(mTypes)):
-			maps.append(list())
-			maps[i].append(image.open(path + '/maps/' + data1['fileref'] + '/' + mTypes[i] + '.png'))
-			maps[i].append(image.open(path + '/maps/' + data2['fileref'] + '/' + mTypes[i] + '.png'))
-		
-		utilities.compileImages(maps, border).save(path + '/comparisons/' + name + '.png')
-	
-	print()
-	print('All comparisons complete.')
-	input('Press ENTER to close: ')
+# def makeComparison(path, border=10, schemes=None):
+#
+# 	data1 = fileloader.getNyeAnalysis(
+# 		utilities.get_file_path(directory_path=utilities.get_directory_path(path + '/analyses'), recursive=True,
+# 								extension='csv', prompt='Select source data for first map set:'))
+# 	print()
+# 	data2 = fileloader.getNyeAnalysis(
+# 		utilities.get_file_path(directory_path=utilities.get_directory_path(path + '/analyses'), recursive=True,
+# 								extension='csv', prompt='Select source data for second map set:'))
+# 	print()
+#
+# 	if schemes == None:
+# 		schemes = ''
+# 		print('Available map types:')
+# 		print(' - ID: P,       Description: Phase map')
+# 		print(' - ID: PQ,      Description: Pattern quality map')
+# 		print(' - ID: IQ,      Description: Index quality map')
+# 		print(' - ID: RGB,     Description: Euler angle map')
+# 		print(' - ID: OX,      Description: Orientation map (x-axis)')
+# 		print(' - ID: OY,      Description: Orientation map (y-axis)')
+# 		print(' - ID: OZ,      Description: Orientation map (z-axis)')
+# 		print(' - ID: KAM,     Description: Kernel average misorientation map')
+# 		print(' - ID: GND,     Description: Geometrically necessary dislocation density map')
+# 		print(' - ID: CF,      Description: Channelling fraction map')
+# 		print(' - ID: IPF,     Description: Inverse pole figure (colour key)')
+# 		print(' - ID: IPF-C,   Description: Inverse pole figure (pixel count density)')
+# 		print(' - ID: IPF-PQ,  Description: Inverse pole figure (average PQ)')
+# 		print(' - ID: IPF-IQ,  Description: Inverse pole figure (average IQ)')
+# 		print(' - ID: IPF-KAM, Description: Inverse pole figure (average KAM)')
+# 		print(' - ID: IPF-GND, Description: Inverse pole figure (average GND density)')
+# 		print(' - ID: IPF-CF,  Description: Inverse pole figure (average channelling fraction)')
+#
+# 		while True:
+# 			if schemes == '':
+# 				schemes += input('Enter ID for first map: ')
+# 			else:
+# 				item = input('Enter ID for next map or leave blank to stop adding maps: ')
+#
+# 				if item == '':
+# 					break
+#
+# 				schemes += ',' + item
+#
+# 		name = input('Enter file name for output: ')
+# 		schemes = name + ':' + schemes
+#
+# 	for scheme in schemes.split(';'):
+# 		name = scheme.split(':')[0]
+# 		mTypes = scheme.split(':')[1].split(',')
+# 		maps = list()
+# 		print('Making comparison \'' + name + '.png\'.')
+#
+# 		for i in range(len(mTypes)):
+# 			maps.append(list())
+# 			maps[i].append(image.open(path + '/maps/' + data1['fileref'] + '/' + mTypes[i] + '.png'))
+# 			maps[i].append(image.open(path + '/maps/' + data2['fileref'] + '/' + mTypes[i] + '.png'))
+#
+# 		utilities.compileImages(maps, border).save(path + '/comparisons/' + name + '.png')
+#
+# 	print()
+# 	print('All comparisons complete.')
+# 	input('Press ENTER to close: ')
 
 def grab(path):
 	
-	filepaths = utilities.getFile(path=path, extension='csv', getSubDirs=True, getMany=True, exclusions=('WDS Element Data',))
+	filepaths = utilities.get_file_paths(directory_path=path, recursive=True, extension='csv',
+                                         exclusions=['WDS Element Data.csv'])
 	destination = 'ebsd/data'
 	print()
 	
 	for filepath in filepaths:
 		print('Grabbing ' + filepath.split('/')[-1][:-4] + '.')
-		dest = utilities.getDir('ebsd/data') + '/' + filepath.split('/')[-1]
+		dest = utilities.get_directory_path('ebsd/data') + '/' + filepath.split('/')[-1]
 		shutil.copy2(filepath, dest)
 	
 	print()
