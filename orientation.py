@@ -1,177 +1,123 @@
-#-*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 
-import math
-import copy
 import itertools
 import numpy
 import utilities
 
-def formatIndices(hkl, iType):
-	
-	if iType == 'zone':
-		prefix = '['
-		suffix = ']'
-	elif iType == 'zones':
-		prefix = '<'
-		suffix = '>'
-	elif iType == 'plane':
-		prefix = '('
-		suffix = ')'
-	elif iType == 'planes':
-		prefix = '{'
-		suffix = '}'
-	
-	return prefix + str(hkl[0]) + ' ' + str(hkl[1]) + ' ' + str(hkl[2]) + suffix
 
-def genFamily(hkl):
+def numpy_cross(a: numpy.ndarray, b: numpy.ndarray) -> numpy.ndarray:
+	"""
+	Wrapper to work around return type mislabeling bug in NumPy causing IDE errors.
+	:param a: First array.
+	:param b: Second array.
+	:return: Cross product of arrays.
+	"""
+
+	return numpy.cross(a, b)
+
+
+def get_plane_family(indices: tuple[int, int, int]) -> list[tuple[int, int, int]]:
+	"""
+	For a given set of Miller indices for a plane family {h,k,l}, determines the list of planes (h,k,l) in the family.
+	:param indices: Indices of the plane family.
+	:return: The list of planes in the family.
+	"""
 	
-	hcf = utilities.highest_common_factor(hkl)
+	hcf = utilities.highest_common_factor(list(indices))
 	
 	if hcf != 0:
-		hkl = list(index // hcf for index in hkl)
+		reduced_indices = tuple(index // hcf for index in indices)
+	else:
+		reduced_indices = indices
 	
-	perms = sorted(list(set(list(itertools.permutations(hkl)))))
-	refs = sorted(list(set(list(itertools.permutations(list((1, 1, 1, -1, -1, -1)), 3)))))
-	refperms = sorted(list(list(refperm) for refperm in set((ref[0] * perm[0], ref[1] * perm[1], ref[2] * perm[2]) for ref in refs for perm in perms)), reverse=True)
-	output = list()
+	index_permutations = sorted(list(set(itertools.permutations(reduced_indices))))
+	index_parities = sorted(list(set(itertools.permutations((1, 1, 1, -1, -1, -1), 3))))
+
+	planes = set()
+
+	for permutation in index_permutations:
+		for parity in index_parities:
+			planes.add((parity[0] * permutation[0], parity[1] * permutation[1], parity[2] * permutation[2]))
+
+	plane_family = list()
 	
-	for hklA in refperms:
-		dupe = False
+	for plane in sorted(list(planes)):
+		if plane in plane_family or -1 * plane in plane_family:
+			continue
 		
-		for hklB in output:
-			if (hklA[0] == hklB[0] and hklA[1] == hklB[1] and hklA[2] == hklB[2]) or (hklA[0] == -hklB[0] and hklA[1] == -hklB[1] and hklA[2] == -hklB[2]):
-				dupe = True
-		
-		pol = 0
+		plane_parity = 0
 		
 		for i in range(3):
-			if hklA[i] > 0:
-				pol += 1
-			if hklA[i] < 0:
-				pol -= 1
+			if plane[i] == 0:
+				continue
+			elif plane[i] > 0:
+				plane_parity += 1
+			elif plane[i] < 0:
+				plane_parity -= 1
 		
-		if not dupe and pol >= 0:
-			output.append(hklA)
-	
-	return output
+		if plane_parity < 0:
+			continue
 
-def genPairs(hklAs, hklBs):
+		plane_family.append(plane)
 	
-	output = list()
-	
-	for hklA in hklAs:
-		for hklB in hklBs:
-			output.append(list((hklA, hklB)))
-	
-	return output
+	return plane_family
 
-def genSet(planePair, zonePair):
-	
-	pair1 = list((numpy.array(planePair[0]), numpy.array(planePair[1])))
-	pair2 = list((numpy.array(zonePair[0]), numpy.array(zonePair[1])))
-	pair3 = list((numpy.cross(numpy.array(planePair[0]), numpy.array(zonePair[0])), numpy.cross(numpy.array(planePair[1]), numpy.array(zonePair[1]))))
-	return list((list(list(hkl) for hkl in pair1), list(list(hkl) for hkl in pair2), list(list(hkl) for hkl in pair3)))
 
-def genMatrix(pairs, params):
-	
-	pairs = copy.deepcopy(pairs)
-	pairs.append(list(list(indices) for indices in (numpy.cross(numpy.array(pairs[0][0]), numpy.array(pairs[1][0])), numpy.cross(numpy.array(pairs[0][1]), numpy.array(pairs[1][1])))))
-	x = numpy.array(list((params[0][i] * numpy.linalg.norm(numpy.array(pairs[i][0]))) / (params[1][i] * numpy.linalg.norm(numpy.array(pairs[i][1]))) for i in range(3)))
-	uA = numpy.transpose(numpy.array(list(pairs[i][0] for i in range(3))))
-	uB = numpy.transpose(numpy.array(list(pairs[i][1] for i in range(3))))
+def get_twin_matrix(indices: tuple[int, int, int]) -> numpy.ndarray:
+	"""
+	Determines the rotation matrix for the homophase cubic orientation relationship described by a reflection in a plane.
+	Solves Eqn. 3.30.
+	:param indices: The Miller indices (h,k,l) of the reflecting plane.
+	:return: The rotation matrix describing the twin.
+	"""
+
+	h, k, l = indices
+
+	T = numpy.array((
+		(h ** 2 - k ** 2 - l ** 2, 2 * h * k, 2 * l * h),
+		(2 * h * k, k ** 2 - l ** 2 - h ** 2, 2 * k * l),
+		(2 * l * h, 2 * k * l, l ** 2 - h ** 2 - k ** 2),
+	))
+
+	J = - 1 / (h ** 2 + k ** 2 + l ** 2) * T
+	return J
+
+
+def get_relationship_matrix(
+		u1A: tuple[int, int, int],
+		u1B: tuple[int, int, int],
+		u2A: tuple[int, int, int],
+		u2B: tuple[int, int, int],
+		a: tuple[float, float, float],
+		b: tuple[float, float, float],
+) -> numpy.ndarray:
+	"""
+	Determines the rotation matrix for the heterophase orientation relationship described by two pairs of parallel zone axes.
+	Parallel axis pairs are u1A || u1B and u2A || u2B for bases A and B.
+	Solves Eqn. 3.50.
+	:param u1A: Zone axis 1 for basis A.
+	:param u1B: Zone axis 1 for basis B.
+	:param u2A: Zone axis 2 for basis A.
+	:param u2B: Zone axis 2 for basis B.
+	:param a: Basis vectors of basis A.
+	:param b: Basis vectors of basis B.
+	:return: The rotation matrix describing the orientation relationship between bases A and B.
+	"""
+
+	u1A = numpy.array(u1A)
+	u1B = numpy.array(u1B)
+	u2A = numpy.array(u2A)
+	u2B = numpy.array(u2B)
+	u3A = numpy.array(int(element) for element in numpy_cross(numpy.array(u1A), numpy.array(u2A)))
+	u3B = numpy.array(int(element) for element in numpy_cross(numpy.array(u1B), numpy.array(u2B)))
+
+	x = numpy.array([
+		(a[0] * numpy.linalg.norm(u1A)) / (b[0] * numpy.linalg.norm(u1B)),
+		(a[1] * numpy.linalg.norm(u2A)) / (b[1] * numpy.linalg.norm(u2B)),
+		(a[2] * numpy.linalg.norm(u3A)) / (b[2] * numpy.linalg.norm(u3B)),
+	])
+
+	uA = numpy.transpose(numpy.array((u1A, u2A, u3A)))
+	uB = numpy.transpose(numpy.array((u1B, u2B, u3B)))
 	J = numpy.dot(x * uB, numpy.linalg.inv(uA))
 	return J
-
-def genTwin(plane):
-	
-	h, k, l = plane
-	T = numpy.array(list((list((h ** 2 - k ** 2 - l ** 2, 2 * h * k, 2 * l * h)), list((2 * h * k, k ** 2 - l ** 2 - h ** 2, 2 * k * l)), list((2 * l * h, 2 * k * l, l ** 2 - h ** 2 - k ** 2)))))
-	s = - 1 / (h ** 2 + k ** 2 + l ** 2)
-	J = s * T
-	return J
-
-def getVariantList(filepath):
-	
-	output = list()
-	
-	with open(filepath, 'r') as file:
-		for line in file:
-			pairs = list(list(list(int(index) for index in indices.split(',')) for indices in pair.split(':')) for pair in line.split(';'))
-			pairs.append(list(list(indices) for indices in (numpy.cross(numpy.array(pairs[0][0]), numpy.array(pairs[1][0])), numpy.cross(numpy.array(pairs[0][1]), numpy.array(pairs[1][1])))))
-			output.append(pairs)
-	
-	return output
-
-if __name__ == '__main__':
-	family = genFamily(list((0, 0, 1)))
-	print(family)
-	print(len(family))
-	print()
-	for plane in family:
-		print(plane)
-		print(genTwin(plane))
-	'''
-	print(genMatrix(list((list((list((1, 0, 0)), list((0, -1, 1)))), list((list((0, 1, 0)), list((1, -1, -1)))), list((list((0, 0, 1)), list((2, 1, 1)))))), list((list((4.5241, 5.0883, 6.7416)), list((2.8662, 2.8662, 2.8662))))))
-	print(getVariantList('ortest/ksor.txt'))
-	'''
-	'''
-	hklA = list((1, 1, 1))
-	hklB = list((1, 1, 0))
-	print('||'.join(list((formatIndices(hklA, 'planes'), formatIndices(hklB, 'planes')))) + ', ' + '||'.join(list((formatIndices(hklB, 'zones'), formatIndices(hklA, 'zones')))) + ':')
-	planePairs = genPairs(genFamily(hklA), genFamily(hklB))
-	zonePairs = genPairs(genFamily(hklB), genFamily(hklA))
-	dps = dict()
-	count = 0
-	
-	for planePair in planePairs:
-		for zonePair in zonePairs:
-			pairs = genSet(planePair, zonePair)
-			
-			if sorted(list(abs(index) for index in pairs[2][0])) == list((1, 1, 2)) and sorted(list(abs(index) for index in pairs[2][1])) == list((1, 1, 2)):
-				pass
-			else:
-				continue
-			
-			dp = ', '.join(list(str(numpy.dot(numpy.array(pairs[i][0]), numpy.array(pairs[i + 1][1]))) for i in range(-1, 2)))
-			
-			if dp not in dps:
-				dps[dp] = 0
-			
-			dps[dp] += 1
-			
-			print(', '.join(list(' ' + '||'.join(list(formatIndices(hkl, 'zone') for hkl in pair)) for pair in pairs)))
-			print(dp)
-			count += 1
-	
-	for dp in dps:
-		print(dp + ': ' + str(dps[dp]))
-	'''
-	'''
-	variants = list()
-	matrices = list()
-	
-	for planePair in planePairs:
-		for zonePair in zonePairs:
-			pairs = genSet(planePair, zonePair)
-			
-			if sorted(list(abs(index) for index in pairs[2][0])) == list((1, 1, 2)) and sorted(list(abs(index) for index in pairs[2][1])) == list((1, 1, 2)):
-				pass
-			else:
-				continue
-			
-			params = list((list((1, 1, 1)), list((1, 1, 1))))
-			matrix = genMatrix(pairs, params)
-			dupe = False
-			
-			for m in matrices:
-				if numpy.array_equal(m, matrix):
-					dupe = True
-			
-			if not dupe:
-				variants.append(pairs)
-				matrices.append(matrix)
-				print(', '.join(list(' ' + '||'.join(list(formatIndices(hkl, 'zone') for hkl in pair)) for pair in pairs)))
-				print(matrix)
-				count += 1
-	'''
-	input()

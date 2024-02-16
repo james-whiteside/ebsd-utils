@@ -1515,7 +1515,7 @@ def summarise(path):
 							
 							for i in range(16):
 								vectors = list((list((list(polarity[i][0] * hkl for hkl in variants[variant]['vectors'][0][0]), list(polarity[i][1] * hkl for hkl in variants[variant]['vectors'][0][1]))), list((list(polarity[i][2] * hkl for hkl in variants[variant]['vectors'][1][0]), list(polarity[i][3] * hkl for hkl in variants[variant]['vectors'][1][1])))))
-								J = orientation.genMatrix(vectors, params)
+								J = orientation.get_relationship_matrix(vectors[0][0], vectors[0][1], vectors[1][0], vectors[1][1], params[0], params[1])
 								s = math.sqrt(params[0][0] ** 2 + params[0][1] ** 2 + params[0][2] ** 2) / math.sqrt(params[1][0] ** 2 + params[1][1] ** 2 + params[1][2] ** 2)
 								RF = numpy.dot(J / s, R1)
 								dR = numpy.dot(numpy.linalg.inv(RF), R2)
@@ -1534,10 +1534,10 @@ def summarise(path):
 							R1 = data['data']['k']['R'][k1]
 							R2 = data['data']['k']['R'][k2]
 							theta = 2 * math.pi
-							family = orientation.genFamily(twins[variant])
+							family = orientation.get_plane_family(twins[variant])
 							
 							for plane in family:
-								J = orientation.genTwin(plane)
+								J = orientation.get_twin_matrix(plane)
 								RF = numpy.dot(J, R1)
 								dR = numpy.dot(numpy.linalg.inv(RF), R2)
 								theta = min(dTheta(dR), theta)
