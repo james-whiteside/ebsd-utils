@@ -1853,37 +1853,3 @@ def makeMaps(path, size=None):
 # 	print()
 # 	print('All comparisons complete.')
 # 	input('Press ENTER to close: ')
-
-def grab(path):
-	
-	filepaths = utilities.get_file_paths(directory_path=path, recursive=True, extension='csv',
-                                         exclusions=['WDS Element Data.csv'])
-	destination = 'ebsd/data'
-	print()
-	
-	for filepath in filepaths:
-		print('Grabbing ' + filepath.split('/')[-1][:-4] + '.')
-		dest = utilities.get_directory_path('ebsd/data') + '/' + filepath.split('/')[-1]
-		shutil.copy2(filepath, dest)
-	
-	print()
-	print('All grabs complete.')
-	input('Press ENTER to close: ')
-
-if __name__ == '__main__':
-	variants = fileloader.getVariantList()
-	print(variants)
-	
-	for variant in variants:
-		polarity = sorted(list(set(list(itertools.permutations(list((1, 1, 1, 1, -1, -1, -1, -1)), 4)))), reverse=True)
-		for i in range(16):
-			vectors = list((list((list(polarity[i][0] * hkl for hkl in variants[variant]['vectors'][0][0]), list(polarity[i][1] * hkl for hkl in variants[variant]['vectors'][0][1]))), list((list(polarity[i][2] * hkl for hkl in variants[variant]['vectors'][1][0]), list(polarity[i][3] * hkl for hkl in variants[variant]['vectors'][1][1])))))
-			print(vectors)
-		break
-	
-	print()
-	angles = (math.radians(186.175), math.radians(5.11666), math.radians(38.5291))
-	print(numpy.array((0,0,1)) * numpy.array(symT(R3('zxz', angles))))
-	
-	print('This is a support module.')
-	input('Press ENTER to close: ')
