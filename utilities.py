@@ -274,7 +274,7 @@ def colour_wheel(i: int, n: int) -> tuple[int, int, int]:
 	return r, g, b
 
 
-def make_image(data: list[list[float | tuple[float]]], width: int, height: int, limit: float, mode: str) -> Image.Image:
+def make_image(data: list[list[float | tuple[float, float, float]]], width: int, height: int, limit: float, mode: str) -> Image.Image:
 	"""
 	Creates an Image object based on a 2D data array of pixel values.
 	Each element of the array must be either a single value for greyscale images, or a triple of RGB values for colour images.
