@@ -66,7 +66,7 @@ def get_plane_family(indices: tuple[int, int, int]) -> list[tuple[int, int, int]
 def get_twin_matrix(indices: tuple[int, int, int]) -> numpy.ndarray:
 	"""
 	Determines the rotation matrix for the homophase cubic orientation relationship described by a reflection in a plane.
-	Solves Eqn. 3.30.
+	Solves Eqn. 4.30.
 	:param indices: The Miller indices (h,k,l) of the reflecting plane.
 	:return: The rotation matrix describing the twin.
 	"""
@@ -94,7 +94,7 @@ def get_relationship_matrix(
 	"""
 	Determines the rotation matrix for the heterophase orientation relationship described by two pairs of parallel zone axes.
 	Parallel axis pairs are u1A || u1B and u2A || u2B for bases A and B.
-	Solves Eqn. 3.50.
+	Solves Eqn. 4.50.
 	:param u1A: Zone axis 1 for basis A.
 	:param u1B: Zone axis 1 for basis B.
 	:param u2A: Zone axis 2 for basis A.
