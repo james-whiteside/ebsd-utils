@@ -263,38 +263,6 @@ def SAlpha5(width, height, phase, euler, x, y, dx):
 	
 	return S
 
-def SAlpha52(width, height, phase, euler, x, y, dx):
-	
-	xm = 0.5
-	xp = 0.5
-	ym = 0.5
-	yp = 0.5
-	S = 0
-	
-	if x == 0:
-		xm = 0
-		xp *= 2
-	
-	if x == width - 1:
-		xp = 0
-		xm *= 2
-	
-	if y == 0:
-		ym = 0
-		yp *= 2
-	
-	if y == height - 1:
-		yp = 0
-		ym *= 2
-	
-	S += abs(xm * dOmega(euler[y][x], euler[y][x-1], dx)[0][2] + xp * dOmega(euler[y][x], euler[y][x+1], dx)[0][2])
-	S += abs(xm * dOmega(euler[y][x], euler[y][x-1], dx)[0][1] + xp * dOmega(euler[y][x], euler[y][x+1], dx)[0][1])
-	S += abs(ym * dOmega(euler[y][x], euler[y-1][x], dx)[1][2] + yp * dOmega(euler[y][x], euler[y+1][x], dx)[1][2])
-	S += abs(ym * dOmega(euler[y][x], euler[y-1][x], dx)[1][0] + yp * dOmega(euler[y][x], euler[y+1][x], dx)[1][0])
-	S += abs(ym * dOmega(euler[y][x], euler[y-1][x], dx)[2][0] + yp * dOmega(euler[y][x], euler[y+1][x], dx)[2][0] - xm * dOmega(euler[y][x], euler[y][x-1], dx)[2][1] - xp * dOmega(euler[y][x], euler[y][x+1], dx)[2][1])
-	
-	return S
-
 def distf(euler1, euler2):
 	
 	return math.degrees(trace_angle(numpy.dot(numpy.linalg.inv(euler1), euler2)))
