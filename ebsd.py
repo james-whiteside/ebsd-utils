@@ -18,19 +18,24 @@ import channelling
 import orientation
 
 
+GENERIC_PHASE_IDS = (0, 4294967294, 4294967295)
+
+
 class Axis(Enum):
 	"""
 	Enumeration of the three Cartesian axes.
 	"""
-	X = "x"
-	Y = "y"
-	Z = "z"
+
+	X = numpy.array((1, 0, 0))
+	Y = numpy.array((0, 1, 0))
+	Z = numpy.array((1, 0, 1))
 
 
 class AxisSet(Enum):
 	"""
 	Enumeration of the Euler axis sets, as listed in Tab. 3.1.
 	"""
+
 	# Tait-Bryan axis sets
 	XYZ = (Axis.X, Axis.Y, Axis.Z)
 	XZY = (Axis.X, Axis.Z, Axis.Y)
@@ -85,10 +90,12 @@ class BravaisLattice(Enum):
 def single_rotation_matrix(axis: Axis, angle: float) -> numpy.ndarray:
 	"""
 	Computes the 3D rotation matrix for an active right-handed rotation about a single axis.
+	Solves Eqns. 3.59 - 3.61.
 	:param axis: The axis of rotation.
 	:param angle: The angle of rotation about the axis in ``rad``.
 	:return: The rotation matrix.
 	"""
+
 	match axis:
 		case Axis.X:
 			return numpy.array((
@@ -112,11 +119,13 @@ def single_rotation_matrix(axis: Axis, angle: float) -> numpy.ndarray:
 
 def euler_rotation_matrix(axis_set: AxisSet, angles: tuple[float, float, float]) -> numpy.ndarray:
 	"""
-	Computes the 3D rotation matrix for a set of Euler angles.
+	Computes the 3D rotation matrix ``R`` for a set of Euler angles ``(α, β, γ)``.
+	Solves Eqn 3.62.
 	:param axis_set: The set of Euler axes.
-	:param angles: The Euler angles in ``rad``.
-	:return: The rotation matrix.
+	:param angles: The Euler angles ``(α, β, γ)`` in ``rad``.
+	:return: The Euler rotation matrix ``R``.
 	"""
+
 	R = numpy.eye(3)
 	R = numpy.dot(single_rotation_matrix(axis_set.value[0], angles[0]), R)
 	R = numpy.dot(single_rotation_matrix(axis_set.value[1], angles[1]), R)
@@ -131,6 +140,7 @@ def euler_angles(rotation_matrix: numpy.ndarray, axis_set: AxisSet) -> tuple[flo
 	:param axis_set: The set of Euler axes.
 	:return: The Euler angles in ``rad``.
 	"""
+
 	if axis_set is AxisSet.ZXZ:
 		phi1 = math.acos(rotation_matrix[2][1] / math.sqrt(1 - rotation_matrix[2][2] ** 2))
 		Phi = math.acos(rotation_matrix[2][2])
@@ -149,6 +159,7 @@ def forward_stereographic(x: float, y: float, z: float) -> tuple[float, float]:
 	:param z: The Cartesian ``z``-coordinate.
 	:return: The stereographic coordinates ``(X, Y)``.
 	"""
+
 	X = x / (1 - z)
 	Y = y / (1 - z)
 	return X, Y
@@ -162,6 +173,7 @@ def inverse_stereographic(X: float, Y: float) -> tuple[float, float, float]:
 	:param Y: The stereographic ``Y``-coordinate.
 	:return: The Cartesian coordinates ``(x, y, z)``.
 	"""
+
 	x = 2 * X / (X ** 2 + Y ** 2 + 1)
 	y = 2 * Y / (X ** 2 + Y ** 2 + 1)
 	z = (X ** 2 + Y ** 2 - 1) / (X ** 2 + Y ** 2 + 1)
@@ -177,6 +189,7 @@ def forward_gnomonic(x: float, y: float, z: float) -> tuple[float, float]:
 	:param z: The Cartesian ``z``-coordinate.
 	:return: The gnomonic coordinates ``(X, Y)``.
 	"""
+
 	X = -x / z
 	Y = -y / z
 	return X, Y
@@ -190,120 +203,237 @@ def inverse_gnomonic(X: float, Y: float) -> tuple[float, float, float]:
 	:param Y: The gnomonic ``Y``-coordinate.
 	:return: The Cartesian coordinates ``(x, y, z)``.
 	"""
+
 	x = -X / math.sqrt(X ** 2 + Y ** 2 + 1)
 	y = -Y / math.sqrt(X ** 2 + Y ** 2 + 1)
 	z = 1 / math.sqrt(X ** 2 + Y ** 2 + 1)
 	return x, y, z
 
 
-def trace_angle(dR: numpy.ndarray) -> float:
+def rotation_angle(R: numpy.ndarray) -> float:
 	"""
-	Computes the rotation angle ``dθ`` of a rotation matrix ``dR``.
+	Computes the rotation angle ``θ`` of a rotation matrix ``R``.
 	Solves Eqn. 4.1.
-	:param dR: The rotation matrix ``dR``.
-	:return: The rotation angle ``dθ``.
+	:param R: The rotation matrix ``R``.
+	:return: The rotation angle ``θ``.
 	"""
-	if 0.5 * (abs(dR[0][0]) + abs(dR[1][1]) + abs(dR[2][2]) - 1) > 1:
-		return math.acos(1)
-	elif 0.5 * (abs(dR[0][0]) + abs(dR[1][1]) + abs(dR[2][2]) - 1) < -1:
-		return math.acos(-1)
+
+	if 0.5 * (abs(R[0][0]) + abs(R[1][1]) + abs(R[2][2]) - 1) > 1:
+		theta = math.acos(1)
+	elif 0.5 * (abs(R[0][0]) + abs(R[1][1]) + abs(R[2][2]) - 1) < -1:
+		theta = math.acos(-1)
 	else:
-		return math.acos(0.5 * (abs(dR[0][0]) + abs(dR[1][1]) + abs(dR[2][2]) - 1))
+		theta = math.acos(0.5 * (abs(R[0][0]) + abs(R[1][1]) + abs(R[2][2]) - 1))
+
+	return theta
 
 
-def dOmega(euler1, euler2, dx):
-	
-	dR = numpy.dot(numpy.linalg.inv(euler1), euler2)
-	
-	if trace_angle(dR) == 0:
-		return numpy.zeros((3, 3))
-	else:
-		return numpy.dot((-3 * trace_angle(dR)) / (dx * math.sin(trace_angle(dR))), dR)
 
-def ref(axis):
-	
-	if axis == 'x':
-		refV = numpy.array((1, 0, 0))
-	elif axis == 'y':
-		refV = numpy.array((0, 1, 0))
-	elif axis == 'z':
-		refV = numpy.array((0, 0, 1))
-	elif axis == 'z-5y':
-		refV = numpy.array((0, -math.sin(math.radians(5)), math.cos(math.radians(5))))
-	
-	return refV
 
-def sym(x, y, z, lSym):
-	
-	if lSym == 'c':
+
+def misrotation_matrix(R1: numpy.ndarray, R2: numpy.ndarray) -> numpy.ndarray:
+	"""
+	Computes the misrotation matrix ``dR`` between two rotation matrices ``R1`` and ``R2``.
+	Solves Eqn. 4.2.
+	:param R1: The rotation matrix ``R1``.
+	:param R2: The rotation matrix ``R2``.
+	:return: The misrotation matrix ``dR``.
+	"""
+
+	dR = numpy.dot(numpy.linalg.inv(R1), R2)
+	return dR
+
+
+def reduce_vector(v: tuple[float, float, float], lattice_type: BravaisLattice) -> tuple[float, float, float]:
+	"""
+	Reduces a lattice vector ``v`` into the fundamental unit triangle of its Bravais lattice by reflection.
+	:param v: The lattice vector ``v``.
+	:param lattice_type: The Bravais lattice type.
+	:return: The reduced vector.
+	"""
+	x, y, z = v
+
+	if lattice_type.value == "None":
+		a, b, c = z, y, x
+	elif lattice_type.value[0] == 'c':
 		z, y, x = sorted((-abs(x), -abs(y), -abs(z)))
-		u = z - y
-		v = (y - x) * math.sqrt(2)
-		w = x * math.sqrt(3)
-	elif lSym == 'o':
-		u, v, w = z, y, x
-	elif lSym == 'N':
-		u, v, w = z, y, x
+		a = z - y
+		b = (y - x) * math.sqrt(2)
+		c = x * math.sqrt(3)
+		a, b, c = abs(a) / max(abs(a), abs(b), abs(c)), abs(b) / max(abs(a), abs(b), abs(c)), abs(c) / max(abs(a), abs(b), abs(c))
 	else:
-		print('Unrecognised symmetry!')
-		u, v, w = z, y, x
-	
-	return u, v, w
+		raise NotImplementedError
 
-def symT(R):
-	
-	if R[2][2] > 0:
-		R = numpy.dot(numpy.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, -1.0]]), R)
-	
-	if R[1][2] > 0:
-		R = numpy.dot(numpy.array([[1.0, 0.0, 0.0], [0.0, -1.0, 0.0], [0.0, 0.0, 1.0]]), R)
-	
-	if R[0][2] > 0:
-		R = numpy.dot(numpy.array([[-1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]), R)
-	
-	if R[1][2] > R[0][2]:
-		R = numpy.dot(numpy.array([[0.0, 1.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0, 1.0]]), R)
-	
+	return a, b, c
+
+
+def reduce_matrix(R: numpy.ndarray, symmetry: CrystalFamily) -> numpy.ndarray:
+	"""
+	Reduces a lattice orientation matrix ``R`` into the fundamental unit triangle of its Bravais lattice by reflection.
+	:param R: The lattice orientation matrix ``R``.
+	:param symmetry: The crystal symmetry of the Bravais lattice type.
+	:return: The reduced matrix.
+	"""
+	if symmetry.value == "c":
+		if R[2][2] > 0:
+			R = numpy.dot(numpy.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, -1.0]]), R)
+
+		if R[1][2] > 0:
+			R = numpy.dot(numpy.array([[1.0, 0.0, 0.0], [0.0, -1.0, 0.0], [0.0, 0.0, 1.0]]), R)
+
+		if R[0][2] > 0:
+			R = numpy.dot(numpy.array([[-1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]), R)
+
+		if R[1][2] > R[0][2]:
+			R = numpy.dot(numpy.array([[0.0, 1.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0, 1.0]]), R)
+	else:
+		raise NotImplementedError
+
 	return R
 
-def SAlpha5(width, height, phase, euler, x, y, dx):
-	
-	xm = 0.5
-	xp = 0.5
-	ym = 0.5
-	yp = 0.5
-	S = 0
-	
-	if x == 0 or phase[y][x] != phase[y][x-1]:
-		xm = 0
-		xp *= 2
-	
-	if x == width - 1 or phase[y][x] != phase[y][x+1]:
-		xp = 0
-		xm *= 2
-	
-	if y == 0 or phase[y][x] != phase[y-1][x]:
-		ym = 0
-		yp *= 2
-	
-	if y == height - 1 or phase[y][x] != phase[y+1][x]:
-		yp = 0
-		ym *= 2
-	
-	S += abs(xm * dOmega(euler[y][x], euler[y][x-1], dx)[0][2] + xp * dOmega(euler[y][x], euler[y][x+1], dx)[0][2])
-	S += abs(xm * dOmega(euler[y][x], euler[y][x-1], dx)[0][1] + xp * dOmega(euler[y][x], euler[y][x+1], dx)[0][1])
-	S += abs(ym * dOmega(euler[y][x], euler[y-1][x], dx)[1][2] + yp * dOmega(euler[y][x], euler[y+1][x], dx)[1][2])
-	S += abs(ym * dOmega(euler[y][x], euler[y-1][x], dx)[1][0] + yp * dOmega(euler[y][x], euler[y+1][x], dx)[1][0])
-	S += abs(ym * dOmega(euler[y][x], euler[y-1][x], dx)[2][0] + yp * dOmega(euler[y][x], euler[y+1][x], dx)[2][0] - xm * dOmega(euler[y][x], euler[y][x-1], dx)[2][1] - xp * dOmega(euler[y][x], euler[y][x+1], dx)[2][1])
-	
-	return S
 
-def distf(euler1, euler2):
-	
-	return math.degrees(trace_angle(numpy.dot(numpy.linalg.inv(euler1), euler2)))
+def differential_rotation_tensor(dR: numpy.ndarray, dx: float) -> numpy.ndarray:
+	"""
+	Computes an approximation of the differential lattice rotation tensor ``dω`` of the lattice misorientation matrix ``dR`` over the finite interval ``dx``.
+	Solves Eqn. 6.54.
+	:param dR: The lattice misorientation matrix ``dR``.
+	:param dx: The finite interval ``dx``.
+	:return: The approximate lattice rotation tensor ``dω``.
+	"""
+
+	dtheta = rotation_angle(dR)
+
+	if dtheta == 0:
+		return numpy.zeros((3, 3))
+	else:
+		return numpy.dot((-3 * dtheta) / (dx * math.sin(dtheta)), dR)
+
+
+# Computes the GND density of a scan pixel ``ρ`` with coordinates ``(x, y)``.
+def gnd_density(
+		width: int,
+		height: int,
+		phase: list[list[int]],
+		R: list[list[numpy.ndarray]],
+		x: int,
+		y: int,
+		w: float,
+		ka: float
+) -> float:
+
+	def f(dx: int, dy: int):
+		dR = misrotation_matrix(R[y][x], R[y + dy][x + dx])
+		return differential_rotation_tensor(dR, w)
+
+	f_kernel = [
+		[None, f(+1, 0), f(-1, 0)],
+		[f(0, +1), None, None],
+		[f(0, -1), None, None],
+	]
+
+	weights = [
+		[None, 0.5, 0.5],
+		[0.5, None, None],
+		[0.5, None, None],
+	]
+
+	if x == 0 or phase[y][x] != phase[y][x-1]:
+		weights[0][-1] = 0
+		weights[0][1] *= 2
+
+	if x == width - 1 or phase[y][x] != phase[y][x+1]:
+		weights[0][-1] *= 2
+		weights[0][1] = 0
+
+	if y == 0 or phase[y][x] != phase[y-1][x]:
+		weights[-1][0] = 0
+		weights[1][0] *= 2
+
+	if y == height - 1 or phase[y][x] != phase[y+1][x]:
+		weights[-1][0] *= 2
+		weights[1][0] = 0
+
+	S = sum((
+		abs(weights[0][-1] * f_kernel[0][-1][0][2] + weights[0][1] * f_kernel[0][1][0][2]) / 2,
+		abs(weights[0][-1] * f_kernel[0][-1][0][1] + weights[0][1] * f_kernel[0][1][0][1]) / 2,
+		abs(weights[-1][0] * f_kernel[-1][0][1][2] + weights[1][0] * f_kernel[1][0][1][2]) / 2,
+		abs(weights[-1][0] * f_kernel[-1][0][1][0] + weights[1][0] * f_kernel[1][0][1][0]) / 2,
+		abs(
+			weights[-1][0] * f_kernel[-1][0][2][0] + weights[1][0] * f_kernel[1][0][2][0]
+			- weights[0][-1] * f_kernel[0][-1][2][1] - weights[0][1] * f_kernel[0][1][2][1]
+		) / 2,
+	))
+
+	rho = (3.6 / ka) * S ** 2
+	return rho
+
+
+def close_pack_distance(
+		lattice_type: BravaisLattice,
+		constants: tuple[float, float, float],
+		angles: tuple[float, float, float]
+) -> float:
+	a, b, c = constants
+	alpha, beta, gamma = angles
+
+	if lattice_type is BravaisLattice.CP:
+		return a
+	elif lattice_type is BravaisLattice.CI:
+		return math.sqrt(3) * a / 2
+	elif lattice_type is BravaisLattice.CF:
+		return math.sqrt(2) * a / 2
+	else:
+		raise NotImplementedError
+
+
+def calR(data):
+	R = list()
+
+	for y in range(data['height']):
+		R.append(list())
+
+		for x in range(data['width']):
+			R[y].append(reduce_matrix(euler_rotation_matrix(AxisSet.ZXZ, data['data']['euler'][y][x]), CrystalFamily.C))
+
+	return R
+
+
+def calGND(data, dx):
+	R = copy.deepcopy(data['data']['R'])
+
+	R.append(list())
+
+	for y in range(data['height']):
+		R[y].append(numpy.eye(3))
+
+	for x in range(data['width'] + 1):
+		R[data['height']].append(numpy.eye(3))
+
+	GND = list()
+
+	for y in range(data['height']):
+		GND.append(list())
+
+		for x in range(data['width']):
+			if data['phases'][data['data']['phase'][y][x]]['ID'] in GENERIC_PHASE_IDS:
+				GND[y].append(0)
+			else:
+				lattice_type = data['phases'][data['data']['phase'][y][x]]['type']
+				constants = data['phases'][data['data']['phase'][y][x]]['constants']
+				angles = data['phases'][data['data']['phase'][y][x]]['angles']
+				ka = close_pack_distance(lattice_type, constants, angles)
+				rho = gnd_density(data['width'], data['height'], data['data']['phase'], R, x, y, dx, ka)
+
+				if rho == 0:
+					GND[y].append(rho)
+				else:
+					GND[y].append(math.log10(rho))
+
+	return GND
+
 
 @jit(nopython=True)
-def dbscan(phase, euler, width, height, n, epsilon):
+def dbscan(phase, R, width, height, n, epsilon):
 	
 	k = 0
 	categories = numpy.zeros((height, width))
@@ -322,7 +452,7 @@ def dbscan(phase, euler, width, height, n, epsilon):
 				for y1 in range(height):
 					for x1 in range(width):
 						if phase[y0][x0] == phase[y1][x1]:
-							dR = numpy.dot(numpy.linalg.inv(euler[y0][x0]), euler[y1][x1])
+							dR = numpy.dot(numpy.linalg.inv(R[y0][x0]), R[y1][x1])
 							
 							if 0.5 * (abs(dR[0][0]) + abs(dR[1][1]) + abs(dR[2][2]) - 1) > 1:
 								dTheta = math.acos(1)
@@ -351,7 +481,7 @@ def dbscan(phase, euler, width, height, n, epsilon):
 			for y1 in range(height):
 				for x1 in range(width):
 					if phase[y0][x0] == phase[y1][x1] and categories[y1][x1] == 1:
-						dR = numpy.dot(numpy.linalg.inv(euler[y0][x0]), euler[y1][x1])
+						dR = numpy.dot(numpy.linalg.inv(R[y0][x0]), R[y1][x1])
 						
 						if 0.5 * (abs(dR[0][0]) + abs(dR[1][1]) + abs(dR[2][2]) - 1) > 1:
 							dTheta = math.acos(1)
@@ -389,7 +519,7 @@ def dbscan(phase, euler, width, height, n, epsilon):
 								for y2 in range(height):#range(y1, height):
 									for x2 in range(width):#range(x1, width):
 										if phase[y1][x1] == phase[y2][x2] and categories[y2][x2] == 1 and clusters[y2][x2] == 0:
-											dR = numpy.dot(numpy.linalg.inv(euler[y1][x1]), euler[y2][x2])
+											dR = numpy.dot(numpy.linalg.inv(R[y1][x1]), R[y2][x2])
 											
 											if 0.5 * (abs(dR[0][0]) + abs(dR[1][1]) + abs(dR[2][2]) - 1) > 1:
 												dTheta = math.acos(1)
@@ -413,7 +543,7 @@ def dbscan(phase, euler, width, height, n, epsilon):
 				for y1 in range(height):
 					for x1 in range(width):
 						if phase[y0][x0] == phase[y1][x1] and categories[y1][x1] == 1:
-							dR = numpy.dot(numpy.linalg.inv(euler[y0][x0]), euler[y1][x1])
+							dR = numpy.dot(numpy.linalg.inv(R[y0][x0]), R[y1][x1])
 							
 							if 0.5 * (abs(dR[0][0]) + abs(dR[1][1]) + abs(dR[2][2]) - 1) > 1:
 								dTheta = math.acos(1)
@@ -435,16 +565,16 @@ def dbscan(phase, euler, width, height, n, epsilon):
 def cluster(data, n, epsilon):
 	
 	phase = numpy.zeros((data['height'], data['width']))
-	euler = numpy.zeros((data['height'], data['width'], 3, 3))
+	R = numpy.zeros((data['height'], data['width'], 3, 3))
 	
 	for y in range(data['height']):
 		for x in range(data['width']):
 			phase[y][x] = data['phases'][data['data']['phase'][y][x]]['ID']
-			euler[y][x] = symT(euler_rotation_matrix(AxisSet.ZXZ, data['data']['euler'][y][x]))
+			R[y][x] = data['data']['R'][y][x]
 	
 	width = data['width']
 	height = data['height']
-	k, categories, clusters = dbscan(phase, euler, width, height, n, epsilon)
+	k, categories, clusters = dbscan(phase, R, width, height, n, epsilon)
 	output = dict()
 	output['k'] = k
 	output['data'] = dict()
@@ -469,77 +599,6 @@ def cluster(data, n, epsilon):
 	
 	return output
 
-def calGND(data, dx):
-	
-	euler = list()
-	
-	for y in range(data['height']):
-		euler.append(list())
-		
-		for x in range(data['width']):
-			euler[y].append(symT(euler_rotation_matrix(AxisSet.ZXZ, data['data']['euler'][y][x])))
-	
-	euler.append(list())
-	
-	for y in range(data['height']):
-		euler[y].append(numpy.eye(3))
-	
-	for x in range(data['width'] + 1):
-		euler[data['height']].append(numpy.eye(3))
-	
-	GND = list()
-	
-	for y in range(data['height']):
-		GND.append(list())
-		
-		for x in range(data['width']):
-			if data['phases'][data['data']['phase'][y][x]]['ID'] in (0, 4294967294, 4294967295):
-				GND[y].append(0)
-			else:
-				lType = data['phases'][data['data']['phase'][y][x]]['type']
-				a, b, c = data['phases'][data['data']['phase'][y][x]]['constants']
-				alpha, beta, gamma = data['phases'][data['data']['phase'][y][x]]['angles']
-				
-				if lType == 'cP':
-					ka = a
-				elif lType == 'cI':
-					ka = math.sqrt(3) * a / 2
-				elif lType == 'cF':
-					ka = math.sqrt(2) * a / 2
-				elif lType == 'tP':
-					ka = min(a, c)
-				elif lType == 'tI':
-					ka = min(a, c, math.sqrt(2 * a ** 2 + c ** 2) / 2)
-				elif lType == 'oP':
-					ka = min(a, b, c)
-				elif lType == 'oS':
-					ka = min(a, b, c, math.sqrt(a ** 2 + b ** 2) / 2)
-				elif lType == 'oI':
-					ka = min(a, b, c, math.sqrt(a ** 2 + b ** 2 + c ** 2) / 2)
-				elif lType == 'oF':
-					ka = min(a, b, c, math.sqrt(a ** 2 + b ** 2) / 2, math.sqrt(b ** 2 + c ** 2) / 2, math.sqrt(c ** 2 + a ** 2) / 2)
-				elif lType == 'hP':
-					ka = min(a, c)
-				elif lType == 'hR':
-					ka = min(a, math.sqrt(2 * a ** 2 * (1 - math.cos(alpha))), math.sqrt(3 * a ** 2 * (1 - 2 * math.cos(alpha))))
-				elif lType == 'mP':
-					ka = min(a, b, c, math.sqrt(c ** 2 + a ** 2 - 2 * c * a * math.cos(beta)))
-				elif lType == 'mS':
-					ka = min(a, b, c, math.sqrt(c ** 2 + a ** 2 - 2 * c * a * math.cos(beta)), math.sqrt(a ** 2 + b ** 2) / 2)
-				elif lType == 'aP':
-					ka = min(a, b, c, math.sqrt(b ** 2 + c ** 2 - 2 * b * c * math.cos(alpha)), math.sqrt(c ** 2 + a ** 2 - 2 * c * a * math.cos(beta)), math.sqrt(a ** 2 + b ** 2 - 2 * a * b * math.cos(gamma)), math.sqrt(a ** 2 + b ** 2 + c ** 2 - 2 * b * c * math.cos(alpha) - 2 * c * a * math.cos(beta) - 2 * a * b * math.cos(gamma)))
-				else:
-					ka = 0
-				
-				rho = (3.6 / ka) * 0.25 * SAlpha5(data['width'], data['height'], data['data']['phase'], euler, x, y, dx) ** 2
-				#rho = (3.6 / ka) * 0.25 * SAlpha52(data['width'], data['height'], data['data']['phase'], euler, x, y, dx) ** 2
-				
-				if rho == 0:
-					GND[y].append(rho)
-				else:
-					GND[y].append(math.log10(rho))
-	
-	return GND
 
 def mapGND(data, phaseID=None):
 	
@@ -560,22 +619,14 @@ def mapGND(data, phaseID=None):
 	return GND
 
 def calKAM(data):
-	
-	euler = list()
-	
-	for y in range(data['height']):
-		euler.append(list())
-		
-		for x in range(data['width']):
-			euler[y].append(symT(euler_rotation_matrix(AxisSet.ZXZ, data['data']['euler'][y][x])))
-	
-	euler.append(list())
+	R = copy.deepcopy(data['data']['r'])
+	R.append(list())
 	
 	for y in range(data['height']):
-		euler[y].append(numpy.eye(3))
+		R[y].append(numpy.eye(3))
 	
 	for x in range(data['width'] + 1):
-		euler[data['height']].append(numpy.eye(3))
+		R[data['height']].append(numpy.eye(3))
 	
 	KAM = list()
 	
@@ -604,10 +655,10 @@ def calKAM(data):
 				if y == data['height'] - 1 or data['data']['phase'][y][x] != data['data']['phase'][y+1][x]:
 					yp = 0
 				
-				S += xm * trace_angle(numpy.dot(numpy.linalg.inv(euler[y][x]), euler[y][x - 1]))
-				S += xp * trace_angle(numpy.dot(numpy.linalg.inv(euler[y][x]), euler[y][x + 1]))
-				S += ym * trace_angle(numpy.dot(numpy.linalg.inv(euler[y][x]), euler[y - 1][x]))
-				S += yp * trace_angle(numpy.dot(numpy.linalg.inv(euler[y][x]), euler[y + 1][x]))
+				S += xm * rotation_angle(misrotation_matrix(R[y][x], R[y][x - 1]))
+				S += xp * rotation_angle(misrotation_matrix(R[y][x], R[y][x + 1]))
+				S += ym * rotation_angle(misrotation_matrix(R[y][x], R[y - 1][x]))
+				S += yp * rotation_angle(misrotation_matrix(R[y][x], R[y + 1][x]))
 				
 				if xm + xp + ym + yp == 0:
 					KAM[y].append(0)
@@ -637,7 +688,7 @@ def mapKAM(data, phaseID=None):
 def mapIPF(data, axis, phaseID=None):
 	
 	IPF = list()
-	refV = ref(axis)
+	refV = axis.value
 	
 	for y in range(data['height']):
 		IPF.append(list())
@@ -649,15 +700,14 @@ def mapIPF(data, axis, phaseID=None):
 				IPF[y].append(list((0.5, 0.5, 0.5)))
 			else:
 				euler = data['data']['euler'][y][x]
-				lSym = data['phases'][data['data']['phase'][y][x]]['type'][0]
-				vx, vy, vz = numpy.dot(euler_rotation_matrix(AxisSet.ZXZ, euler), refV).tolist()
-				vx, vy, vz = sym(vx, vy, vz, lSym)
-				vx, vy, vz = abs(vx) / max(abs(vx), abs(vy), abs(vz)), abs(vy) / max(abs(vx), abs(vy), abs(vz)), abs(vz) / max(abs(vx), abs(vy), abs(vz))
-				IPF[y].append((vx, vy, vz))
+				lattice_type = BravaisLattice(data['phases'][data['data']['phase'][y][x]]['type'])
+				v = numpy.dot(euler_rotation_matrix(AxisSet.ZXZ, euler), refV).tolist()
+				v = reduce_vector(v, lattice_type)
+				IPF[y].append(v)
 	
 	return IPF
 
-def keyIPF(lSym, size, guides):
+def keyIPF(lattice_type, size, guides):
 	
 	IPF = list()
 	
@@ -672,15 +722,15 @@ def keyIPF(lSym, size, guides):
 			elif guides and (round(abs(x), 2) == round(abs(y), 2) or round(abs(y), 2) == round(abs(z), 2) or round(abs(z), 2) == round(abs(x), 2) or X == size / 2 or Y == size / 2):
 				IPF[Y].append(list((0, 0, 0)))
 			else:
-				x, y, z = sym(x, y, z, lSym)
-				x, y, z = abs(x) / max(abs(x), abs(y), abs(z)), abs(y) / max(abs(x), abs(y), abs(z)), abs(z) / max(abs(x), abs(y), abs(z))
-				IPF[Y].append((x, y, z))
+				v = (x, y, z)
+				v = reduce_vector(v, lattice_type)
+				IPF[Y].append(v)
 	
 	return IPF
 
 def calV(euler, refV):
-	
-	R = symT(euler_rotation_matrix(AxisSet.ZXZ, euler))
+
+	R = reduce_matrix(euler_rotation_matrix(AxisSet.ZXZ, euler), CrystalFamily.C)
 	vx, vy, vz = numpy.dot(R, refV).tolist()
 	vX, vY = forward_stereographic(vx, vy, vz)
 	return (-vX, -vY)
@@ -688,7 +738,7 @@ def calV(euler, refV):
 def calSGP(data, axis):
 	
 	SGP = list()
-	refV = ref(axis)
+	refV = axis.value
 	
 	for y in range(data['height']):
 		SGP.append(list())
@@ -776,12 +826,11 @@ def mapSGP(data, metadata, size, plot, phaseID=None, trim=True):
 			for X in range(size):
 				vX = math.tan(math.radians(22.5)) * X / (size - 1)
 				vY = math.tan(math.radians(22.5)) * Y / (size - 1)
-				vx, vy, vz = inverse_stereographic(vX, vY)
-				lSym = 'c'
-				vx, vy, vz = sym(vx, vy, vz, lSym)
-				vx, vy, vz = abs(vx) / max(abs(vx), abs(vy), abs(vz)), abs(vy) / max(abs(vx), abs(vy), abs(vz)), abs(vz) / max(abs(vx), abs(vy), abs(vz))
+				v = inverse_stereographic(vX, vY)
+				lattice_type = BravaisLattice.CP
+				v = reduce_vector(v, lattice_type)
 				try:
-					SGP[int(round((size - 1) * vY / math.tan(math.radians(22.5))))][int(round((size - 1) * vX / math.tan(math.radians(22.5))))] = list((vx, vy, vz))
+					SGP[int(round((size - 1) * vY / math.tan(math.radians(22.5))))][int(round((size - 1) * vX / math.tan(math.radians(22.5))))] = list(v)
 				except IndexError:
 					continue
 	
@@ -801,12 +850,11 @@ def mapSGP(data, metadata, size, plot, phaseID=None, trim=True):
 					continue
 				
 				vX, vY = data['data']['SGP'][y][x]
-				vx, vy, vz = inverse_stereographic(vX, vY)
-				lSym = data['phases'][data['data']['phase'][y][x]]['type'][0]
-				vx, vy, vz = sym(vx, vy, vz, lSym)
-				vx, vy, vz = abs(vx) / max(abs(vx), abs(vy), abs(vz)), abs(vy) / max(abs(vx), abs(vy), abs(vz)), abs(vz) / max(abs(vx), abs(vy), abs(vz))
+				v = inverse_stereographic(vX, vY)
+				lattice_type = BravaisLattice(data['phases'][data['data']['phase'][y][x]]['type'])
+				v = reduce_vector(v, lattice_type)
 				try:
-					SGP[int(round((size - 1) * vY / math.tan(math.radians(22.5))))][int(round((size - 1) * vX / math.tan(math.radians(22.5))))] = list((vx, vy, vz))
+					SGP[int(round((size - 1) * vY / math.tan(math.radians(22.5))))][int(round((size - 1) * vX / math.tan(math.radians(22.5))))] = list(v)
 				except IndexError:
 					continue
 	
@@ -1243,13 +1291,13 @@ def crunch(data):
 			for pixel in pixels:
 				if data['phases'][data['data']['phase'][pixel[1]][pixel[0]]]['ID'] != 0:
 					count += 1
-					R += symT(euler_rotation_matrix(AxisSet.ZXZ, data['data']['euler'][pixel[1]][pixel[0]]))
+					R += reduce_matrix(euler_rotation_matrix(AxisSet.ZXZ, data['data']['euler'][pixel[1]][pixel[0]]), CrystalFamily.C)
 					IQ += data['data']['IQ'][pixel[1]][pixel[0]]
 					PQ += data['data']['PQ'][pixel[1]][pixel[0]]
 			
 			U, S, VT = numpy.linalg.svd(R / count)
 			R = numpy.dot(U, VT)
-			euler = euler_angles(symT(R), AxisSet.ZXZ)
+			euler = euler_angles(reduce_matrix(R, CrystalFamily.C), AxisSet.ZXZ)
 			IQ = IQ / count
 			PQ = PQ / 4
 			output['data']['phase'][y].append(phase)
@@ -1270,18 +1318,17 @@ def misorientation():
 	
 	euler1 = list(math.radians(float(angle.strip())) for angle in input('Enter Bunge-Euler angles for first point, separated by commas (deg): ').split(','))
 	euler2 = list(math.radians(float(angle.strip())) for angle in input('Enter Bunge-Euler angles for second point, separated by commas (deg): ').split(','))
-	R1 = symT(euler_rotation_matrix(AxisSet.ZXZ, euler1))
-	R2 = symT(euler_rotation_matrix(AxisSet.ZXZ, euler2))
-	dR = numpy.dot(numpy.linalg.inv(R1), R2)
-	theta = utilities.format_sig_figs_or_int(math.degrees(trace_angle(dR)), 6)
+	R1 = reduce_matrix(euler_rotation_matrix(AxisSet.ZXZ, euler1), CrystalFamily.C)
+	R2 = reduce_matrix(euler_rotation_matrix(AxisSet.ZXZ, euler2), CrystalFamily.C)
+	dR = misrotation_matrix(R1, R2)
+	theta = utilities.format_sig_figs_or_int(math.degrees(rotation_angle(dR)), 6)
 	print('Misorientation is: ' + theta + ' deg')
 	input('Press ENTER to close: ')
 	
 
 def analyse(path):
 	
-	filepaths = utilities.get_file_paths(directory_path=utilities.get_directory_path(path + '/data'), recursive=True,
-                                         extension='csv')
+	filepaths = utilities.get_file_paths(directory_path=utilities.get_directory_path(path + '/data'), recursive=True, extension='csv')
 	metadata = fileloader.getNyeMetadata(path + '/metadata.csv')
 	cNum = -1
 	aType = 'q'
@@ -1351,8 +1398,9 @@ def analyse(path):
 		if cNum >= 0:
 			fileref += '-' + str(cNum)
 			data = crunches(data, cNum)
-		
-		data['data']['SGP'] = calSGP(data, 'z')
+
+		data['data']['R'] = calR(data)
+		data['data']['SGP'] = calSGP(data, Axis.Z)
 		
 		if 'g' in aType:
 			data['data']['KAM'] = calKAM(data)
@@ -1549,7 +1597,7 @@ def summarise(path):
 				if 'd' in metadata[data['fileref']]['aType']:
 					kCounts[data['data']['cID'][y][x]] += 1
 					data['data']['k']['phase'][data['data']['cID'][y][x]] = data['data']['phase'][y][x]
-					data['data']['k']['R'][data['data']['cID'][y][x]] += symT(euler_rotation_matrix(AxisSet.ZXZ, data['data']['euler'][y][x]))
+					data['data']['k']['R'][data['data']['cID'][y][x]] += reduce_matrix(euler_rotation_matrix(AxisSet.ZXZ, data['data']['euler'][y][x]), CrystalFamily.C)
 					data['data']['k']['IQ'][data['data']['cID'][y][x]] += data['data']['IQ'][y][x]
 					data['data']['k']['PQ'][data['data']['cID'][y][x]] += data['data']['PQ'][y][x]
 					
@@ -1569,7 +1617,7 @@ def summarise(path):
 					data['data']['k']['R'][k] = numpy.dot(U, VT)
 					phi1, Phi, phi2 = euler_angles(data['data']['k']['R'][k], AxisSet.ZXZ)
 					data['data']['k']['euler'][k] = list((phi1, Phi, phi2))
-					vX, vY = calV(data['data']['k']['euler'][k], ref('z'))
+					vX, vY = calV(data['data']['k']['euler'][k], Axis.Z.value)
 					data['data']['k']['SGP'][k] = list((vX, vY))
 				
 				data['data']['k']['IQ'][k] /= kCounts[k]
@@ -1621,8 +1669,8 @@ def summarise(path):
 								J = orientation.get_relationship_matrix(vectors[0][0], vectors[0][1], vectors[1][0], vectors[1][1], params[0], params[1])
 								s = math.sqrt(params[0][0] ** 2 + params[0][1] ** 2 + params[0][2] ** 2) / math.sqrt(params[1][0] ** 2 + params[1][1] ** 2 + params[1][2] ** 2)
 								RF = numpy.dot(J / s, R1)
-								dR = numpy.dot(numpy.linalg.inv(RF), R2)
-								theta = min(trace_angle(dR), theta)
+								dR = misrotation_matrix(RF, R2)
+								theta = min(rotation_angle(dR), theta)
 							
 							match['dTheta'] = theta
 							match['cosine'] = math.cos(theta)
@@ -1642,8 +1690,8 @@ def summarise(path):
 							for plane in family:
 								J = orientation.get_twin_matrix(plane)
 								RF = numpy.dot(J, R1)
-								dR = numpy.dot(numpy.linalg.inv(RF), R2)
-								theta = min(trace_angle(dR), theta)
+								dR = misrotation_matrix(RF, R2)
+								theta = min(rotation_angle(dR), theta)
 							
 							match['dTheta'] = theta
 							match['cosine'] = math.cos(theta)
@@ -1836,9 +1884,9 @@ def makeMaps(path, size=None):
 		utilities.make_image(data['data']['PQ'], data['width'], data['height'], 100, 'L').save(path + '/maps/' + data['fileref'] + '/PQ.png')
 		utilities.make_image(data['data']['IQ'], data['width'], data['height'], 100, 'L').save(path + '/maps/' + data['fileref'] + '/IQ.png')
 		utilities.make_image(mapRGB(data), data['width'], data['height'], 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/RGB.png')
-		utilities.make_image(mapIPF(data, 'x'), data['width'], data['height'], 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/OX.png')
-		utilities.make_image(mapIPF(data, 'y'), data['width'], data['height'], 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/OY.png')
-		utilities.make_image(mapIPF(data, 'z'), data['width'], data['height'], 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/OZ.png')
+		utilities.make_image(mapIPF(data, Axis.X), data['width'], data['height'], 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/OX.png')
+		utilities.make_image(mapIPF(data, Axis.Y), data['width'], data['height'], 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/OY.png')
+		utilities.make_image(mapIPF(data, Axis.Z), data['width'], data['height'], 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/OZ.png')
 		# utilities.makeImage(mapIPF(data, 'z', phaseID=60696), data['width'], data['height'], 1, 'RGB').save(path + '/maps/' + data['fileref'] + '/OZ[60696].png') # temporary
 		
 		if 'g' in metadata[data['fileref']]['aType']:
