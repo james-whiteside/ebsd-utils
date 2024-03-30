@@ -63,6 +63,7 @@ class CrystalFamily(Enum):
 	H = "h"
 	M = "m"
 	A = "a"
+	NONE = "None"
 
 
 class BravaisLattice(Enum):
@@ -85,6 +86,12 @@ class BravaisLattice(Enum):
 	MS = "mS"
 	AP = "aP"
 	NONE = "None"
+
+	def get_family(self) -> CrystalFamily:
+		if self is BravaisLattice.NONE:
+			return CrystalFamily.NONE
+		else:
+			return CrystalFamily(self.value[0])
 
 
 def single_rotation_matrix(axis: Axis, angle: float) -> numpy.ndarray:
@@ -228,9 +235,6 @@ def rotation_angle(R: numpy.ndarray) -> float:
 	return theta
 
 
-
-
-
 def misrotation_matrix(R1: numpy.ndarray, R2: numpy.ndarray) -> numpy.ndarray:
 	"""
 	Computes the misrotation matrix ``dR`` between two rotation matrices ``R1`` and ``R2``.
@@ -252,10 +256,11 @@ def reduce_vector(v: tuple[float, float, float], lattice_type: BravaisLattice) -
 	:return: The reduced vector.
 	"""
 	x, y, z = v
+	crystal_family = lattice_type.get_family()
 
-	if lattice_type.value == "None":
+	if crystal_family is CrystalFamily.NONE:
 		a, b, c = z, y, x
-	elif lattice_type.value[0] == 'c':
+	elif crystal_family is CrystalFamily.C:
 		z, y, x = sorted((-abs(x), -abs(y), -abs(z)))
 		a = z - y
 		b = (y - x) * math.sqrt(2)
@@ -274,7 +279,7 @@ def reduce_matrix(R: numpy.ndarray, symmetry: CrystalFamily) -> numpy.ndarray:
 	:param symmetry: The crystal symmetry of the Bravais lattice type.
 	:return: The reduced matrix.
 	"""
-	if symmetry.value == "c":
+	if symmetry is CrystalFamily.C:
 		if R[2][2] > 0:
 			R = numpy.dot(numpy.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, -1.0]]), R)
 
@@ -373,15 +378,12 @@ def close_pack_distance(
 		constants: tuple[float, float, float],
 		angles: tuple[float, float, float]
 ) -> float:
-	a, b, c = constants
-	alpha, beta, gamma = angles
-
 	if lattice_type is BravaisLattice.CP:
-		return a
+		return constants[0]
 	elif lattice_type is BravaisLattice.CI:
-		return math.sqrt(3) * a / 2
+		return math.sqrt(3) * constants[0] / 2
 	elif lattice_type is BravaisLattice.CF:
-		return math.sqrt(2) * a / 2
+		return math.sqrt(2) * constants[0] / 2
 	else:
 		raise NotImplementedError
 
