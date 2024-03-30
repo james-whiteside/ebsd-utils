@@ -1,4 +1,4 @@
-#-*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 
 import math
 import datetime
@@ -7,6 +7,8 @@ import itertools
 import sys
 import os
 import shutil
+from enum import Enum
+
 import numpy
 from numba import jit, cuda
 from PIL import Image as image
@@ -15,60 +17,157 @@ import fileloader
 import channelling
 import orientation
 
-def R1(axis, angle):
-	
-	if axis == 'x':
-		return numpy.array([[1.0, 0.0, 0.0], [0.0, math.cos(angle), -math.sin(angle)], [0.0, math.sin(angle), math.cos(angle)]])
-	
-	if axis == 'y':
-		return numpy.array([[math.cos(angle), 0.0, math.sin(angle)], [0.0, 1.0, 0.0], [-math.sin(angle), 0.0, math.cos(angle)]])
-	
-	if axis == 'z':
-		return numpy.array([[math.cos(angle), -math.sin(angle), 0.0], [math.sin(angle), math.cos(angle), 0.0], [0.0, 0.0, 1.0]])
 
-def R3(axes, angles):
-	
+class Axis(Enum):
+	"""
+	Enumeration of the three Cartesian axes.
+	"""
+	X = "x"
+	Y = "y"
+	Z = "z"
+
+
+class AxisSet(Enum):
+	"""
+	Enumeration of the Euler axis sets, as listed in Tab. 3.1.
+	"""
+	# Tait-Bryan axis sets
+	XYZ = (Axis.X, Axis.Y, Axis.Z)
+	XZY = (Axis.X, Axis.Z, Axis.Y)
+	YXZ = (Axis.Y, Axis.X, Axis.Z)
+	YZX = (Axis.Y, Axis.Z, Axis.X)
+	ZXY = (Axis.Z, Axis.X, Axis.Y)
+	ZYX = (Axis.Z, Axis.Y, Axis.X)
+	# Proper Euler axis sets
+	XYX = (Axis.X, Axis.Y, Axis.X)
+	XZX = (Axis.X, Axis.Z, Axis.X)
+	YXY = (Axis.Y, Axis.X, Axis.Y)
+	YZY = (Axis.Y, Axis.Z, Axis.Y)
+	ZXZ = (Axis.Z, Axis.X, Axis.Z)
+	ZYZ = (Axis.Z, Axis.Y, Axis.Z)
+
+
+def single_rotation_matrix(axis: Axis, angle: float) -> numpy.ndarray:
+	"""
+	Computes the 3D rotation matrix for an active right-handed rotation about a single axis.
+	:param axis: The axis of rotation.
+	:param angle: The angle of rotation about the axis in ``rad``.
+	:return: The rotation matrix.
+	"""
+	match axis:
+		case Axis.X:
+			return numpy.array((
+				(1.0, 0.0, 0.0),
+				(0.0, math.cos(angle), -math.sin(angle)),
+				(0.0, math.sin(angle), math.cos(angle))
+			))
+		case Axis.Y:
+			return numpy.array((
+				(math.cos(angle), 0.0, math.sin(angle)),
+				(0.0, 1.0, 0.0),
+				(-math.sin(angle), 0.0, math.cos(angle))
+			))
+		case Axis.Z:
+			return numpy.array((
+				(math.cos(angle), -math.sin(angle), 0.0),
+				(math.sin(angle), math.cos(angle), 0.0),
+				(0.0, 0.0, 1.0)
+			))
+
+
+def euler_rotation_matrix(axis_set: AxisSet, angles: tuple[float, float, float]) -> numpy.ndarray:
+	"""
+	Computes the 3D rotation matrix for a set of Euler angles.
+	:param axis_set: The set of Euler axes.
+	:param angles: The Euler angles in ``rad``.
+	:return: The rotation matrix.
+	"""
 	R = numpy.eye(3)
-	R = numpy.dot(R1(axes[0], angles[0]), R)
-	R = numpy.dot(R1(axes[1], angles[1]), R)
-	R = numpy.dot(R1(axes[2], angles[2]), R)
+	R = numpy.dot(single_rotation_matrix(axis_set.value[0], angles[0]), R)
+	R = numpy.dot(single_rotation_matrix(axis_set.value[1], angles[1]), R)
+	R = numpy.dot(single_rotation_matrix(axis_set.value[2], angles[2]), R)
 	return R
 
-def ZXZ(R):
-	
-	phi1 = math.acos(R[2][1] / math.sqrt(1 - R[2][2] ** 2))
-	Phi = math.acos(R[2][2])
-	phi2 = math.acos(-R[1][2] / math.sqrt(1 - R[2][2] ** 2))
-	return phi1, Phi, phi2
 
-def fSGP(x, y, z):
-	
+def euler_angles(rotation_matrix: numpy.ndarray, axis_set: AxisSet) -> tuple[float, float, float]:
+	"""
+	Computes the Euler angles for a 3D rotation matrix.
+	:param rotation_matrix: The rotation matrix.
+	:param axis_set: The set of Euler axes.
+	:return: The Euler angles in ``rad``.
+	"""
+	if axis_set is AxisSet.ZXZ:
+		phi1 = math.acos(rotation_matrix[2][1] / math.sqrt(1 - rotation_matrix[2][2] ** 2))
+		Phi = math.acos(rotation_matrix[2][2])
+		phi2 = math.acos(-rotation_matrix[1][2] / math.sqrt(1 - rotation_matrix[2][2] ** 2))
+		return phi1, Phi, phi2
+	else:
+		raise NotImplementedError
+
+
+def forward_stereographic(x: float, y: float, z: float) -> tuple[float, float]:
+	"""
+	Computes the forward stereographic projection ``(X, Y)`` of a point ``(x, y, z)`` in Cartesian space.
+	Solves Eqn. 3.34.
+	:param x: The Cartesian ``x``-coordinate.
+	:param y: The Cartesian ``y``-coordinate.
+	:param z: The Cartesian ``z``-coordinate.
+	:return: The stereographic coordinates ``(X, Y)``.
+	"""
 	X = x / (1 - z)
 	Y = y / (1 - z)
 	return X, Y
 
-def iSGP(X, Y):
-	
+
+def inverse_stereographic(X: float, Y: float) -> tuple[float, float, float]:
+	"""
+	Computes the Cartesian projection ``(x, y, z)`` of a point ``(X, Y)`` in stereographic space.
+	Solves Eqn. 3.34.
+	:param X: The stereographic ``X``-coordinate.
+	:param Y: The stereographic ``Y``-coordinate.
+	:return: The Cartesian coordinates ``(x, y, z)``.
+	"""
 	x = 2 * X / (X ** 2 + Y ** 2 + 1)
 	y = 2 * Y / (X ** 2 + Y ** 2 + 1)
 	z = (X ** 2 + Y ** 2 - 1) / (X ** 2 + Y ** 2 + 1)
 	return x, y, z
 
-def fGP(x, y, z):
-	
-	X = x / z
-	Y = y / z
+
+def forward_gnomonic(x: float, y: float, z: float) -> tuple[float, float]:
+	"""
+	Computes the forward gnomonic projection ``(X, Y)`` of a point ``(x, y, z)`` in Cartesian space.
+	Solves Eqn. 3.37.
+	:param x: The Cartesian ``x``-coordinate.
+	:param y: The Cartesian ``y``-coordinate.
+	:param z: The Cartesian ``z``-coordinate.
+	:return: The gnomonic coordinates ``(X, Y)``.
+	"""
+	X = -x / z
+	Y = -y / z
 	return X, Y
 
-def iGP(X, Y):
-	
-	x = X / math.sqrt(X ** 2 + Y ** 2 + 1)
-	y = Y / math.sqrt(X ** 2 + Y ** 2 + 1)
+
+def inverse_gnomonic(X: float, Y: float) -> tuple[float, float, float]:
+	"""
+	Computes the Cartesian projection ``(x, y, z)`` of a point ``(X, Y)`` in gnomonic space.
+	Solves Eqn. 3.37.
+	:param X: The gnomonic ``X``-coordinate.
+	:param Y: The gnomonic ``Y``-coordinate.
+	:return: The Cartesian coordinates ``(x, y, z)``.
+	"""
+	x = -X / math.sqrt(X ** 2 + Y ** 2 + 1)
+	y = -Y / math.sqrt(X ** 2 + Y ** 2 + 1)
 	z = 1 / math.sqrt(X ** 2 + Y ** 2 + 1)
 	return x, y, z
 
-def dTheta(dR):
-	
+
+def trace_angle(dR: numpy.ndarray) -> float:
+	"""
+	Computes the rotation angle ``dθ`` of a rotation matrix ``dR``.
+	Solves Eqn. 4.1.
+	:param dR: The rotation matrix ``dR``.
+	:return: The rotation angle ``dθ``.
+	"""
 	if 0.5 * (abs(dR[0][0]) + abs(dR[1][1]) + abs(dR[2][2]) - 1) > 1:
 		return math.acos(1)
 	elif 0.5 * (abs(dR[0][0]) + abs(dR[1][1]) + abs(dR[2][2]) - 1) < -1:
@@ -76,14 +175,15 @@ def dTheta(dR):
 	else:
 		return math.acos(0.5 * (abs(dR[0][0]) + abs(dR[1][1]) + abs(dR[2][2]) - 1))
 
+
 def dOmega(euler1, euler2, dx):
 	
 	dR = numpy.dot(numpy.linalg.inv(euler1), euler2)
 	
-	if dTheta(dR) == 0:
+	if trace_angle(dR) == 0:
 		return numpy.zeros((3, 3))
 	else:
-		return numpy.dot((-3 * dTheta(dR)) / (dx * math.sin(dTheta(dR))), dR)
+		return numpy.dot((-3 * trace_angle(dR)) / (dx * math.sin(trace_angle(dR))), dR)
 
 def ref(axis):
 	
@@ -197,7 +297,7 @@ def SAlpha52(width, height, phase, euler, x, y, dx):
 
 def distf(euler1, euler2):
 	
-	return math.degrees(dTheta(numpy.dot(numpy.linalg.inv(euler1), euler2)))
+	return math.degrees(trace_angle(numpy.dot(numpy.linalg.inv(euler1), euler2)))
 
 @jit(nopython=True)
 def dbscan(phase, euler, width, height, n, epsilon):
@@ -337,7 +437,7 @@ def cluster(data, n, epsilon):
 	for y in range(data['height']):
 		for x in range(data['width']):
 			phase[y][x] = data['phases'][data['data']['phase'][y][x]]['ID']
-			euler[y][x] = symT(R3('zxz', data['data']['euler'][y][x]))
+			euler[y][x] = symT(euler_rotation_matrix(AxisSet.ZXZ, data['data']['euler'][y][x]))
 	
 	width = data['width']
 	height = data['height']
@@ -374,7 +474,7 @@ def calGND(data, dx):
 		euler.append(list())
 		
 		for x in range(data['width']):
-			euler[y].append(symT(R3('zxz', data['data']['euler'][y][x])))
+			euler[y].append(symT(euler_rotation_matrix(AxisSet.ZXZ, data['data']['euler'][y][x])))
 	
 	euler.append(list())
 	
@@ -464,7 +564,7 @@ def calKAM(data):
 		euler.append(list())
 		
 		for x in range(data['width']):
-			euler[y].append(symT(R3('zxz', data['data']['euler'][y][x])))
+			euler[y].append(symT(euler_rotation_matrix(AxisSet.ZXZ, data['data']['euler'][y][x])))
 	
 	euler.append(list())
 	
@@ -501,10 +601,10 @@ def calKAM(data):
 				if y == data['height'] - 1 or data['data']['phase'][y][x] != data['data']['phase'][y+1][x]:
 					yp = 0
 				
-				S += xm * dTheta(numpy.dot(numpy.linalg.inv(euler[y][x]), euler[y][x-1]))
-				S += xp * dTheta(numpy.dot(numpy.linalg.inv(euler[y][x]), euler[y][x+1]))
-				S += ym * dTheta(numpy.dot(numpy.linalg.inv(euler[y][x]), euler[y-1][x]))
-				S += yp * dTheta(numpy.dot(numpy.linalg.inv(euler[y][x]), euler[y+1][x]))
+				S += xm * trace_angle(numpy.dot(numpy.linalg.inv(euler[y][x]), euler[y][x - 1]))
+				S += xp * trace_angle(numpy.dot(numpy.linalg.inv(euler[y][x]), euler[y][x + 1]))
+				S += ym * trace_angle(numpy.dot(numpy.linalg.inv(euler[y][x]), euler[y - 1][x]))
+				S += yp * trace_angle(numpy.dot(numpy.linalg.inv(euler[y][x]), euler[y + 1][x]))
 				
 				if xm + xp + ym + yp == 0:
 					KAM[y].append(0)
@@ -547,7 +647,7 @@ def mapIPF(data, axis, phaseID=None):
 			else:
 				euler = data['data']['euler'][y][x]
 				lSym = data['phases'][data['data']['phase'][y][x]]['type'][0]
-				vx, vy, vz = numpy.dot(R3('zxz', euler), refV).tolist()
+				vx, vy, vz = numpy.dot(euler_rotation_matrix(AxisSet.ZXZ, euler), refV).tolist()
 				vx, vy, vz = sym(vx, vy, vz, lSym)
 				vx, vy, vz = abs(vx) / max(abs(vx), abs(vy), abs(vz)), abs(vy) / max(abs(vx), abs(vy), abs(vz)), abs(vz) / max(abs(vx), abs(vy), abs(vz))
 				IPF[y].append((vx, vy, vz))
@@ -562,7 +662,7 @@ def keyIPF(lSym, size, guides):
 		IPF.append(list())
 		
 		for X in range(size):
-			x, y, z = iSGP(2 * X / size - 1, 2 * Y / size - 1)
+			x, y, z = inverse_stereographic(2 * X / size - 1, 2 * Y / size - 1)
 			
 			if math.sqrt((2 * X / size - 1) ** 2 + (2 * Y / size - 1) ** 2) > 1:
 				IPF[Y].append(list((0, 0, 0)))
@@ -577,9 +677,9 @@ def keyIPF(lSym, size, guides):
 
 def calV(euler, refV):
 	
-	R = symT(R3('zxz', euler))
+	R = symT(euler_rotation_matrix(AxisSet.ZXZ, euler))
 	vx, vy, vz = numpy.dot(R, refV).tolist()
-	vX, vY = fSGP(vx, vy, vz)
+	vX, vY = forward_stereographic(vx, vy, vz)
 	return (-vX, -vY)
 
 def calSGP(data, axis):
@@ -617,7 +717,7 @@ def calCF(data, Z, E, refV):
 				CF[y].append(0)
 			else:
 				vX, vY = calV(data['data']['euler'][y][x], refV)
-				vx, vy, vz = iSGP(vX, vY)
+				vx, vy, vz = inverse_stereographic(vX, vY)
 				vtheta = -math.degrees(math.atan(math.sqrt(vx ** 2 + vy ** 2) / vz))
 				vphi = 90 - math.degrees(math.atan2(vy, vx))
 				CF[y].append(channelling.fraction(vtheta, vphi, critData[data['data']['phase'][y][x]]))
@@ -657,7 +757,7 @@ def mapSGP(data, metadata, size, plot, phaseID=None, trim=True):
 			for X in range(size):
 				vX = math.tan(math.radians(22.5)) * X / size
 				vY = math.tan(math.radians(22.5)) * Y / size
-				vx, vy, vz = iSGP(vX, vY)
+				vx, vy, vz = inverse_stereographic(vX, vY)
 				
 				if (abs(vx) > abs(vy) or abs(vy) > abs(vz) or abs(vz) < abs(vx)):
 					SGP[Y][X] = list((1, 1, 1))
@@ -673,7 +773,7 @@ def mapSGP(data, metadata, size, plot, phaseID=None, trim=True):
 			for X in range(size):
 				vX = math.tan(math.radians(22.5)) * X / (size - 1)
 				vY = math.tan(math.radians(22.5)) * Y / (size - 1)
-				vx, vy, vz = iSGP(vX, vY)
+				vx, vy, vz = inverse_stereographic(vX, vY)
 				lSym = 'c'
 				vx, vy, vz = sym(vx, vy, vz, lSym)
 				vx, vy, vz = abs(vx) / max(abs(vx), abs(vy), abs(vz)), abs(vy) / max(abs(vx), abs(vy), abs(vz)), abs(vz) / max(abs(vx), abs(vy), abs(vz))
@@ -698,7 +798,7 @@ def mapSGP(data, metadata, size, plot, phaseID=None, trim=True):
 					continue
 				
 				vX, vY = data['data']['SGP'][y][x]
-				vx, vy, vz = iSGP(vX, vY)
+				vx, vy, vz = inverse_stereographic(vX, vY)
 				lSym = data['phases'][data['data']['phase'][y][x]]['type'][0]
 				vx, vy, vz = sym(vx, vy, vz, lSym)
 				vx, vy, vz = abs(vx) / max(abs(vx), abs(vy), abs(vz)), abs(vy) / max(abs(vx), abs(vy), abs(vz)), abs(vz) / max(abs(vx), abs(vy), abs(vz))
@@ -1003,7 +1103,7 @@ def mapSGP(data, metadata, size, plot, phaseID=None, trim=True):
 			for X in range(size):
 				vX = math.tan(math.radians(22.5)) * X / size
 				vY = math.tan(math.radians(22.5)) * Y / size
-				vx, vy, vz = iSGP(vX, vY)
+				vx, vy, vz = inverse_stereographic(vX, vY)
 				
 				if (abs(vx) > abs(vy) or abs(vy) > abs(vz) or abs(vz) < abs(vx)):
 					SGP[Y][X] = list((1, 1, 1))
@@ -1140,13 +1240,13 @@ def crunch(data):
 			for pixel in pixels:
 				if data['phases'][data['data']['phase'][pixel[1]][pixel[0]]]['ID'] != 0:
 					count += 1
-					R += symT(R3('zxz', data['data']['euler'][pixel[1]][pixel[0]]))
+					R += symT(euler_rotation_matrix(AxisSet.ZXZ, data['data']['euler'][pixel[1]][pixel[0]]))
 					IQ += data['data']['IQ'][pixel[1]][pixel[0]]
 					PQ += data['data']['PQ'][pixel[1]][pixel[0]]
 			
 			U, S, VT = numpy.linalg.svd(R / count)
 			R = numpy.dot(U, VT)
-			euler = ZXZ(symT(R))
+			euler = euler_angles(symT(R), AxisSet.ZXZ)
 			IQ = IQ / count
 			PQ = PQ / 4
 			output['data']['phase'][y].append(phase)
@@ -1167,10 +1267,10 @@ def misorientation():
 	
 	euler1 = list(math.radians(float(angle.strip())) for angle in input('Enter Bunge-Euler angles for first point, separated by commas (deg): ').split(','))
 	euler2 = list(math.radians(float(angle.strip())) for angle in input('Enter Bunge-Euler angles for second point, separated by commas (deg): ').split(','))
-	R1 = symT(R3('zxz', euler1))
-	R2 = symT(R3('zxz', euler2))
+	R1 = symT(euler_rotation_matrix(AxisSet.ZXZ, euler1))
+	R2 = symT(euler_rotation_matrix(AxisSet.ZXZ, euler2))
 	dR = numpy.dot(numpy.linalg.inv(R1), R2)
-	theta = utilities.format_sig_figs_or_int(math.degrees(dTheta(dR)), 6)
+	theta = utilities.format_sig_figs_or_int(math.degrees(trace_angle(dR)), 6)
 	print('Misorientation is: ' + theta + ' deg')
 	input('Press ENTER to close: ')
 	
@@ -1446,7 +1546,7 @@ def summarise(path):
 				if 'd' in metadata[data['fileref']]['aType']:
 					kCounts[data['data']['cID'][y][x]] += 1
 					data['data']['k']['phase'][data['data']['cID'][y][x]] = data['data']['phase'][y][x]
-					data['data']['k']['R'][data['data']['cID'][y][x]] += symT(R3('zxz', data['data']['euler'][y][x]))
+					data['data']['k']['R'][data['data']['cID'][y][x]] += symT(euler_rotation_matrix(AxisSet.ZXZ, data['data']['euler'][y][x]))
 					data['data']['k']['IQ'][data['data']['cID'][y][x]] += data['data']['IQ'][y][x]
 					data['data']['k']['PQ'][data['data']['cID'][y][x]] += data['data']['PQ'][y][x]
 					
@@ -1464,7 +1564,7 @@ def summarise(path):
 				if k != 0:
 					U, S, VT = numpy.linalg.svd(data['data']['k']['R'][k] / kCounts[k])
 					data['data']['k']['R'][k] = numpy.dot(U, VT)
-					phi1, Phi, phi2 = ZXZ(data['data']['k']['R'][k])
+					phi1, Phi, phi2 = euler_angles(data['data']['k']['R'][k], AxisSet.ZXZ)
 					data['data']['k']['euler'][k] = list((phi1, Phi, phi2))
 					vX, vY = calV(data['data']['k']['euler'][k], ref('z'))
 					data['data']['k']['SGP'][k] = list((vX, vY))
@@ -1519,7 +1619,7 @@ def summarise(path):
 								s = math.sqrt(params[0][0] ** 2 + params[0][1] ** 2 + params[0][2] ** 2) / math.sqrt(params[1][0] ** 2 + params[1][1] ** 2 + params[1][2] ** 2)
 								RF = numpy.dot(J / s, R1)
 								dR = numpy.dot(numpy.linalg.inv(RF), R2)
-								theta = min(dTheta(dR), theta)
+								theta = min(trace_angle(dR), theta)
 							
 							match['dTheta'] = theta
 							match['cosine'] = math.cos(theta)
@@ -1540,7 +1640,7 @@ def summarise(path):
 								J = orientation.get_twin_matrix(plane)
 								RF = numpy.dot(J, R1)
 								dR = numpy.dot(numpy.linalg.inv(RF), R2)
-								theta = min(dTheta(dR), theta)
+								theta = min(trace_angle(dR), theta)
 							
 							match['dTheta'] = theta
 							match['cosine'] = math.cos(theta)
