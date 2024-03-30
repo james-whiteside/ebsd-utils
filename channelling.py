@@ -228,11 +228,11 @@ def genCritData(beamZ, targetID, E, maxRange, maxIndex):
 	e = E
 	max_range = maxRange
 	max_miller = maxIndex
-	materials = fileloader.getMaterials()
+	materials = fileloader.get_materials()
 	Z1 = beamZ
-	Z2 = materials[targetID]['Z']
-	lType = materials[targetID]['type']
-	diamond = materials[targetID]['diamond']
+	Z2 = materials[targetID].atomic_number
+	lType = materials[targetID].lattice_type
+	diamond = materials[targetID].has_diamond_structure
 	
 	if lType == 'cP':
 		lattice = 'sc'
@@ -243,8 +243,8 @@ def genCritData(beamZ, targetID, E, maxRange, maxIndex):
 	elif lType == 'cF':
 		lattice = 'fcc'
 	
-	alat = 10 * materials[targetID]['constants'][0]
-	xrms = 10 * materials[targetID]['vibration']
+	alat = 10 * materials[targetID].lattice_constants[0]
+	xrms = 10 * materials[targetID].vibration_amplitude
 	base = get_base(lattice)
 	fileref = '[' + str(targetID) + '][' + str(beamZ) + '][' + str(E) + ']'
 	file_emin_a = open('channelling/' + fileref + 'emin-a.txt', 'w')

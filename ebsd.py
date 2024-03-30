@@ -47,6 +47,41 @@ class AxisSet(Enum):
 	ZYZ = (Axis.Z, Axis.Y, Axis.Z)
 
 
+class CrystalFamily(Enum):
+	"""
+	Enumeration of the crystal lattice types, as listed in Tab. A2.1.
+	"""
+
+	C = "c"
+	T = "t"
+	O = "o"
+	H = "h"
+	M = "m"
+	A = "a"
+
+
+class BravaisLattice(Enum):
+	"""
+	Enumeration of the Bravais lattice types, as listed in Tab. A2.1.
+	"""
+
+	CP = "cP"
+	CI = "cI"
+	CF = "cF"
+	TP = "tP"
+	TI = "tI"
+	OP = "oP"
+	OI = "oI"
+	OF = "oF"
+	OS = "oS"
+	HP = "hP"
+	HR = "hR"
+	MP = "mP"
+	MS = "mS"
+	AP = "aP"
+	NONE = "None"
+
+
 def single_rotation_matrix(axis: Axis, angle: float) -> numpy.ndarray:
 	"""
 	Computes the 3D rotation matrix for an active right-handed rotation about a single axis.
@@ -1559,7 +1594,7 @@ def summarise(path):
 					data['data']['k']['GND'].append(math.log10(kGND[k]))
 		
 		if 'd' in metadata[data['fileref']]['aType']:
-			materials = fileloader.getMaterials()
+			materials = fileloader.get_materials()
 			variants = fileloader.getVariantList()
 			twins = fileloader.getTwinList()
 			matches = list()
@@ -1575,7 +1610,7 @@ def summarise(path):
 							match['variant'] = variant
 							match['k1'] = k1
 							match['k2'] = k2
-							params = list((materials[data['phases'][data['data']['k']['phase'][k1]]['ID']]['constants'], materials[data['phases'][data['data']['k']['phase'][k1]]['ID']]['constants']))
+							params = list((materials[data['phases'][data['data']['k']['phase'][k1]]['ID']].lattice_constants, materials[data['phases'][data['data']['k']['phase'][k2]]['ID']].lattice_constants))
 							R1 = data['data']['k']['R'][k1]
 							R2 = data['data']['k']['R'][k2]
 							polarity = sorted(list(set(list(itertools.permutations(list((1, 1, 1, 1, -1, -1, -1, -1)), 4)))), reverse=True)

@@ -1,31 +1,74 @@
-#-*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 
 import sys
 import math
 import numpy
 from PIL import Image as image
+from ebsd import BravaisLattice
 
-def getMaterials():
+
+class Material:
+	def __init__(
+		self,
+		name: str,
+		atomic_number: float,
+		atomic_weight: float,
+		density: float,
+		vibration_amplitude: float,
+		lattice_type: BravaisLattice,
+		lattice_constants: tuple[float, float, float],
+		lattice_angles: tuple[float, float, float],
+		has_diamond_structure: bool,
+	):
+		self.name = name
+		self.atomic_number = atomic_number
+		self.atomic_weight = atomic_weight
+		self.density = density
+		self.vibration_amplitude = vibration_amplitude
+		self.lattice_type = lattice_type
+		self.lattice_constants = lattice_constants
+		self.lattice_angles = lattice_angles
+		self.has_diamond_structure = has_diamond_structure
+
+	def as_dict(self):
+		return {
+			"name": self.name,
+			"Z": self.atomic_number,
+			"A": self.atomic_weight,
+			"density": self.density,
+			"vibration": self.vibration_amplitude,
+			"type": self.lattice_type,
+			"constants": self.lattice_constants,
+			"angles": self.lattice_angles,
+			"diamond": self.has_diamond_structure,
+		}
+
+
+def get_materials(path: str = "materials/materials.csv") -> dict[int, Material]:
+	materials = dict()
 	
-	output = dict()
-	
-	with open('materials/materials.csv', 'r') as file:
+	with open(path, "r") as file:
 		file.readline()
 		
 		for line in file:
-			material = line.split(',')
-			output[int(material[0])] = dict()
-			output[int(material[0])]['name'] = material[1]
-			output[int(material[0])]['Z'] = float(material[2])
-			output[int(material[0])]['A'] = float(material[3])
-			output[int(material[0])]['density'] = float(material[4])
-			output[int(material[0])]['vibration'] = float(material[5]) # For some values at RT see D.S.Gemmell, Rev. Mod. Phys. 46 (1974) 129.
-			output[int(material[0])]['type'] = material[6]
-			output[int(material[0])]['constants'] = list((float(material[7]), float(material[8]), float(material[9])))
-			output[int(material[0])]['angles'] = list((math.radians(float(material[10])), math.radians(float(material[11])), math.radians(float(material[12]))))
-			output[int(material[0])]['diamond'] = material[13] == 'Y'
+			args = line.split(',')
+			material_id = int(args[0])
+
+			material = Material(
+				name=args[1],
+				atomic_number=float(args[2]),
+				atomic_weight=float(args[3]),
+				density=float(args[4]),
+				vibration_amplitude=float(args[5]),
+				lattice_type=BravaisLattice(args[6]),
+				lattice_constants=(float(args[7]), float(args[8]), float(args[9])),
+				lattice_angles=(math.radians(float(args[10])), math.radians(float(args[11])), math.radians(float(args[12]))),
+				has_diamond_structure=args == "Y",
+			)
+
+			materials[material_id] = material
 	
-	return output
+	return materials
 
 def getVariantList():
 	
@@ -88,7 +131,7 @@ def getNyeData(filepath):
 	with open(filepath, 'r') as file:
 		output['fileref'] = filepath.split('/')[-1].split('.')[0].lstrip('p')
 		output['phases'] = dict()
-		materials = getMaterials()
+		materials = get_materials()
 		file.readline()
 		
 		while True:
@@ -102,17 +145,17 @@ def getNyeData(filepath):
 			output['phases'][localID]['ID'] = int(line[2])
 			
 			try:
-				output['phases'][localID]['name'] = materials[output['phases'][localID]['ID']]['name']
+				output['phases'][localID]['name'] = materials[output['phases'][localID]['ID']].name
 			except KeyError:
 				input('No material with ID ' + str(output['phases'][localID]['ID']) + '.')
 				sys.exit()
 			
-			output['phases'][localID]['Z'] = materials[output['phases'][localID]['ID']]['Z']
-			output['phases'][localID]['A'] = materials[output['phases'][localID]['ID']]['A']
-			output['phases'][localID]['density'] = materials[output['phases'][localID]['ID']]['density']
-			output['phases'][localID]['type'] = materials[output['phases'][localID]['ID']]['type']
-			output['phases'][localID]['constants'] = materials[output['phases'][localID]['ID']]['constants']
-			output['phases'][localID]['angles'] = materials[output['phases'][localID]['ID']]['angles']
+			output['phases'][localID]['Z'] = materials[output['phases'][localID]['ID']].atomic_number
+			output['phases'][localID]['A'] = materials[output['phases'][localID]['ID']].atomic_weight
+			output['phases'][localID]['density'] = materials[output['phases'][localID]['ID']].density
+			output['phases'][localID]['type'] = materials[output['phases'][localID]['ID']].lattice_type
+			output['phases'][localID]['constants'] = materials[output['phases'][localID]['ID']].lattice_constants
+			output['phases'][localID]['angles'] = materials[output['phases'][localID]['ID']].lattice_angles
 		
 		output['width'] = int(file.readline().rstrip('\n').split(',')[1])
 		output['height'] = int(file.readline().rstrip('\n').split(',')[1])
@@ -147,7 +190,7 @@ def getNyeAnalysis(filepath):
 	with open(filepath, 'r') as file:
 		output['fileref'] = filepath.split('/')[-1].split('.')[0].lstrip('q')
 		output['phases'] = dict()
-		materials = getMaterials()
+		materials = get_materials()
 		file.readline()
 		
 		while True:
@@ -159,13 +202,13 @@ def getNyeAnalysis(filepath):
 			localID = int(line[0])
 			output['phases'][localID] = dict()
 			output['phases'][localID]['ID'] = int(line[2])
-			output['phases'][localID]['name'] = materials[output['phases'][localID]['ID']]['name']
-			output['phases'][localID]['Z'] = materials[output['phases'][localID]['ID']]['Z']
-			output['phases'][localID]['A'] = materials[output['phases'][localID]['ID']]['A']
-			output['phases'][localID]['density'] = materials[output['phases'][localID]['ID']]['density']
-			output['phases'][localID]['type'] = materials[output['phases'][localID]['ID']]['type']
-			output['phases'][localID]['constants'] = materials[output['phases'][localID]['ID']]['constants']
-			output['phases'][localID]['angles'] = materials[output['phases'][localID]['ID']]['angles']
+			output['phases'][localID]['name'] = materials[output['phases'][localID]['ID']].name
+			output['phases'][localID]['Z'] = materials[output['phases'][localID]['ID']].atomic_number
+			output['phases'][localID]['A'] = materials[output['phases'][localID]['ID']].atomic_weight
+			output['phases'][localID]['density'] = materials[output['phases'][localID]['ID']].density
+			output['phases'][localID]['type'] = materials[output['phases'][localID]['ID']].lattice_type
+			output['phases'][localID]['constants'] = materials[output['phases'][localID]['ID']].lattice_constants
+			output['phases'][localID]['angles'] = materials[output['phases'][localID]['ID']].lattice_angles
 		
 		output['width'] = int(file.readline().rstrip('\n').split(',')[1])
 		output['height'] = int(file.readline().rstrip('\n').split(',')[1])
