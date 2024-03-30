@@ -87,7 +87,7 @@ def format_file_size(size: int) -> str:
 
 def format_time_interval(interval: int | float) -> str:
 	"""
-	Formats a time interval in seconds as a string in "hh:mm:ss" format, rounded to the nearest second.
+	Formats a time interval in seconds as a string in ``hh:mm:ss`` format, rounded to the nearest second.
 	The number of hours can exceed two digits.
 	:param interval: The time interval in seconds to be formatted.
 	:return: The formatted string.
@@ -105,10 +105,10 @@ def format_time_interval(interval: int | float) -> str:
 def parse_ids(id_string: str) -> list[int]:
 	"""
 	Parses a specially formatted input string to produce an ordered list of unique integer IDs.
-	The input string must take the following format: "<START>[-<STOP>[-<STEP>]][,<START>[-<STOP>[-<STEP>]] ...]"
-	Each comma-separated "<START>[-<STOP>[-<STEP>]]" tuple is evaluated using the built-in range function, but with <STOP> increased by one.
-	For example, the input string "0-33-3,15-37-5,7,12-19" will produce the following list of integers:
-	[0, 3, 6, 7, 9, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 24, 25, 27, 30, 33, 35]
+	The input string must take the following format: ``<START>[-<STOP>[-<STEP>]][,<START>[-<STOP>[-<STEP>]] ...]``
+	Each comma-separated ``<START>[-<STOP>[-<STEP>]]`` tuple is evaluated using the built-in range function, but with ``<STOP>`` increased by one.
+	For example, the input string ``"0-33-3,15-37-5,7,12-19"`` will produce the following list of integers:
+	``[0, 3, 6, 7, 9, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 24, 25, 27, 30, 33, 35]``
 	:param id_string: The specially formatted input string.
 	:return: The ordered list of unique integer IDs.
 	"""
@@ -236,8 +236,8 @@ def get_file_path(directory_path: str, recursive: bool = False, extension: str =
 def colour_wheel(i: int, n: int) -> tuple[int, int, int]:
 	"""
 	Returns the RGB values for a colour with maximum saturation and brightness, with hue determined by input arguments.
-	Hue is determined by the ratio of i to n, where the range [0,n) of i maps onto the hue described by the angle [0,360) degrees.
-	:param i: Hue value numerator, in the interval [0,n).
+	Hue is determined by the ratio of ``i`` to ``n``, where the range ``[0,n)`` of ``i`` maps onto the hue described by the angle ``[0,360)`` degrees.
+	:param i: Hue value numerator, in the interval ``[0,n)``.
 	:param n: Hue value denominator.
 	:return: The RGB values of the colour.
 	"""
@@ -278,12 +278,12 @@ def make_image(data: list[list[float | tuple[float, float, float]]], width: int,
 	"""
 	Creates an Image object based on a 2D data array of pixel values.
 	Each element of the array must be either a single value for greyscale images, or a triple of RGB values for colour images.
-	Colour channel intensities are determined by the ratio of the values to the limit argument, where the range [0,limit] of a value maps onto a channel intensity in the range [0,255].
-	:param data: The 2D array of pixel values. Must have dimensions height * width.
+	Colour channel intensities are determined by the ratio of the values to the limit argument, where the range ``[0,limit]`` of a value maps onto a channel intensity in the range ``[0,255]``.
+	:param data: The 2D array of pixel values. Must have dimensions ``height * width``.
 	:param width: The width of the image.
 	:param height: The height of the image.
 	:param limit: The maximum data value for each channel.
-	:param mode: The image mode: 'L' for greyscale or 'RGB' for colour.
+	:param mode: The image mode: ``"L"`` for greyscale or ``"RGB"`` for colour.
 	:return: The created image.
 	"""
 	

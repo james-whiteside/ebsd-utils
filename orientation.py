@@ -18,7 +18,7 @@ def numpy_cross(a: numpy.ndarray, b: numpy.ndarray) -> numpy.ndarray:
 
 def get_plane_family(indices: tuple[int, int, int]) -> list[tuple[int, int, int]]:
 	"""
-	For a given set of Miller indices for a plane family {h,k,l}, determines the list of planes (h,k,l) in the family.
+	For a given set of Miller indices for a plane family ``{h,k,l}``, computes the list of planes ``(h,k,l)`` in the family.
 	:param indices: Indices of the plane family.
 	:return: The list of planes in the family.
 	"""
@@ -65,9 +65,9 @@ def get_plane_family(indices: tuple[int, int, int]) -> list[tuple[int, int, int]
 
 def get_twin_matrix(indices: tuple[int, int, int]) -> numpy.ndarray:
 	"""
-	Determines the rotation matrix for the homophase cubic orientation relationship described by a reflection in a plane.
+	Computes the rotation matrix for the homophase cubic orientation relationship described by a reflection in a plane.
 	Solves Eqn. 4.30.
-	:param indices: The Miller indices (h,k,l) of the reflecting plane.
+	:param indices: The Miller indices ``(h,k,l)`` of the reflecting plane.
 	:return: The rotation matrix describing the twin.
 	"""
 
@@ -92,16 +92,16 @@ def get_relationship_matrix(
 		b: tuple[float, float, float],
 ) -> numpy.ndarray:
 	"""
-	Determines the rotation matrix for the heterophase orientation relationship described by two pairs of parallel zone axes.
-	Parallel axis pairs are u1A || u1B and u2A || u2B for bases A and B.
+	Computes the rotation matrix for the heterophase orientation relationship described by two pairs of parallel zone axes.
+	Parallel axis pairs are ``u1A || u1B`` and ``u2A || u2B`` for bases ``A`` and ``B``.
 	Solves Eqn. 4.50.
-	:param u1A: Zone axis 1 for basis A.
-	:param u1B: Zone axis 1 for basis B.
-	:param u2A: Zone axis 2 for basis A.
-	:param u2B: Zone axis 2 for basis B.
-	:param a: Basis vectors of basis A.
-	:param b: Basis vectors of basis B.
-	:return: The rotation matrix describing the orientation relationship between bases A and B.
+	:param u1A: Zone axis 1 for basis ``A``.
+	:param u1B: Zone axis 1 for basis ``B``.
+	:param u2A: Zone axis 2 for basis ``A``.
+	:param u2B: Zone axis 2 for basis ``B``.
+	:param a: Basis vectors of basis ``A``.
+	:param b: Basis vectors of basis ``B``.
+	:return: The rotation matrix describing the orientation relationship between bases ``A`` and ``B``.
 	"""
 
 	u1A = numpy.array(u1A)
