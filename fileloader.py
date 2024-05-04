@@ -30,6 +30,25 @@ class Material:
 		self.lattice_angles = lattice_angles
 		self.has_diamond_structure = has_diamond_structure
 
+	def __eq__(self, other):
+		if not isinstance(other, Material):
+			return False
+
+		if (
+			self.name == other.name
+			and self.atomic_number == other.atomic_number
+			and self.atomic_weight == other.atomic_weight
+			and self.density == other.density
+			and self.vibration_amplitude == other.vibration_amplitude
+			and self.lattice_type is other.lattice_type
+			and self.lattice_constants == other.lattice_constants
+			and self.lattice_angles == other.lattice_angles
+			and self.has_diamond_structure == other.has_diamond_structure
+		):
+			return True
+		else:
+			return False
+
 	def as_dict(self):
 		return {
 			"name": self.name,

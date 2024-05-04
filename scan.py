@@ -1,16 +1,24 @@
 from enum import Enum
-from typing import Optional
 import numpy
+import fileloader
 
 
 class FieldType(Enum):
+    DISCRETE = int
     SCALAR = float
     VECTOR = tuple[float, float, float]
     MATRIX = numpy.ndarray
 
 
 class Field[T]:
-    def __init__(self, width: int, height: int, field_type: FieldType, default_value: Optional[T], values: Optional[list[list[T]]]):
+    def __init__(
+        self,
+        width: int,
+        height: int,
+        field_type: FieldType,
+        default_value: T = None,
+        values: list[list[T]] = None,
+    ):
         self.width = width
         self.height = height
         self.field_type = field_type
@@ -54,3 +62,48 @@ class Field[T]:
             raise ValueError(f"Type of provided value {type(value)} does not match field type {self.field_type.value}.")
         else:
             self._values[y][x] = value
+
+
+class DiscreteFieldMapper[T]:
+    def __init__(self, mapping: dict[int, T], discrete_field: Field[int]):
+        self._mapping = mapping
+        self._field = discrete_field
+
+    def get_value(self, x: int, y: int) -> T:
+        key = self._field.get_value(x, y)
+        return self._mapping[key]
+
+    def set_value(self, x: int, y: int, value: T) -> None:
+        for key in self._mapping:
+            if self._mapping[key] == value:
+                self._field.set_value(x, y, key)
+                return
+
+        raise KeyError(f"Value is not within permitted values of discrete-valued field.")
+
+
+class Scan:
+    def __init__(
+        self,
+        file_reference: str,
+        width: int,
+        height: int,
+        phases: dict[int, fileloader.Material],
+        phase_id_values: list[list[int]],
+        euler_angle_values: list[list[tuple[float, float, float]]],
+        pattern_quality_values: list[list[float]],
+        index_quality_values: list[list[float]],
+    ):
+        self.file_reference = file_reference
+        self.width = width
+        self.height = height
+        self.phases = phases
+        self._phase_id = Field(self.width, self.height, FieldType.DISCRETE, values=phase_id_values)
+        self.euler_angles = Field(self.width, self.height, FieldType.VECTOR, values=euler_angle_values)
+        self.pattern_quality = Field(self.width, self.height, FieldType.SCALAR, values=pattern_quality_values)
+        self.index_quality = Field(self.width, self.height, FieldType.SCALAR, values=index_quality_values)
+
+    @property
+    def phase(self) -> DiscreteFieldMapper:
+        return DiscreteFieldMapper(self.phases, self._phase_id)
+
