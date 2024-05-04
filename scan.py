@@ -1,6 +1,7 @@
 from enum import Enum
 import numpy
-import fileloader
+from fileloader import Material
+from transforms import AxisSet, reduce_matrix, euler_rotation_matrix
 
 
 class FieldType(Enum):
@@ -88,22 +89,45 @@ class Scan:
         file_reference: str,
         width: int,
         height: int,
-        phases: dict[int, fileloader.Material],
+        phases: dict[int, Material],
         phase_id_values: list[list[int]],
         euler_angle_values: list[list[tuple[float, float, float]]],
         pattern_quality_values: list[list[float]],
         index_quality_values: list[list[float]],
+        axis_set: AxisSet = AxisSet.ZXZ,
     ):
         self.file_reference = file_reference
         self.width = width
         self.height = height
         self.phases = phases
+        self.axis_set = axis_set
         self._phase_id = Field(self.width, self.height, FieldType.DISCRETE, values=phase_id_values)
         self.euler_angles = Field(self.width, self.height, FieldType.VECTOR, values=euler_angle_values)
         self.pattern_quality = Field(self.width, self.height, FieldType.SCALAR, values=pattern_quality_values)
         self.index_quality = Field(self.width, self.height, FieldType.SCALAR, values=index_quality_values)
+        self._reduced_euler_rotation_matrices = None
 
     @property
-    def phase(self) -> DiscreteFieldMapper:
+    def phase(self) -> DiscreteFieldMapper[Material]:
         return DiscreteFieldMapper(self.phases, self._phase_id)
 
+    @property
+    def reduced_euler_rotation_matrices(self) -> Field[numpy.ndarray]:
+        if self._reduced_euler_rotation_matrices is None:
+            raise AttributeError("Reduced euler rotation matrix field not initialised.")
+        else:
+            return self._reduced_euler_rotation_matrices
+
+    def init_reduced_euler_rotation_matrices(self) -> None:
+        values = list()
+
+        for y in range(self.height):
+            values.append(list())
+
+            for x in range(self.width):
+                axis_set = self.axis_set
+                euler_angles = self.euler_angles.get_value(x, y)
+                crystal_family = self.phase.get_value(x, y).lattice_type.get_family()
+                values[y].append(reduce_matrix(euler_rotation_matrix(axis_set, euler_angles), crystal_family))
+
+        self._reduced_euler_rotation_matrices = Field(self.width, self.height, FieldType.MATRIX, values=values)
