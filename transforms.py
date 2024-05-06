@@ -207,3 +207,32 @@ def inverse_gnomonic(X: float, Y: float) -> tuple[float, float, float]:
     return x, y, z
 
 
+def rotation_angle(R: numpy.ndarray) -> float:
+    """
+    Computes the rotation angle ``θ`` of a rotation matrix ``R``.
+    Solves Eqn. 4.1.
+    :param R: The rotation matrix ``R``.
+    :return: The rotation angle ``θ``.
+    """
+
+    if 0.5 * (abs(R[0][0]) + abs(R[1][1]) + abs(R[2][2]) - 1) > 1:
+        theta = math.acos(1)
+    elif 0.5 * (abs(R[0][0]) + abs(R[1][1]) + abs(R[2][2]) - 1) < -1:
+        theta = math.acos(-1)
+    else:
+        theta = math.acos(0.5 * (abs(R[0][0]) + abs(R[1][1]) + abs(R[2][2]) - 1))
+
+    return theta
+
+
+def misrotation_matrix(R1: numpy.ndarray, R2: numpy.ndarray) -> numpy.ndarray:
+    """
+    Computes the misrotation matrix ``dR`` between two rotation matrices ``R1`` and ``R2``.
+    Solves Eqn. 4.2.
+    :param R1: The rotation matrix ``R1``.
+    :param R2: The rotation matrix ``R2``.
+    :return: The misrotation matrix ``dR``.
+    """
+
+    dR = numpy.dot(numpy.linalg.inv(R1), R2)
+    return dR

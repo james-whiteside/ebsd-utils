@@ -14,10 +14,9 @@ import utilities
 import fileloader
 import channelling
 import orientation
+from scan import GENERIC_PHASE_IDS
 from transforms import Axis, AxisSet, euler_rotation_matrix, reduce_vector, reduce_matrix, euler_angles, \
-	inverse_stereographic, forward_stereographic
-
-GENERIC_PHASE_IDS = (0, 4294967294, 4294967295)
+	inverse_stereographic, forward_stereographic, rotation_angle, misrotation_matrix
 
 
 class CrystalFamily(Enum):
@@ -60,37 +59,6 @@ class BravaisLattice(Enum):
 			return CrystalFamily.NONE
 		else:
 			return CrystalFamily(self.value[0])
-
-
-def rotation_angle(R: numpy.ndarray) -> float:
-	"""
-	Computes the rotation angle ``θ`` of a rotation matrix ``R``.
-	Solves Eqn. 4.1.
-	:param R: The rotation matrix ``R``.
-	:return: The rotation angle ``θ``.
-	"""
-
-	if 0.5 * (abs(R[0][0]) + abs(R[1][1]) + abs(R[2][2]) - 1) > 1:
-		theta = math.acos(1)
-	elif 0.5 * (abs(R[0][0]) + abs(R[1][1]) + abs(R[2][2]) - 1) < -1:
-		theta = math.acos(-1)
-	else:
-		theta = math.acos(0.5 * (abs(R[0][0]) + abs(R[1][1]) + abs(R[2][2]) - 1))
-
-	return theta
-
-
-def misrotation_matrix(R1: numpy.ndarray, R2: numpy.ndarray) -> numpy.ndarray:
-	"""
-	Computes the misrotation matrix ``dR`` between two rotation matrices ``R1`` and ``R2``.
-	Solves Eqn. 4.2.
-	:param R1: The rotation matrix ``R1``.
-	:param R2: The rotation matrix ``R2``.
-	:return: The misrotation matrix ``dR``.
-	"""
-
-	dR = numpy.dot(numpy.linalg.inv(R1), R2)
-	return dR
 
 
 def differential_rotation_tensor(dR: numpy.ndarray, dx: float) -> numpy.ndarray:

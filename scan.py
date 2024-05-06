@@ -1,7 +1,16 @@
+import math
 from enum import Enum
 import numpy
+
 from fileloader import Material
-from transforms import AxisSet, reduce_matrix, euler_rotation_matrix, Axis, forward_stereographic
+from transforms import AxisSet, reduce_matrix, euler_rotation_matrix, Axis, forward_stereographic, rotation_angle, \
+    misrotation_matrix
+
+
+UNINDEXED_PHASE_ID = 0
+GENERIC_BCC_PHASE_ID = 4294967294
+GENERIC_FCC_PHASE_ID = 4294967295
+GENERIC_PHASE_IDS = (UNINDEXED_PHASE_ID, GENERIC_BCC_PHASE_ID, GENERIC_FCC_PHASE_ID)
 
 
 class FieldType(Enum):
@@ -110,6 +119,7 @@ class Scan:
         self._inverse_x_pole_figure_coordinates = None
         self._inverse_y_pole_figure_coordinates = None
         self._inverse_z_pole_figure_coordinates = None
+        self._kernel_average_misorientation = None
 
     @property
     def phase(self) -> DiscreteFieldMapper[Material]:
@@ -156,7 +166,7 @@ class Scan:
 
         for y in range(self.height):
             for x in range(self.width):
-                if self.phase.get_value_at(x, y).global_id == 0:
+                if self.phase.get_value_at(x, y).global_id == UNINDEXED_PHASE_ID:
                     continue
                 else:
                     rotation_matrix = self.reduced_euler_rotation_matrix.get_value_at(x, y)
@@ -169,3 +179,38 @@ class Scan:
         self._inverse_x_pole_figure_coordinates = self._gen_inverse_pole_figure_coordinates(Axis.X)
         self._inverse_y_pole_figure_coordinates = self._gen_inverse_pole_figure_coordinates(Axis.Y)
         self._inverse_z_pole_figure_coordinates = self._gen_inverse_pole_figure_coordinates(Axis.Z)
+
+    @property
+    def kernel_average_misorientation(self) -> Field[float]:
+        if self._kernel_average_misorientation is None:
+            raise AttributeError("Kernel average misorientation field not initialised.")
+        else:
+            return self._kernel_average_misorientation
+
+    def init_kernel_average_misorientation(self) -> None:
+        field = Field(self.width, self.height, FieldType.SCALAR, default_value=0.0)
+
+        for y in range(self.height):
+            for x in range(self.width):
+                if self.phase.get_value_at(x, y).global_id == UNINDEXED_PHASE_ID:
+                    continue
+                else:
+                    total = 0.0
+                    count = 4
+
+                    for dx, dy in [(-1, 0), (+1, 0), (0, -1), (0, +1)]:
+                        if self.phase.get_value_at(x, y) != self.phase.get_value_at(x + dx, y + dy):
+                            try:
+                                rotation_matrix_1 = self.reduced_euler_rotation_matrix.get_value_at(x, y)
+                                rotation_matrix_2 = self.reduced_euler_rotation_matrix.get_value_at(x + dx, y + dy)
+                                total += rotation_angle(misrotation_matrix(rotation_matrix_1, rotation_matrix_2))
+                            except IndexError:
+                                count -= 1
+
+                    if count == 0:
+                        continue
+                    else:
+                        value = total / count
+                        field.set_value_at(x, y, value)
+
+        self._kernel_average_misorientation = field
