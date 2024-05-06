@@ -128,3 +128,82 @@ def reduce_matrix(R: numpy.ndarray, symmetry: CrystalFamily) -> numpy.ndarray:
         raise NotImplementedError
 
     return R
+
+
+def euler_angles(rotation_matrix: numpy.ndarray, axis_set: AxisSet) -> tuple[float, float, float]:
+    """
+    Computes the Euler angles for a 3D rotation matrix.
+    :param rotation_matrix: The rotation matrix.
+    :param axis_set: The set of Euler axes.
+    :return: The Euler angles in ``rad``.
+    """
+
+    if axis_set is AxisSet.ZXZ:
+        phi1 = math.acos(rotation_matrix[2][1] / math.sqrt(1 - rotation_matrix[2][2] ** 2))
+        Phi = math.acos(rotation_matrix[2][2])
+        phi2 = math.acos(-rotation_matrix[1][2] / math.sqrt(1 - rotation_matrix[2][2] ** 2))
+        return phi1, Phi, phi2
+    else:
+        raise NotImplementedError
+
+
+def forward_stereographic(x: float, y: float, z: float) -> tuple[float, float]:
+    """
+    Computes the forward stereographic projection ``(X, Y)`` of a point ``(x, y, z)`` in Cartesian space.
+    Solves Eqn. 3.34.
+    :param x: The Cartesian ``x``-coordinate.
+    :param y: The Cartesian ``y``-coordinate.
+    :param z: The Cartesian ``z``-coordinate.
+    :return: The stereographic coordinates ``(X, Y)``.
+    """
+
+    X = -x / (1 - z)
+    Y = -y / (1 - z)
+    return X, Y
+
+
+def inverse_stereographic(X: float, Y: float) -> tuple[float, float, float]:
+    """
+    Computes the Cartesian projection ``(x, y, z)`` of a point ``(X, Y)`` in stereographic space.
+    Solves Eqn. 3.34.
+    :param X: The stereographic ``X``-coordinate.
+    :param Y: The stereographic ``Y``-coordinate.
+    :return: The Cartesian coordinates ``(x, y, z)``.
+    """
+
+    x = 2 * X / (X ** 2 + Y ** 2 + 1)
+    y = 2 * Y / (X ** 2 + Y ** 2 + 1)
+    z = (X ** 2 + Y ** 2 - 1) / (X ** 2 + Y ** 2 + 1)
+    return x, y, z
+
+
+def forward_gnomonic(x: float, y: float, z: float) -> tuple[float, float]:
+    """
+    Computes the forward gnomonic projection ``(X, Y)`` of a point ``(x, y, z)`` in Cartesian space.
+    Solves Eqn. 3.37.
+    :param x: The Cartesian ``x``-coordinate.
+    :param y: The Cartesian ``y``-coordinate.
+    :param z: The Cartesian ``z``-coordinate.
+    :return: The gnomonic coordinates ``(X, Y)``.
+    """
+
+    X = -x / z
+    Y = -y / z
+    return X, Y
+
+
+def inverse_gnomonic(X: float, Y: float) -> tuple[float, float, float]:
+    """
+    Computes the Cartesian projection ``(x, y, z)`` of a point ``(X, Y)`` in gnomonic space.
+    Solves Eqn. 3.37.
+    :param X: The gnomonic ``X``-coordinate.
+    :param Y: The gnomonic ``Y``-coordinate.
+    :return: The Cartesian coordinates ``(x, y, z)``.
+    """
+
+    x = -X / math.sqrt(X ** 2 + Y ** 2 + 1)
+    y = -Y / math.sqrt(X ** 2 + Y ** 2 + 1)
+    z = 1 / math.sqrt(X ** 2 + Y ** 2 + 1)
+    return x, y, z
+
+

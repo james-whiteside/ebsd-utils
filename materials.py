@@ -84,6 +84,7 @@ def add(database):
 						diamond = input('Does crystal have diamond structure? (Y/N): ').lower() == 'y'
 
 					material = fileloader.Material(
+						global_id=ID,
 						name=name,
 						atomic_number=Z,
 						atomic_weight=A,

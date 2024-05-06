@@ -10,6 +10,7 @@ from ebsd import BravaisLattice
 class Material:
 	def __init__(
 		self,
+		global_id: int,
 		name: str,
 		atomic_number: float,
 		atomic_weight: float,
@@ -20,6 +21,7 @@ class Material:
 		lattice_angles: tuple[float, float, float],
 		has_diamond_structure: bool,
 	):
+		self.global_id = global_id
 		self.name = name
 		self.atomic_number = atomic_number
 		self.atomic_weight = atomic_weight
@@ -34,23 +36,14 @@ class Material:
 		if not isinstance(other, Material):
 			return False
 
-		if (
-			self.name == other.name
-			and self.atomic_number == other.atomic_number
-			and self.atomic_weight == other.atomic_weight
-			and self.density == other.density
-			and self.vibration_amplitude == other.vibration_amplitude
-			and self.lattice_type is other.lattice_type
-			and self.lattice_constants == other.lattice_constants
-			and self.lattice_angles == other.lattice_angles
-			and self.has_diamond_structure == other.has_diamond_structure
-		):
+		if self.global_id == other.global_id:
 			return True
 		else:
 			return False
 
 	def as_dict(self):
 		return {
+			"global_id": self.global_id,
 			"name": self.name,
 			"Z": self.atomic_number,
 			"A": self.atomic_weight,
@@ -74,6 +67,7 @@ def get_materials(path: str = "materials/materials.csv") -> dict[int, Material]:
 			material_id = int(args[0])
 
 			material = Material(
+				global_id=material_id,
 				name=args[1],
 				atomic_number=float(args[2]),
 				atomic_weight=float(args[3]),

@@ -14,7 +14,8 @@ import utilities
 import fileloader
 import channelling
 import orientation
-from transforms import Axis, AxisSet, euler_rotation_matrix, reduce_vector, reduce_matrix
+from transforms import Axis, AxisSet, euler_rotation_matrix, reduce_vector, reduce_matrix, euler_angles, \
+	inverse_stereographic, forward_stereographic
 
 GENERIC_PHASE_IDS = (0, 4294967294, 4294967295)
 
@@ -59,83 +60,6 @@ class BravaisLattice(Enum):
 			return CrystalFamily.NONE
 		else:
 			return CrystalFamily(self.value[0])
-
-
-def euler_angles(rotation_matrix: numpy.ndarray, axis_set: AxisSet) -> tuple[float, float, float]:
-	"""
-	Computes the Euler angles for a 3D rotation matrix.
-	:param rotation_matrix: The rotation matrix.
-	:param axis_set: The set of Euler axes.
-	:return: The Euler angles in ``rad``.
-	"""
-
-	if axis_set is AxisSet.ZXZ:
-		phi1 = math.acos(rotation_matrix[2][1] / math.sqrt(1 - rotation_matrix[2][2] ** 2))
-		Phi = math.acos(rotation_matrix[2][2])
-		phi2 = math.acos(-rotation_matrix[1][2] / math.sqrt(1 - rotation_matrix[2][2] ** 2))
-		return phi1, Phi, phi2
-	else:
-		raise NotImplementedError
-
-
-def forward_stereographic(x: float, y: float, z: float) -> tuple[float, float]:
-	"""
-	Computes the forward stereographic projection ``(X, Y)`` of a point ``(x, y, z)`` in Cartesian space.
-	Solves Eqn. 3.34.
-	:param x: The Cartesian ``x``-coordinate.
-	:param y: The Cartesian ``y``-coordinate.
-	:param z: The Cartesian ``z``-coordinate.
-	:return: The stereographic coordinates ``(X, Y)``.
-	"""
-
-	X = x / (1 - z)
-	Y = y / (1 - z)
-	return X, Y
-
-
-def inverse_stereographic(X: float, Y: float) -> tuple[float, float, float]:
-	"""
-	Computes the Cartesian projection ``(x, y, z)`` of a point ``(X, Y)`` in stereographic space.
-	Solves Eqn. 3.34.
-	:param X: The stereographic ``X``-coordinate.
-	:param Y: The stereographic ``Y``-coordinate.
-	:return: The Cartesian coordinates ``(x, y, z)``.
-	"""
-
-	x = 2 * X / (X ** 2 + Y ** 2 + 1)
-	y = 2 * Y / (X ** 2 + Y ** 2 + 1)
-	z = (X ** 2 + Y ** 2 - 1) / (X ** 2 + Y ** 2 + 1)
-	return x, y, z
-
-
-def forward_gnomonic(x: float, y: float, z: float) -> tuple[float, float]:
-	"""
-	Computes the forward gnomonic projection ``(X, Y)`` of a point ``(x, y, z)`` in Cartesian space.
-	Solves Eqn. 3.37.
-	:param x: The Cartesian ``x``-coordinate.
-	:param y: The Cartesian ``y``-coordinate.
-	:param z: The Cartesian ``z``-coordinate.
-	:return: The gnomonic coordinates ``(X, Y)``.
-	"""
-
-	X = -x / z
-	Y = -y / z
-	return X, Y
-
-
-def inverse_gnomonic(X: float, Y: float) -> tuple[float, float, float]:
-	"""
-	Computes the Cartesian projection ``(x, y, z)`` of a point ``(X, Y)`` in gnomonic space.
-	Solves Eqn. 3.37.
-	:param X: The gnomonic ``X``-coordinate.
-	:param Y: The gnomonic ``Y``-coordinate.
-	:return: The Cartesian coordinates ``(x, y, z)``.
-	"""
-
-	x = -X / math.sqrt(X ** 2 + Y ** 2 + 1)
-	y = -Y / math.sqrt(X ** 2 + Y ** 2 + 1)
-	z = 1 / math.sqrt(X ** 2 + Y ** 2 + 1)
-	return x, y, z
 
 
 def rotation_angle(R: numpy.ndarray) -> float:
@@ -602,17 +526,14 @@ def keyIPF(lattice_type, size, guides):
 	
 	return IPF
 
-def calV(euler, refV):
-
-	R = reduce_matrix(euler_rotation_matrix(AxisSet.ZXZ, euler), CrystalFamily.C)
-	vx, vy, vz = numpy.dot(R, refV).tolist()
-	vX, vY = forward_stereographic(vx, vy, vz)
-	return (-vX, -vY)
+def calV(R: numpy.ndarray, axis: Axis) -> tuple[float, float]:
+	x, y, z = numpy.dot(R, axis.value).tolist()
+	X, Y = forward_stereographic(x, y, z)
+	return X, Y
 
 def calSGP(data, axis):
 	
 	SGP = list()
-	refV = axis.value
 	
 	for y in range(data['height']):
 		SGP.append(list())
@@ -621,8 +542,9 @@ def calSGP(data, axis):
 			if data['phases'][data['data']['phase'][y][x]]['ID'] == 0:
 				SGP[y].append(list((0, 0)))
 			else:
-				SGP[y].append(calV(data['data']['euler'][y][x], refV))
-	
+				R = reduce_matrix(euler_rotation_matrix(AxisSet.ZXZ, data['data']['euler'][y][x]), CrystalFamily.C)
+				SGP[y].append(calV(R, axis))
+
 	return SGP
 
 def calCF(data, Z, E, refV):
@@ -643,8 +565,9 @@ def calCF(data, Z, E, refV):
 			if data['phases'][data['data']['phase'][y][x]]['ID'] == 0:
 				CF[y].append(0)
 			else:
-				vX, vY = calV(data['data']['euler'][y][x], refV)
-				vx, vy, vz = inverse_stereographic(vX, vY)
+				R = reduce_matrix(euler_rotation_matrix(AxisSet.ZXZ, data['data']['euler'][y][x]), CrystalFamily.C)
+				xg, yg, zg = numpy.dot(R, refV).tolist()
+				vx, vy, vz = -xg, -yg, zg
 				vtheta = -math.degrees(math.atan(math.sqrt(vx ** 2 + vy ** 2) / vz))
 				vphi = 90 - math.degrees(math.atan2(vy, vx))
 				CF[y].append(channelling.fraction(vtheta, vphi, critData[data['data']['phase'][y][x]]))
@@ -1492,7 +1415,8 @@ def summarise(path):
 					data['data']['k']['R'][k] = numpy.dot(U, VT)
 					phi1, Phi, phi2 = euler_angles(data['data']['k']['R'][k], AxisSet.ZXZ)
 					data['data']['k']['euler'][k] = list((phi1, Phi, phi2))
-					vX, vY = calV(data['data']['k']['euler'][k], Axis.Z.value)
+					R = reduce_matrix(euler_rotation_matrix(AxisSet.ZXZ, data['data']['k']['euler'][k]), CrystalFamily.C)
+					vX, vY = calV(R, Axis.Z)
 					data['data']['k']['SGP'][k] = list((vX, vY))
 				
 				data['data']['k']['IQ'][k] /= kCounts[k]
@@ -1878,4 +1802,4 @@ def makeMaps(path, size=None):
 #
 # 	print()
 # 	print('All comparisons complete.')
-# 	input('Press ENTER to close: ')
+# 	input('Press ENTER to close: ')3
