@@ -199,13 +199,15 @@ class Scan:
                     count = 4
 
                     for dx, dy in [(-1, 0), (+1, 0), (0, -1), (0, +1)]:
-                        if self.phase.get_value_at(x, y) != self.phase.get_value_at(x + dx, y + dy):
-                            try:
+                        try:
+                            if self.phase.get_value_at(x, y) == self.phase.get_value_at(x + dx, y + dy):
                                 rotation_matrix_1 = self.reduced_euler_rotation_matrix.get_value_at(x, y)
                                 rotation_matrix_2 = self.reduced_euler_rotation_matrix.get_value_at(x + dx, y + dy)
                                 total += rotation_angle(misrotation_matrix(rotation_matrix_1, rotation_matrix_2))
-                            except IndexError:
+                            else:
                                 count -= 1
+                        except IndexError:
+                            count -= 1
 
                     if count == 0:
                         continue
