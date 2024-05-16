@@ -2,6 +2,7 @@ import math
 from enum import Enum
 import numpy
 
+import channelling
 from fileloader import Material
 from transforms import AxisSet, reduce_matrix, euler_rotation_matrix, Axis, forward_stereographic, rotation_angle, \
     misrotation_matrix, misrotation_tensor
@@ -126,6 +127,10 @@ class Scan:
         self._misrotation_y_tensor = None
         self._nye_tensor = None
         self._geometrically_necessary_dislocation_density = None
+        self.beam_atomic_number = None
+        self.beam_energy = None
+        self.beam_vector = None
+        self._channelling_fraction = None
 
     @property
     def phase(self) -> DiscreteFieldMapper[Material]:
@@ -328,3 +333,38 @@ class Scan:
                     field.set_value_at(x, y, value)
 
         self._geometrically_necessary_dislocation_density = field
+
+    @property
+    def channelling_fraction(self) -> Field[float]:
+        if self._channelling_fraction is None:
+            raise AttributeError("Channelling fraction field not initialised.")
+        else:
+            return self._channelling_fraction
+
+    def init_channelling_fraction(
+        self,
+        beam_atomic_number: int,
+        beam_energy: float,
+        beam_vector: tuple[float, float, float]
+    ) -> None:
+        self.beam_atomic_number = beam_atomic_number
+        self.beam_energy = beam_energy
+        self.beam_vector = beam_vector
+        field = Field(self.width, self.height, FieldType.SCALAR, default_value=0.0)
+
+        channel_data = {
+            local_id: channelling.load_crit_data(self.beam_atomic_number, phase.global_id, self.beam_energy)
+            for local_id, phase in self.phases.items() if phase.global_id != UNINDEXED_PHASE_ID
+        }
+
+        for y in range(self.height):
+            for x in range(self.width):
+                if self.phase.get_value_at(x, y).global_id == UNINDEXED_PHASE_ID:
+                    continue
+                else:
+                    rotation_matrix = self.reduced_euler_rotation_matrix.get_value_at(x, y)
+                    effective_beam_vector = numpy.dot(rotation_matrix, self.beam_vector).to_list()
+                    value = channelling.fraction(effective_beam_vector, channel_data[self._phase_id.get_value_at(x, y)])
+                    field.set_value_at(x, y, value)
+
+        self._channelling_fraction = field

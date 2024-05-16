@@ -507,7 +507,7 @@ def calCF(data, Z, E, refV):
 		if data['phases'][localID]['ID'] == 0:
 			continue
 		
-		critData[localID] = channelling.loadCritData(Z, data['phases'][localID]['ID'], E)
+		critData[localID] = channelling.load_crit_data(Z, data['phases'][localID]['ID'], E)
 	
 	for y in range(data['height']):
 		CF.append(list())
@@ -517,11 +517,8 @@ def calCF(data, Z, E, refV):
 				CF[y].append(0)
 			else:
 				R = reduce_matrix(euler_rotation_matrix(AxisSet.ZXZ, data['data']['euler'][y][x]), CrystalFamily.C)
-				xg, yg, zg = numpy.dot(R, refV).tolist()
-				vx, vy, vz = -xg, -yg, zg
-				vtheta = -math.degrees(math.atan(math.sqrt(vx ** 2 + vy ** 2) / vz))
-				vphi = 90 - math.degrees(math.atan2(vy, vx))
-				CF[y].append(channelling.fraction(vtheta, vphi, critData[data['data']['phase'][y][x]]))
+				v = numpy.dot(R, refV).tolist()
+				CF[y].append(channelling.fraction(v, critData[data['data']['phase'][y][x]]))
 	
 	return CF
 

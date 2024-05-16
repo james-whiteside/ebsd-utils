@@ -12,8 +12,8 @@ import utilities
 from utilities import ProgressBar
 import fileloader
 
+
 def get_base(lattice):
-	
 	if lattice == 'diamond':
 		xbase = (0, 2, 2, 0, 1, 3, 3, 1)
 		ybase = (0, 2, 0, 2, 1, 3, 1, 3)
@@ -37,8 +37,8 @@ def get_base(lattice):
 	
 	return xbase, ybase, zbase, a
 
+
 def transform(x, y, z, miller):
-	
 	i, j, k = miller
 	xi_scale = 1. / numpy.sqrt((i ** 2 + j ** 2) ** 2 + (i * k) ** 2 + (j * k) ** 2)
 	eta_scale = 1. / numpy.sqrt(i ** 2 + j ** 2)
@@ -48,8 +48,8 @@ def transform(x, y, z, miller):
 	zeta = i * x + j * y + k * z
 	return xi, eta, zeta, xi_scale, eta_scale, zeta_scale
 
+
 def get_crystal(base, miller, max_range):
-	
 	xbase, ybase, zbase, a = base
 	i, j, k = miller
 	rmax = max(numpy.ceil(max_range), i) * a
@@ -70,8 +70,8 @@ def get_crystal(base, miller, max_range):
 	zeta_scale /= a
 	return xis, etas, zetas, xi_scale, eta_scale, zeta_scale
 
+
 def get_rows(xis, etas, zetas, xi_scale, eta_scale, zeta_scale, max_range):
-	
 	dist = dict()
 	
 	for xi, eta, zeta in zip(xis, etas, zetas):
@@ -101,8 +101,8 @@ def get_rows(xis, etas, zetas, xi_scale, eta_scale, zeta_scale, max_range):
 	dmean = 0.5 * (dmax + dmin)
 	return numpy.array(xi_rows), numpy.array(eta_rows), dmean, dmax
 
+
 def get_planes(xis, etas, zetas, zeta_scale, max_range):
-	
 	pos = dict()
 	for xi, eta, zeta in zip(xis, etas, zetas):
 		if zeta in pos:
@@ -133,8 +133,8 @@ def get_planes(xis, etas, zetas, zeta_scale, max_range):
 	dmean = 0.5 * (dmax + dmin)
 	return zeta_planes, zeta_ch, opposing, dmean
 
+
 def fr1(r):
-	
 	a = numpy.array((0.1818, 0.50983, 0.2802, 0.02817))
 	b = numpy.array((3.2, 0.9423, 0.4028, 0.2016))
 	f = numpy.zeros_like(r)
@@ -151,8 +151,8 @@ def fr1(r):
 	
 	return f, f1, f2
 
+
 def ur1(r, Z1, Z2, dmean):
-	
 	e = constants.physical_constants['elementary charge'][0]
 	eps0 = constants.physical_constants['electric constant'][0]
 	q = e / (4 * numpy.pi * eps0)
@@ -165,8 +165,8 @@ def ur1(r, Z1, Z2, dmean):
 	u2 = ufac * f2 / aZBL ** 2
 	return u, u1, u2
 
+
 def ur(pos, xi_rows, eta_rows, Z1, Z2, dmean):
-	
 	x, y = pos
 	r = numpy.hypot(x-xi_rows, y-eta_rows)
 	u1, du1_dr, dummy = ur1(r, Z1, Z2, dmean)
@@ -175,15 +175,15 @@ def ur(pos, xi_rows, eta_rows, Z1, Z2, dmean):
 	dudy = numpy.sum(du1_dr * (y-eta_rows) / r)
 	return u, numpy.array((dudx, dudy))
 
+
 def fp1(r):
-	
 	a = numpy.array((0.1818, 0.50983, 0.2802, 0.02817))
 	b = numpy.array((3.2, 0.9423, 0.4028, 0.2016))
 	f = numpy.sum(a / b * numpy.exp(-b * r))
 	return f
 
+
 def up1(r, Z1, Z2, d2):
-	
 	e = constants.physical_constants['elementary charge'][0]
 	eps0 = constants.physical_constants['electric constant'][0]
 	q = e / (4 * numpy.pi * eps0)
@@ -194,8 +194,8 @@ def up1(r, Z1, Z2, d2):
 	u = ufac * f
 	return u
 
+
 def up(zeta, zeta_planes, Z1, Z2, d2):
-	
 	u = 0.
 	
 	for zeta_plane in zeta_planes:
@@ -205,14 +205,13 @@ def up(zeta, zeta_planes, Z1, Z2, d2):
 	
 	return u
 
+
 def fun1(r, Z1, Z2, dmean, dmax, vbcorr, e):
-	
 	u, u1, u2 = ur1(r, Z1, Z2, dmean)
 	ee = (dmax * u2 / (2 * vbcorr * u1)) ** 2 * u
 	return ee - e
 
 def fun2(r, Z1, Z2, opposing, rch, d2, e):
-	
 	u1, du1_dr, dummy = ur1(r, Z1, Z2, 1.)
 	
 	if opposing:
@@ -223,16 +222,14 @@ def fun2(r, Z1, Z2, opposing, rch, d2, e):
 	
 	return ee - e
 
-def genCritData(beamZ, targetID, E, maxRange, maxIndex):
-	
-	e = E
-	max_range = maxRange
-	max_miller = maxIndex
+
+def gen_crit_data(beam_z, target_id, beam_energy, max_range, max_index):
+	e = beam_energy
 	materials = fileloader.get_materials()
-	Z1 = beamZ
-	Z2 = materials[targetID].atomic_number
-	lType = materials[targetID].lattice_type
-	diamond = materials[targetID].has_diamond_structure
+	Z1 = beam_z
+	Z2 = materials[target_id].atomic_number
+	lType = materials[target_id].lattice_type
+	diamond = materials[target_id].has_diamond_structure
 	
 	if lType == 'cP':
 		lattice = 'sc'
@@ -243,10 +240,10 @@ def genCritData(beamZ, targetID, E, maxRange, maxIndex):
 	elif lType == 'cF':
 		lattice = 'fcc'
 	
-	alat = 10 * materials[targetID].lattice_constants[0]
-	xrms = 10 * materials[targetID].vibration_amplitude
+	alat = 10 * materials[target_id].lattice_constants[0]
+	xrms = 10 * materials[target_id].vibration_amplitude
 	base = get_base(lattice)
-	fileref = '[' + str(targetID) + '][' + str(beamZ) + '][' + str(E) + ']'
+	fileref = '[' + str(target_id) + '][' + str(beam_z) + '][' + str(beam_energy) + ']'
 	file_emin_a = open('channelling/' + fileref + 'emin-a.txt', 'w')
 	file_emin_p = open('channelling/' + fileref + 'emin-p.txt', 'w')
 	file_psicrit_a = open('channelling/' + fileref + 'psicrit-a.txt', 'w')
@@ -270,7 +267,7 @@ def genCritData(beamZ, targetID, E, maxRange, maxIndex):
 	emins = list()
 	total = 0
 	
-	for i in range(max_miller + 1):
+	for i in range(max_index + 1):
 		for j in range(i + 1):
 			for k in range(j + 1):
 				total += 1
@@ -278,7 +275,7 @@ def genCritData(beamZ, targetID, E, maxRange, maxIndex):
 	progress_bar = ProgressBar(total)
 	progress_bar.print()
 	
-	for i in range(max_miller + 1):
+	for i in range(max_index + 1):
 		for j in range(i + 1):
 			ggT = math.gcd(i, j)
 			
@@ -437,9 +434,9 @@ def genCritData(beamZ, targetID, E, maxRange, maxIndex):
 	file_uper_a.close()
 	file_uper_p.close()
 
-def loadCritData(beamZ, targetID, E):
-	
-	fileref = '[' + str(targetID) + '][' + str(beamZ) + '][' + str(E) + ']'
+
+def load_crit_data(beam_z: int, target_id: int, beam_energy: float) -> dict:
+	fileref = '[' + str(target_id) + '][' + str(beam_z) + '][' + str(beam_energy) + ']'
 	
 	try:
 		file_eperpcrit_a = open('channelling/' + fileref + 'eperpcrit-a.txt', 'r')
@@ -451,10 +448,10 @@ def loadCritData(beamZ, targetID, E):
 		file_uper_a.close()
 		file_uper_p.close()
 	except FileNotFoundError:
-		maxRange = 10
-		maxIndex = 10
-		print('Generating channelling fraction data for phase ID ' + str(targetID) + '.')
-		genCritData(beamZ, targetID, E, maxRange, maxIndex)
+		max_range = 10  # Maximum range from origin where rows are to be considered (Å)
+		max_index = 10  # Maximum Miller index to be considered
+		print('Generating channelling fraction data for phase ID ' + str(target_id) + '.')
+		gen_crit_data(beam_z, target_id, beam_energy, max_range, max_index)
 	
 	try:
 		has, kas, las, eperpcrit_a = numpy.loadtxt('channelling/' + fileref + 'eperpcrit-a.txt', unpack=True)
@@ -489,9 +486,9 @@ def loadCritData(beamZ, targetID, E):
 		planar = False
 	
 	output = dict()
-	output['beamZ'] = beamZ
-	output['targetID'] = targetID
-	output['energy'] = E
+	output['beam_z'] = beam_z
+	output['target_id'] = target_id
+	output['energy'] = beam_energy
 	output['data'] = dict()
 	output['data']['axial'] = axial
 	output['data']['has'] = has
@@ -507,26 +504,29 @@ def loadCritData(beamZ, targetID, E):
 	output['data']['u_percentiles_p'] = u_percentiles_p
 	return output
 
-def fraction(theta, phi, critData):
-	
-	e = critData['energy']
-	axial = critData['data']['axial']
-	has = critData['data']['has']
-	kas = critData['data']['kas']
-	las = critData['data']['las']
-	eperpcrit_a = critData['data']['eperpcrit_a']
-	u_percentiles_a = critData['data']['u_percentiles_a']
-	planar = critData['data']['planar']
-	hps = critData['data']['hps']
-	kps = critData['data']['kps']
-	lps = critData['data']['lps']
-	eperpcrit_p = critData['data']['eperpcrit_p']
-	u_percentiles_p = critData['data']['u_percentiles_p']
+
+def fraction(effective_beam_vector: tuple[float, float, float], crit_data: dict) -> float:
+	vx, vy, vz = -effective_beam_vector[0], -effective_beam_vector[1], effective_beam_vector[2]
+	theta = -math.atan(math.sqrt(vx ** 2 + vy ** 2) / vz)
+	phi = (math.pi / 2) - math.atan2(vy, vx)
+	e = crit_data['energy']
+	axial = crit_data['data']['axial']
+	has = crit_data['data']['has']
+	kas = crit_data['data']['kas']
+	las = crit_data['data']['las']
+	eperpcrit_a = crit_data['data']['eperpcrit_a']
+	u_percentiles_a = crit_data['data']['u_percentiles_a']
+	planar = crit_data['data']['planar']
+	hps = crit_data['data']['hps']
+	kps = crit_data['data']['kps']
+	lps = crit_data['data']['lps']
+	eperpcrit_p = crit_data['data']['eperpcrit_p']
+	u_percentiles_p = crit_data['data']['u_percentiles_p']
 	
 	output = 0
-	dirx = numpy.cos(numpy.radians(theta))
-	diry = numpy.sin(numpy.radians(theta)) * numpy.cos(numpy.radians(phi))
-	dirz = numpy.sin(numpy.radians(theta)) * numpy.sin(numpy.radians(phi))
+	dirx = numpy.cos(theta)
+	diry = numpy.sin(theta) * numpy.cos(phi)
+	dirz = numpy.sin(theta) * numpy.sin(phi)
 	
 	if axial:
 		for h, k, l, eperpcrit, u_percentiles in zip(has, kas, las, eperpcrit_a, u_percentiles_a):
@@ -557,21 +557,5 @@ def fraction(theta, phi, critData):
 							ulim = eperpcrit - e * psi ** 2
 							prob = numpy.interp(ulim, u_percentiles, range(100), left=0, right=100)
 							output = max(output, prob)
+
 	return output
-
-def run(beamZ, targetID, E, maxRange=10, maxIndex=10):
-	
-	print('Generating channelling fraction data.')
-	print('Material ID: ' + str(targetID))
-	print('Beam species atomic number: ' + str(beamZ))
-	print('Beam energy: ' + str(E) + ' eV')
-	print('Maximum range from origin: ' + utilities.format_sig_figs_or_int(0.1 * maxRange, 3) + ' nm')
-	print('Maximum Miller index: ' + str(maxIndex))
-	genCritData(beamZ, targetID, E, maxRange=maxRange, maxIndex=maxIndex)
-	print()
-	print('Data generation complete.')
-	input('Press ENTER to close: ')
-
-if __name__ == '__main__':
-	print('This is a support module.')
-	input('Press ENTER to close: ')
