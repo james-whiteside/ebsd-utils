@@ -16,7 +16,7 @@ import channelling
 import orientation
 from scan import GENERIC_PHASE_IDS
 from transforms import Axis, AxisSet, euler_rotation_matrix, reduce_vector, reduce_matrix, euler_angles, \
-	inverse_stereographic, forward_stereographic, rotation_angle, misrotation_matrix
+	inverse_stereographic, forward_stereographic, rotation_angle, misrotation_matrix, misrotation_tensor
 
 
 class CrystalFamily(Enum):
@@ -61,23 +61,6 @@ class BravaisLattice(Enum):
 			return CrystalFamily(self.value[0])
 
 
-def differential_rotation_tensor(dR: numpy.ndarray, dx: float) -> numpy.ndarray:
-	"""
-	Computes an approximation of the differential lattice rotation tensor ``dω`` of the lattice misorientation matrix ``dR`` over the finite interval ``dx``.
-	Solves Eqn. 6.54.
-	:param dR: The lattice misorientation matrix ``dR``.
-	:param dx: The finite interval ``dx``.
-	:return: The approximate lattice rotation tensor ``dω``.
-	"""
-
-	dtheta = rotation_angle(dR)
-
-	if dtheta == 0:
-		return numpy.zeros((3, 3))
-	else:
-		return numpy.dot((-3 * dtheta) / (dx * math.sin(dtheta)), dR)
-
-
 # Computes the GND density of a scan pixel ``ρ`` with coordinates ``(x, y)``.
 def gnd_density(
 		width: int,
@@ -92,7 +75,7 @@ def gnd_density(
 
 	def f(dx: int, dy: int):
 		dR = misrotation_matrix(R[y][x], R[y + dy][x + dx])
-		return differential_rotation_tensor(dR, w)
+		return numpy.transpose(misrotation_tensor(dR, w))
 
 	f_kernel = [
 		[None, f(+1, 0), f(-1, 0)],

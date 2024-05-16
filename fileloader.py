@@ -41,6 +41,17 @@ class Material:
 		else:
 			return False
 
+	@property
+	def close_pack_distance(self) -> float:
+		if self.lattice_type is BravaisLattice.CP:
+			return self.lattice_constants[0]
+		elif self.lattice_type is BravaisLattice.CI:
+			return math.sqrt(3) * self.lattice_constants[0] / 2
+		elif self.lattice_type is BravaisLattice.CF:
+			return math.sqrt(2) * self.lattice_constants[0] / 2
+		else:
+			raise NotImplementedError
+
 	def as_dict(self):
 		return {
 			"global_id": self.global_id,

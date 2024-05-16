@@ -236,3 +236,20 @@ def misrotation_matrix(R1: numpy.ndarray, R2: numpy.ndarray) -> numpy.ndarray:
 
     dR = numpy.dot(numpy.linalg.inv(R1), R2)
     return dR
+
+
+def misrotation_tensor(dR: numpy.ndarray, dx: float) -> numpy.ndarray:
+    """
+    Computes an approximation of the misrotation tensor ``dω`` of the misrotation matrix ``dR`` over the finite interval ``dx``.
+    Solves Eqn. 6.54.
+    :param dR: The misrotation matrix ``dR``.
+    :param dx: The finite interval ``dx``.
+    :return: The approximate misrotation tensor ``dω``.
+    """
+
+    dtheta = rotation_angle(dR)
+
+    if dtheta == 0:
+        return numpy.zeros((3, 3))
+    else:
+        return numpy.dot((-3 * dtheta) / (dx * math.sin(dtheta)), numpy.transpose(dR))

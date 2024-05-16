@@ -4,13 +4,13 @@ import numpy
 
 from fileloader import Material
 from transforms import AxisSet, reduce_matrix, euler_rotation_matrix, Axis, forward_stereographic, rotation_angle, \
-    misrotation_matrix
-
+    misrotation_matrix, misrotation_tensor
 
 UNINDEXED_PHASE_ID = 0
 GENERIC_BCC_PHASE_ID = 4294967294
 GENERIC_FCC_PHASE_ID = 4294967295
 GENERIC_PHASE_IDS = (UNINDEXED_PHASE_ID, GENERIC_BCC_PHASE_ID, GENERIC_FCC_PHASE_ID)
+GND_DENSITY_CORRECTIVE_FACTOR = 3.6
 
 
 class FieldType(Enum):
@@ -99,6 +99,7 @@ class Scan:
         file_reference: str,
         width: int,
         height: int,
+        pixel_size: float,
         phases: dict[int, Material],
         phase_id_values: list[list[int]],
         euler_angle_values: list[list[tuple[float, float, float]]],
@@ -109,6 +110,7 @@ class Scan:
         self.file_reference = file_reference
         self.width = width
         self.height = height
+        self.pixel_size = pixel_size
         self.phases = phases
         self.axis_set = axis_set
         self._phase_id = Field(self.width, self.height, FieldType.DISCRETE, values=phase_id_values)
@@ -120,6 +122,10 @@ class Scan:
         self._inverse_y_pole_figure_coordinates = None
         self._inverse_z_pole_figure_coordinates = None
         self._kernel_average_misorientation = None
+        self._misrotation_x_tensor = None
+        self._misrotation_y_tensor = None
+        self._nye_tensor = None
+        self._geometrically_necessary_dislocation_density = None
 
     @property
     def phase(self) -> DiscreteFieldMapper[Material]:
@@ -197,11 +203,12 @@ class Scan:
                 else:
                     total = 0.0
                     count = 4
+                    kernel = [(-1, 0), (+1, 0), (0, -1), (0, +1)]
+                    rotation_matrix_1 = self.reduced_euler_rotation_matrix.get_value_at(x, y)
 
-                    for dx, dy in [(-1, 0), (+1, 0), (0, -1), (0, +1)]:
+                    for dx, dy in kernel:
                         try:
                             if self.phase.get_value_at(x, y) == self.phase.get_value_at(x + dx, y + dy):
-                                rotation_matrix_1 = self.reduced_euler_rotation_matrix.get_value_at(x, y)
                                 rotation_matrix_2 = self.reduced_euler_rotation_matrix.get_value_at(x + dx, y + dy)
                                 total += rotation_angle(misrotation_matrix(rotation_matrix_1, rotation_matrix_2))
                             else:
@@ -216,3 +223,108 @@ class Scan:
                         field.set_value_at(x, y, value)
 
         self._kernel_average_misorientation = field
+
+    def misrotation_tensor(self, axis: Axis) -> Field[numpy.ndarray]:
+        if None in (
+            self._misrotation_x_tensor,
+            self._misrotation_y_tensor,
+        ):
+            raise AttributeError("Misrotation tensor fields not initialised.")
+        else:
+            match axis:
+                case Axis.X:
+                    return self._misrotation_x_tensor
+                case Axis.Y:
+                    return self._misrotation_y_tensor
+                case Axis.Z:
+                    raise ValueError("Misrotation data not available for z-axis intervals.")
+
+    def _gen_misrotation_tensor(self, axis: Axis) -> Field[numpy.ndarray]:
+        field = Field(self.width, self.height, FieldType.MATRIX, default_value=numpy.zeros((3, 3)))
+
+        for y in range(self.height):
+            for x in range(self.width):
+                if self.phase.get_value_at(x, y).global_id == UNINDEXED_PHASE_ID:
+                    continue
+                else:
+                    total = numpy.zeros((3, 3))
+                    count = 2
+
+                    match axis:
+                        case Axis.X:
+                            kernel = [(-1, 0), (+1, 0)]
+                        case Axis.Y:
+                            kernel = [(0, -1), (0, +1)]
+                        case Axis.Z:
+                            raise ValueError("Misrotation data not available for z-axis intervals.")
+
+                    rotation_matrix_1 = self.reduced_euler_rotation_matrix.get_value_at(x, y)
+
+                    for dx, dy in kernel:
+                        try:
+                            if self.phase.get_value_at(x, y) == self.phase.get_value_at(x + dx, y + dy):
+                                rotation_matrix_2 = self.reduced_euler_rotation_matrix.get_value_at(x + dx, y + dy)
+                                total += misrotation_tensor(misrotation_matrix(rotation_matrix_1, rotation_matrix_2), self.pixel_size)
+                            else:
+                                count -= 1
+                        except IndexError:
+                            count -= 1
+
+                    if count == 0:
+                        continue
+                    else:
+                        value = total / count
+                        field.set_value_at(x, y, value)
+
+        return field
+
+    def init_misrotation_tensor(self) -> None:
+        self._misrotation_x_tensor = self._gen_misrotation_tensor(Axis.X)
+        self._misrotation_y_tensor = self._gen_misrotation_tensor(Axis.Y)
+
+    @property
+    def nye_tensor(self) -> Field[numpy.ndarray]:
+        if self._nye_tensor is None:
+            raise AttributeError("Nye tensor field not initialised.")
+        else:
+            return self._nye_tensor
+
+    def init_nye_tensor(self) -> None:
+        field = Field(self.width, self.height, FieldType.MATRIX, default_value=numpy.zeros((3, 3)))
+
+        for y in range(self.height):
+            for x in range(self.width):
+                if self.phase.get_value_at(x, y).global_id == UNINDEXED_PHASE_ID:
+                    continue
+                else:
+                    value = numpy.array((
+                        (0.0, self.misrotation_tensor(Axis.X).get_value_at(x, y)[2][0], -self.misrotation_tensor(Axis.X).get_value_at(x, y)[1][0]),
+                        (-self.misrotation_tensor(Axis.Y).get_value_at(x, y)[2][1], 0.0, self.misrotation_tensor(Axis.Y).get_value_at(x, y)[0][1]),
+                        (0.0, 0.0, self.misrotation_tensor(Axis.Y).get_value_at(x, y)[0][2] - self.misrotation_tensor(Axis.X).get_value_at(x, y)[1][2])
+                    ))
+
+                    field.set_value_at(x, y, value)
+
+        self._nye_tensor = field
+
+    @property
+    def geometrically_necessary_dislocation_density(self) -> Field[float]:
+        if self._geometrically_necessary_dislocation_density is None:
+            raise AttributeError("Geometrically necessary dislocation density field not initialised.")
+        else:
+            return self._geometrically_necessary_dislocation_density
+
+    def init_geometrically_necessary_dislocation_density(self) -> None:
+        field = Field(self.width, self.height, FieldType.SCALAR, default_value=0.0)
+
+        for y in range(self.height):
+            for x in range(self.width):
+                if self.phase.get_value_at(x, y).global_id == UNINDEXED_PHASE_ID:
+                    continue
+                else:
+                    nye_tensor_norm = sum(abs(element) for element in self.nye_tensor.get_value_at(x, y))
+                    close_pack_distance = self.phase.get_value_at(x, y).close_pack_distance
+                    value = (GND_DENSITY_CORRECTIVE_FACTOR / close_pack_distance) * nye_tensor_norm
+                    field.set_value_at(x, y, value)
+
+        self._geometrically_necessary_dislocation_density = field
