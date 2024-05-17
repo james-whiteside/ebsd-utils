@@ -1,7 +1,7 @@
 import math
 from enum import Enum
 import numpy
-from ebsd import BravaisLattice, CrystalFamily
+from material import CrystalFamily, BravaisLattice
 
 
 class Axis(Enum):

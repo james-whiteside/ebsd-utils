@@ -1,12 +1,20 @@
-import math
-from enum import Enum
-import numpy
+# -*- coding: utf-8 -*-
 
-import channelling
-from clustering import dbscan
-from fileloader import Material
-from transforms import AxisSet, reduce_matrix, euler_rotation_matrix, Axis, forward_stereographic, rotation_angle, \
-    misrotation_matrix, misrotation_tensor
+from enum import Enum
+from numpy import ndarray, array, zeros, eye, dot
+from geometry import (
+    Axis,
+    AxisSet,
+    euler_rotation_matrix,
+    reduce_matrix,
+    rotation_angle,
+    misrotation_matrix,
+    misrotation_tensor,
+    forward_stereographic,
+)
+from material import Material
+from channelling import load_crit_data, fraction
+from clustering import ClusterCategory, dbscan
 
 UNINDEXED_PHASE_ID = 0
 GENERIC_BCC_PHASE_ID = 4294967294
@@ -20,13 +28,7 @@ class FieldType(Enum):
     SCALAR = float
     VECTOR_2D = tuple[float, float]
     VECTOR_3D = tuple[float, float, float]
-    MATRIX = numpy.ndarray
-
-
-class ClusterCategory(Enum):
-    CORE = 1
-    BORDER = 2
-    NOISE = 3
+    MATRIX = ndarray
 
 
 class Field[T]:
@@ -107,7 +109,6 @@ class Scan:
         file_reference: str,
         width: int,
         height: int,
-        pixel_size: float,
         phases: dict[int, Material],
         phase_id_values: list[list[int]],
         euler_angle_values: list[list[tuple[float, float, float]]],
@@ -118,7 +119,6 @@ class Scan:
         self.file_reference = file_reference
         self.width = width
         self.height = height
-        self.pixel_size = pixel_size
         self.phases = phases
         self.axis_set = axis_set
         self._phase_id = Field(self.width, self.height, FieldType.DISCRETE, values=phase_id_values)
@@ -130,6 +130,7 @@ class Scan:
         self._inverse_y_pole_figure_coordinates = None
         self._inverse_z_pole_figure_coordinates = None
         self._kernel_average_misorientation = None
+        self.pixel_size = None
         self._misrotation_x_tensor = None
         self._misrotation_y_tensor = None
         self._nye_tensor = None
@@ -149,14 +150,138 @@ class Scan:
         return DiscreteFieldMapper(self.phases, self._phase_id)
 
     @property
-    def reduced_euler_rotation_matrix(self) -> Field[numpy.ndarray]:
+    def reduced_euler_rotation_matrix(self) -> Field[ndarray]:
         if self._reduced_euler_rotation_matrix is None:
-            raise AttributeError("Reduced euler rotation matrix field not initialised.")
-        else:
-            return self._reduced_euler_rotation_matrix
+            self._init_reduced_euler_rotation_matrices()
 
-    def init_reduced_euler_rotation_matrices(self) -> None:
-        field = Field(self.width, self.height, FieldType.MATRIX, default_value=numpy.eye(3))
+        return self._reduced_euler_rotation_matrix
+
+    def inverse_pole_figure_coordinates(self, axis: Axis) -> Field[tuple[float, float]]:
+        if None in (
+            self._inverse_x_pole_figure_coordinates,
+            self._inverse_y_pole_figure_coordinates,
+            self._inverse_z_pole_figure_coordinates,
+        ):
+            self._init_inverse_pole_figure_coordinates()
+
+        match axis:
+            case Axis.X:
+                return self._inverse_x_pole_figure_coordinates
+            case Axis.Y:
+                return self._inverse_y_pole_figure_coordinates
+            case Axis.Z:
+                return self._inverse_z_pole_figure_coordinates
+
+    @property
+    def kernel_average_misorientation(self) -> Field[float]:
+        if self._kernel_average_misorientation is None:
+            self._init_kernel_average_misorientation()
+
+        return self._kernel_average_misorientation
+
+    def misrotation_tensor(self, axis: Axis, pixel_size: float = None) -> Field[ndarray]:
+        if None in (self._misrotation_x_tensor, self._misrotation_y_tensor) or (pixel_size is not None and self.pixel_size != pixel_size):
+            self.pixel_size = pixel_size if pixel_size is not None else self.pixel_size
+
+            if self.pixel_size is None:
+                raise AttributeError("Misrotation tensor fields not initialised and initialisation arguments were not provided.")
+
+            self._init_misrotation_tensors()
+
+        match axis:
+            case Axis.X:
+                return self._misrotation_x_tensor
+            case Axis.Y:
+                return self._misrotation_y_tensor
+            case Axis.Z:
+                raise ValueError("Misrotation data not available for z-axis intervals.")
+
+    def nye_tensor(self, pixel_size: float = None) -> Field[ndarray]:
+        if self._nye_tensor is None or (pixel_size is not None and self.pixel_size != pixel_size):
+            self.pixel_size = pixel_size if pixel_size is not None else self.pixel_size
+
+            if self.pixel_size is None:
+                raise AttributeError("Nye tensor field not initialised and initialisation arguments were not provided.")
+
+            self._init_nye_tensor()
+
+        return self._nye_tensor
+
+    def geometrically_necessary_dislocation_density(self, pixel_size: float = None) -> Field[float]:
+        if self._geometrically_necessary_dislocation_density is None or (pixel_size is not None and self.pixel_size != pixel_size):
+            self.pixel_size = pixel_size if pixel_size is not None else self.pixel_size
+
+            if self.pixel_size is None:
+                raise AttributeError("Geometrically necessary dislocation density field not initialised and initialisation arguments were not provided.")
+
+            self._init_geometrically_necessary_dislocation_density()
+
+        return self._geometrically_necessary_dislocation_density
+
+    def channelling_fraction(
+        self,
+        beam_atomic_number: int = None,
+        beam_energy: float = None,
+        beam_vector: tuple[float, float, float] = None
+    ) -> Field[float]:
+        if self._channelling_fraction is None or any((
+            beam_atomic_number is not None and self.beam_atomic_number != beam_atomic_number,
+            beam_energy is not None and self.beam_energy != beam_energy,
+            beam_vector is not None and self.beam_atomic_number != beam_vector,
+        )):
+            self.beam_atomic_number = beam_atomic_number if beam_atomic_number is not None else self.beam_atomic_number
+            self.beam_energy = beam_energy if beam_energy is not None else self.beam_energy
+            self.beam_vector = beam_vector if beam_vector is not None else self.beam_vector
+
+            if None in (self.beam_atomic_number, self.beam_energy, self.beam_vector):
+                raise AttributeError("Channelling fraction field not initialised and initialisation arguments were not provided.")
+
+            self._init_channelling_fraction()
+
+        return self._channelling_fraction
+
+    def orientation_clustering_category(
+        self,
+        core_point_neighbourhood_threshold: int = None,
+        neighbourhood_radius: float = None,
+    ) -> DiscreteFieldMapper[ClusterCategory]:
+        if self._orientation_clustering_category_id is None or any((
+            core_point_neighbourhood_threshold is not None and self.core_point_neighbour_threshold != core_point_neighbourhood_threshold,
+            neighbourhood_radius is not None and self.neighbourhood_radius != neighbourhood_radius,
+        )):
+            self.core_point_neighbour_threshold = core_point_neighbourhood_threshold if core_point_neighbourhood_threshold is not None else self.core_point_neighbour_threshold
+            self.neighbourhood_radius = neighbourhood_radius if neighbourhood_radius is not None else self.neighbourhood_radius
+
+            if None in (self.core_point_neighbour_threshold, self.neighbourhood_radius):
+                raise AttributeError("Orientation cluster fields not initialised and initialisation arguments were not provided.")
+
+            self._init_orientation_cluster()
+
+        mapping = {category.value: category for category in ClusterCategory}
+        return DiscreteFieldMapper(mapping, self._orientation_clustering_category_id)
+
+    def orientation_cluster_id(
+        self,
+        core_point_neighbourhood_threshold: int = None,
+        neighbourhood_radius: float = None,
+    ) -> Field[int]:
+        if self._orientation_cluster_id is None or any((
+            core_point_neighbourhood_threshold is not None and self.core_point_neighbour_threshold != core_point_neighbourhood_threshold,
+            neighbourhood_radius is not None and self.neighbourhood_radius != neighbourhood_radius,
+        )):
+            self.core_point_neighbour_threshold = core_point_neighbourhood_threshold if core_point_neighbourhood_threshold is not None else self.core_point_neighbour_threshold
+            self.neighbourhood_radius = neighbourhood_radius if neighbourhood_radius is not None else self.neighbourhood_radius
+
+            if None in (self.core_point_neighbour_threshold, self.neighbourhood_radius):
+                raise AttributeError(
+                    "Orientation cluster fields not initialised and initialisation arguments were not provided.")
+
+            self._init_orientation_cluster()
+
+        return self._orientation_cluster_id
+
+    def _init_reduced_euler_rotation_matrices(self) -> None:
+        field = Field(self.width, self.height, FieldType.MATRIX, default_value=eye(3))
 
         for y in range(self.height):
             for x in range(self.width):
@@ -168,22 +293,6 @@ class Scan:
 
         self._reduced_euler_rotation_matrix = field
 
-    def inverse_pole_figure_coordinates(self, axis: Axis) -> Field[tuple[float, float]]:
-        if None in (
-            self._inverse_x_pole_figure_coordinates,
-            self._inverse_y_pole_figure_coordinates,
-            self._inverse_z_pole_figure_coordinates,
-        ):
-            raise AttributeError("Inverse pole figure coordinate fields not initialised.")
-        else:
-            match axis:
-                case Axis.X:
-                    return self._inverse_x_pole_figure_coordinates
-                case Axis.Y:
-                    return self._inverse_y_pole_figure_coordinates
-                case Axis.Z:
-                    return self._inverse_z_pole_figure_coordinates
-
     def _gen_inverse_pole_figure_coordinates(self, axis: Axis) -> Field[tuple[float, float]]:
         field = Field(self.width, self.height, FieldType.VECTOR_2D, default_value=(0.0, 0.0))
 
@@ -193,24 +302,17 @@ class Scan:
                     continue
                 else:
                     rotation_matrix = self.reduced_euler_rotation_matrix.get_value_at(x, y)
-                    value = forward_stereographic(*numpy.dot(rotation_matrix, axis.value).tolist())
+                    value = forward_stereographic(*dot(rotation_matrix, axis.value).tolist())
                     field.set_value_at(x, y, value)
 
         return field
 
-    def init_inverse_pole_figure_coordinates(self) -> None:
+    def _init_inverse_pole_figure_coordinates(self) -> None:
         self._inverse_x_pole_figure_coordinates = self._gen_inverse_pole_figure_coordinates(Axis.X)
         self._inverse_y_pole_figure_coordinates = self._gen_inverse_pole_figure_coordinates(Axis.Y)
         self._inverse_z_pole_figure_coordinates = self._gen_inverse_pole_figure_coordinates(Axis.Z)
 
-    @property
-    def kernel_average_misorientation(self) -> Field[float]:
-        if self._kernel_average_misorientation is None:
-            raise AttributeError("Kernel average misorientation field not initialised.")
-        else:
-            return self._kernel_average_misorientation
-
-    def init_kernel_average_misorientation(self) -> None:
+    def _init_kernel_average_misorientation(self) -> None:
         field = Field(self.width, self.height, FieldType.SCALAR, default_value=0.0)
 
         for y in range(self.height):
@@ -241,30 +343,15 @@ class Scan:
 
         self._kernel_average_misorientation = field
 
-    def misrotation_tensor(self, axis: Axis) -> Field[numpy.ndarray]:
-        if None in (
-            self._misrotation_x_tensor,
-            self._misrotation_y_tensor,
-        ):
-            raise AttributeError("Misrotation tensor fields not initialised.")
-        else:
-            match axis:
-                case Axis.X:
-                    return self._misrotation_x_tensor
-                case Axis.Y:
-                    return self._misrotation_y_tensor
-                case Axis.Z:
-                    raise ValueError("Misrotation data not available for z-axis intervals.")
-
-    def _gen_misrotation_tensor(self, axis: Axis) -> Field[numpy.ndarray]:
-        field = Field(self.width, self.height, FieldType.MATRIX, default_value=numpy.zeros((3, 3)))
+    def _gen_misrotation_tensor(self, axis: Axis) -> Field[ndarray]:
+        field = Field(self.width, self.height, FieldType.MATRIX, default_value=zeros((3, 3)))
 
         for y in range(self.height):
             for x in range(self.width):
                 if self.phase.get_value_at(x, y).global_id == UNINDEXED_PHASE_ID:
                     continue
                 else:
-                    total = numpy.zeros((3, 3))
+                    total = zeros((3, 3))
                     count = 2
 
                     match axis:
@@ -295,26 +382,19 @@ class Scan:
 
         return field
 
-    def init_misrotation_tensor(self) -> None:
+    def _init_misrotation_tensors(self) -> None:
         self._misrotation_x_tensor = self._gen_misrotation_tensor(Axis.X)
         self._misrotation_y_tensor = self._gen_misrotation_tensor(Axis.Y)
 
-    @property
-    def nye_tensor(self) -> Field[numpy.ndarray]:
-        if self._nye_tensor is None:
-            raise AttributeError("Nye tensor field not initialised.")
-        else:
-            return self._nye_tensor
-
-    def init_nye_tensor(self) -> None:
-        field = Field(self.width, self.height, FieldType.MATRIX, default_value=numpy.zeros((3, 3)))
+    def _init_nye_tensor(self) -> None:
+        field = Field(self.width, self.height, FieldType.MATRIX, default_value=zeros((3, 3)))
 
         for y in range(self.height):
             for x in range(self.width):
                 if self.phase.get_value_at(x, y).global_id == UNINDEXED_PHASE_ID:
                     continue
                 else:
-                    value = numpy.array((
+                    value = array((
                         (0.0, self.misrotation_tensor(Axis.X).get_value_at(x, y)[2][0], -self.misrotation_tensor(Axis.X).get_value_at(x, y)[1][0]),
                         (-self.misrotation_tensor(Axis.Y).get_value_at(x, y)[2][1], 0.0, self.misrotation_tensor(Axis.Y).get_value_at(x, y)[0][1]),
                         (0.0, 0.0, self.misrotation_tensor(Axis.Y).get_value_at(x, y)[0][2] - self.misrotation_tensor(Axis.X).get_value_at(x, y)[1][2])
@@ -324,14 +404,7 @@ class Scan:
 
         self._nye_tensor = field
 
-    @property
-    def geometrically_necessary_dislocation_density(self) -> Field[float]:
-        if self._geometrically_necessary_dislocation_density is None:
-            raise AttributeError("Geometrically necessary dislocation density field not initialised.")
-        else:
-            return self._geometrically_necessary_dislocation_density
-
-    def init_geometrically_necessary_dislocation_density(self) -> None:
+    def _init_geometrically_necessary_dislocation_density(self) -> None:
         field = Field(self.width, self.height, FieldType.SCALAR, default_value=0.0)
 
         for y in range(self.height):
@@ -339,33 +412,18 @@ class Scan:
                 if self.phase.get_value_at(x, y).global_id == UNINDEXED_PHASE_ID:
                     continue
                 else:
-                    nye_tensor_norm = sum(abs(element) for element in self.nye_tensor.get_value_at(x, y))
+                    nye_tensor_norm = sum(abs(element) for element in self.nye_tensor().get_value_at(x, y))
                     close_pack_distance = self.phase.get_value_at(x, y).close_pack_distance
                     value = (GND_DENSITY_CORRECTIVE_FACTOR / close_pack_distance) * nye_tensor_norm
                     field.set_value_at(x, y, value)
 
         self._geometrically_necessary_dislocation_density = field
 
-    @property
-    def channelling_fraction(self) -> Field[float]:
-        if self._channelling_fraction is None:
-            raise AttributeError("Channelling fraction field not initialised.")
-        else:
-            return self._channelling_fraction
-
-    def init_channelling_fraction(
-        self,
-        beam_atomic_number: int,
-        beam_energy: float,
-        beam_vector: tuple[float, float, float]
-    ) -> None:
-        self.beam_atomic_number = beam_atomic_number
-        self.beam_energy = beam_energy
-        self.beam_vector = beam_vector
+    def _init_channelling_fraction(self) -> None:
         field = Field(self.width, self.height, FieldType.SCALAR, default_value=0.0)
 
         channel_data = {
-            local_id: channelling.load_crit_data(self.beam_atomic_number, phase.global_id, self.beam_energy)
+            local_id: load_crit_data(self.beam_atomic_number, phase.global_id, self.beam_energy)
             for local_id, phase in self.phases.items() if phase.global_id != UNINDEXED_PHASE_ID
         }
 
@@ -375,37 +433,30 @@ class Scan:
                     continue
                 else:
                     rotation_matrix = self.reduced_euler_rotation_matrix.get_value_at(x, y)
-                    effective_beam_vector = numpy.dot(rotation_matrix, self.beam_vector).to_list()
-                    value = channelling.fraction(effective_beam_vector, channel_data[self._phase_id.get_value_at(x, y)])
+                    effective_beam_vector = dot(rotation_matrix, self.beam_vector).to_list()
+                    value = fraction(effective_beam_vector, channel_data[self._phase_id.get_value_at(x, y)])
                     field.set_value_at(x, y, value)
 
         self._channelling_fraction = field
 
-    @property
-    def orientation_clustering_category(self) -> DiscreteFieldMapper[ClusterCategory]:
-        if self._orientation_clustering_category_id is None:
-            raise AttributeError("Orientation cluster field not initialised.")
-        else:
-            mapping = {category.value: category for category in ClusterCategory}
-            return DiscreteFieldMapper(mapping, self._orientation_clustering_category_id)
-
-    @property
-    def orientation_cluster_id(self) -> Field[int]:
-        if self._orientation_cluster_id is None:
-            raise AttributeError("Orientation cluster field not initialised.")
-        else:
-            return self._orientation_cluster_id
-
-    def init_orientation_cluster(self, core_point_neighbour_threshold: int, neighbourhood_radius: float) -> None:
-        phase = numpy.zeros((self.height, self.width))
-        R = numpy.zeros((self.height, self.width, 3, 3))
+    def _init_orientation_cluster(self) -> None:
+        phase = zeros((self.height, self.width))
+        reduced_euler_rotation_matrix = zeros((self.height, self.width, 3, 3))
 
         for y in range(self.height):
             for x in range(self.width):
                 phase[y][x] = self.phase.get_value_at(x, y).global_id
-                R[y][x] = self.reduced_euler_rotation_matrix.get_value_at(x, y)
+                reduced_euler_rotation_matrix[y][x] = self.reduced_euler_rotation_matrix.get_value_at(x, y)
 
-        cluster_count, category_id_array, cluster_id_array = dbscan(self.width, self.height, phase, R, core_point_neighbour_threshold, neighbourhood_radius)
+        cluster_count, category_id_array, cluster_id_array = dbscan(
+            self.width,
+            self.height,
+            phase,
+            reduced_euler_rotation_matrix,
+            self.core_point_neighbour_threshold,
+            self.neighbourhood_radius
+        )
+
         self.cluster_count = cluster_count
         self._orientation_clustering_category_id = Field(self.width, self.height, FieldType.DISCRETE, values=category_id_array.tolist())
         self._orientation_cluster_id = Field(self.width, self.height, FieldType.DISCRETE, values=cluster_id_array.tolist())

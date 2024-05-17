@@ -6,7 +6,6 @@ import copy
 import itertools
 import sys
 import os
-from enum import Enum
 
 import numpy
 from numba import cuda
@@ -15,51 +14,10 @@ import fileloader
 import channelling
 import orientation
 from clustering import dbscan
+from material import CrystalFamily, BravaisLattice
 from scan import GENERIC_PHASE_IDS
-from transforms import Axis, AxisSet, euler_rotation_matrix, reduce_vector, reduce_matrix, euler_angles, \
+from geometry import Axis, AxisSet, euler_rotation_matrix, reduce_vector, reduce_matrix, euler_angles, \
 	inverse_stereographic, forward_stereographic, rotation_angle, misrotation_matrix, misrotation_tensor
-
-
-class CrystalFamily(Enum):
-	"""
-	Enumeration of the crystal lattice types, as listed in Tab. A2.1.
-	"""
-
-	C = "c"
-	T = "t"
-	O = "o"
-	H = "h"
-	M = "m"
-	A = "a"
-	NONE = "None"
-
-
-class BravaisLattice(Enum):
-	"""
-	Enumeration of the Bravais lattice types, as listed in Tab. A2.1.
-	"""
-
-	CP = "cP"
-	CI = "cI"
-	CF = "cF"
-	TP = "tP"
-	TI = "tI"
-	OP = "oP"
-	OI = "oI"
-	OF = "oF"
-	OS = "oS"
-	HP = "hP"
-	HR = "hR"
-	MP = "mP"
-	MS = "mS"
-	AP = "aP"
-	NONE = "None"
-
-	def get_family(self) -> CrystalFamily:
-		if self is BravaisLattice.NONE:
-			return CrystalFamily.NONE
-		else:
-			return CrystalFamily(self.value[0])
 
 
 # Computes the GND density of a scan pixel ``ρ`` with coordinates ``(x, y)``.

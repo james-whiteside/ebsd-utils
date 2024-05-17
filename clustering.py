@@ -1,6 +1,15 @@
+# -*- coding: utf-8 -*-
+
 import math
+from enum import Enum
 import numpy
 from numba import jit
+
+
+class ClusterCategory(Enum):
+    CORE = 1
+    BORDER = 2
+    NOISE = 3
 
 
 @jit(nopython=True)

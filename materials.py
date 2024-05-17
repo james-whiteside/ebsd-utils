@@ -3,7 +3,7 @@
 import math
 import utilities
 import fileloader
-from ebsd import BravaisLattice
+from material import BravaisLattice, Material
 
 
 def decode_lattice_type(value):
@@ -83,7 +83,7 @@ def add(database):
 					if lType.value == 'cF':
 						diamond = input('Does crystal have diamond structure? (Y/N): ').lower() == 'y'
 
-					material = fileloader.Material(
+					material = Material(
 						global_id=ID,
 						name=name,
 						atomic_number=Z,
