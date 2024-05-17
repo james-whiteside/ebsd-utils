@@ -9,11 +9,12 @@ import os
 from enum import Enum
 
 import numpy
-from numba import jit, cuda
+from numba import cuda
 import utilities
 import fileloader
 import channelling
 import orientation
+from clustering import dbscan
 from scan import GENERIC_PHASE_IDS
 from transforms import Axis, AxisSet, euler_rotation_matrix, reduce_vector, reduce_matrix, euler_angles, \
 	inverse_stereographic, forward_stereographic, rotation_angle, misrotation_matrix, misrotation_tensor
@@ -180,137 +181,6 @@ def calGND(data, dx):
 
 	return GND
 
-
-@jit(nopython=True)
-def dbscan(phase, R, width, height, n, epsilon):
-	
-	k = 0
-	categories = numpy.zeros((height, width))
-	clusters = numpy.zeros((height, width))
-	
-	for y in range(height):
-		for x in range(width):
-			if phase[y][x] == 0:
-				categories[y][x] = 3
-	
-	for y0 in range(height):
-		for x0 in range(width):
-			if categories[y0][x0] == 0:
-				m = 0
-				
-				for y1 in range(height):
-					for x1 in range(width):
-						if phase[y0][x0] == phase[y1][x1]:
-							dR = numpy.dot(numpy.linalg.inv(R[y0][x0]), R[y1][x1])
-							
-							if 0.5 * (abs(dR[0][0]) + abs(dR[1][1]) + abs(dR[2][2]) - 1) > 1:
-								dTheta = math.acos(1)
-							elif 0.5 * (abs(dR[0][0]) + abs(dR[1][1]) + abs(dR[2][2]) - 1) < -1:
-								dTheta = math.acos(-1)
-							else:
-								dTheta = math.acos(0.5 * (abs(dR[0][0]) + abs(dR[1][1]) + abs(dR[2][2]) - 1))
-							
-							distf = math.degrees(dTheta)
-							if distf <= epsilon and x0 != x1 and y0 != y1:
-								m += 1
-							
-							if m >= n:
-								categories[y0][x0] = 1
-								
-								break
-					
-					if m >= n:
-						break
-	
-	for y0 in range(height):
-		for x0 in range(width):
-			if categories[y0][x0] != 0:
-				continue
-			
-			for y1 in range(height):
-				for x1 in range(width):
-					if phase[y0][x0] == phase[y1][x1] and categories[y1][x1] == 1:
-						dR = numpy.dot(numpy.linalg.inv(R[y0][x0]), R[y1][x1])
-						
-						if 0.5 * (abs(dR[0][0]) + abs(dR[1][1]) + abs(dR[2][2]) - 1) > 1:
-							dTheta = math.acos(1)
-						elif 0.5 * (abs(dR[0][0]) + abs(dR[1][1]) + abs(dR[2][2]) - 1) < -1:
-							dTheta = math.acos(-1)
-						else:
-							dTheta = math.acos(0.5 * (abs(dR[0][0]) + abs(dR[1][1]) + abs(dR[2][2]) - 1))
-						
-						distf = math.degrees(dTheta)
-						if distf <= epsilon:
-							categories[y0][x0] = 2
-							break
-				
-				if categories[y0][x0] == 2:
-					break
-	
-	for y0 in range(height):
-		for x0 in range(width):
-			if categories[y0][x0] == 0:
-				categories[y0][x0] = 3
-	
-	for y0 in range(height):
-		for x0 in range(width):
-			if categories[y0][x0] == 1 and clusters[y0][x0] == 0:
-				k += 1
-				clusters[y0][x0] = k
-				complete = False
-				
-				while not complete:
-					complete = True
-					
-					for y1 in range(height):#range(y0, height):
-						for x1 in range(width):#range(x0, width):
-							if clusters[y1][x1] == k:
-								for y2 in range(height):#range(y1, height):
-									for x2 in range(width):#range(x1, width):
-										if phase[y1][x1] == phase[y2][x2] and categories[y2][x2] == 1 and clusters[y2][x2] == 0:
-											dR = numpy.dot(numpy.linalg.inv(R[y1][x1]), R[y2][x2])
-											
-											if 0.5 * (abs(dR[0][0]) + abs(dR[1][1]) + abs(dR[2][2]) - 1) > 1:
-												dTheta = math.acos(1)
-											elif 0.5 * (abs(dR[0][0]) + abs(dR[1][1]) + abs(dR[2][2]) - 1) < -1:
-												dTheta = math.acos(-1)
-											else:
-												dTheta = math.acos(0.5 * (abs(dR[0][0]) + abs(dR[1][1]) + abs(dR[2][2]) - 1))
-											
-											distf = math.degrees(dTheta)
-											if distf <= epsilon:
-												clusters[y2][x2] = k
-												complete = False
-	
-	for y0 in range(height):
-		for x0 in range(width):
-			if categories[y0][x0] == 2:
-				dmin = epsilon
-				xmin = 0
-				ymin = 0
-				
-				for y1 in range(height):
-					for x1 in range(width):
-						if phase[y0][x0] == phase[y1][x1] and categories[y1][x1] == 1:
-							dR = numpy.dot(numpy.linalg.inv(R[y0][x0]), R[y1][x1])
-							
-							if 0.5 * (abs(dR[0][0]) + abs(dR[1][1]) + abs(dR[2][2]) - 1) > 1:
-								dTheta = math.acos(1)
-							elif 0.5 * (abs(dR[0][0]) + abs(dR[1][1]) + abs(dR[2][2]) - 1) < -1:
-								dTheta = math.acos(-1)
-							else:
-								dTheta = math.acos(0.5 * (abs(dR[0][0]) + abs(dR[1][1]) + abs(dR[2][2]) - 1))
-							
-							distf = math.degrees(dTheta)
-							if  distf <= dmin:
-								dmin = distf
-								xmin = x1
-								ymin = y1
-				
-				clusters[y0][x0] = clusters[ymin][xmin]
-	
-	return k, categories, clusters
-
 def cluster(data, n, epsilon):
 	
 	phase = numpy.zeros((data['height'], data['width']))
@@ -323,7 +193,7 @@ def cluster(data, n, epsilon):
 	
 	width = data['width']
 	height = data['height']
-	k, categories, clusters = dbscan(phase, R, width, height, n, epsilon)
+	k, categories, clusters = dbscan(width, height, phase, R, n, math.radians(epsilon))
 	output = dict()
 	output['k'] = k
 	output['data'] = dict()

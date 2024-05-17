@@ -3,6 +3,7 @@ from enum import Enum
 import numpy
 
 import channelling
+from clustering import dbscan
 from fileloader import Material
 from transforms import AxisSet, reduce_matrix, euler_rotation_matrix, Axis, forward_stereographic, rotation_angle, \
     misrotation_matrix, misrotation_tensor
@@ -20,6 +21,12 @@ class FieldType(Enum):
     VECTOR_2D = tuple[float, float]
     VECTOR_3D = tuple[float, float, float]
     MATRIX = numpy.ndarray
+
+
+class ClusterCategory(Enum):
+    CORE = 1
+    BORDER = 2
+    NOISE = 3
 
 
 class Field[T]:
@@ -131,6 +138,11 @@ class Scan:
         self.beam_energy = None
         self.beam_vector = None
         self._channelling_fraction = None
+        self.core_point_neighbour_threshold = None
+        self.neighbourhood_radius = None
+        self.cluster_count = None
+        self._orientation_clustering_category_id = None
+        self._orientation_cluster_id = None
 
     @property
     def phase(self) -> DiscreteFieldMapper[Material]:
@@ -368,3 +380,32 @@ class Scan:
                     field.set_value_at(x, y, value)
 
         self._channelling_fraction = field
+
+    @property
+    def orientation_clustering_category(self) -> DiscreteFieldMapper[ClusterCategory]:
+        if self._orientation_clustering_category_id is None:
+            raise AttributeError("Orientation cluster field not initialised.")
+        else:
+            mapping = {category.value: category for category in ClusterCategory}
+            return DiscreteFieldMapper(mapping, self._orientation_clustering_category_id)
+
+    @property
+    def orientation_cluster_id(self) -> Field[int]:
+        if self._orientation_cluster_id is None:
+            raise AttributeError("Orientation cluster field not initialised.")
+        else:
+            return self._orientation_cluster_id
+
+    def init_orientation_cluster(self, core_point_neighbour_threshold: int, neighbourhood_radius: float) -> None:
+        phase = numpy.zeros((self.height, self.width))
+        R = numpy.zeros((self.height, self.width, 3, 3))
+
+        for y in range(self.height):
+            for x in range(self.width):
+                phase[y][x] = self.phase.get_value_at(x, y).global_id
+                R[y][x] = self.reduced_euler_rotation_matrix.get_value_at(x, y)
+
+        cluster_count, category_id_array, cluster_id_array = dbscan(self.width, self.height, phase, R, core_point_neighbour_threshold, neighbourhood_radius)
+        self.cluster_count = cluster_count
+        self._orientation_clustering_category_id = Field(self.width, self.height, FieldType.DISCRETE, values=category_id_array.tolist())
+        self._orientation_cluster_id = Field(self.width, self.height, FieldType.DISCRETE, values=cluster_id_array.tolist())
