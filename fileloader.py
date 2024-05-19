@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import os
 import sys
 import math
 import numpy
@@ -7,7 +8,7 @@ from PIL import Image as image
 from material import Material, BravaisLattice
 
 
-def get_materials(path: str = "materials/materials.csv") -> dict[int, Material]:
+def get_materials(path: str = f"{os.getcwd()}/example_data/materials.csv".replace("\\", "/")) -> dict[int, Material]:
 	materials = dict()
 	
 	with open(path, "r") as file:

@@ -5,7 +5,7 @@ from collections.abc import Iterator, Callable
 from enum import Enum
 from typing import Self
 
-from numpy import ndarray, array, zeros, eye, dot
+from numpy import ndarray, array, zeros, eye, dot, nditer
 
 from fileloader import get_materials
 from geometry import (
@@ -32,8 +32,7 @@ GND_DENSITY_CORRECTIVE_FACTOR = 3.6
 class FieldType(Enum):
     DISCRETE = int
     SCALAR = float
-    VECTOR_2D = tuple[float, float]
-    VECTOR_3D = tuple[float, float, float]
+    VECTOR = tuple
     MATRIX = ndarray
 
 
@@ -53,7 +52,7 @@ class Field[VALUE_TYPE]:
         if default_value is None and values is None:
             raise ValueError(f"Either default field value or array of field values must be provided.")
 
-        if default_value is not None and not isinstance(default_value, self.field_type.value):
+        if default_value is not None and type(default_value) is not self.field_type.value:
             raise ValueError(f"Type of default field value {type(default_value)} does not match field type {self.field_type.value}.")
 
         self.default_value = default_value
@@ -69,12 +68,12 @@ class Field[VALUE_TYPE]:
                     except IndexError:
                         raise IndexError(f"Coordinate ({x}, {y}) is out of bounds of provided value array.")
 
-                    if not isinstance(value, self.field_type.value):
+                    if type(value) is not self.field_type.value:
                         raise ValueError(f"Type of provided value {type(value)} does not match field type {self.field_type.value}.")
 
-                    self._values.append(values[y][x])
+                    self._values[y].append(value)
                 else:
-                    self._values.append(self.default_value)
+                    self._values[y].append(self.default_value)
 
     def get_value_at(self, x: int, y: int) -> VALUE_TYPE:
         if not 0 <= x < self.width or not 0 <= y < self.height:
@@ -85,7 +84,7 @@ class Field[VALUE_TYPE]:
     def set_value_at(self, x: int, y: int, value: VALUE_TYPE) -> None:
         if not 0 <= x < self.width or not 0 <= y < self.height:
             raise IndexError(f"Coordinate ({x}, {y}) is out of bounds of field.")
-        elif not isinstance(value, self.field_type.value):
+        elif type(value) is not self.field_type.value:
             raise ValueError(f"Type of provided value {type(value)} does not match field type {self.field_type.value}.")
         else:
             self._values[y][x] = value
@@ -112,9 +111,9 @@ class DiscreteFieldMapper[VALUE_TYPE]:
 class FunctionalFieldMapper[INPUT_TYPE, OUTPUT_TYPE]:
     def __init__(
         self,
-        forward_mapping: Callable[INPUT_TYPE, OUTPUT_TYPE],
+        forward_mapping: Callable[[INPUT_TYPE], OUTPUT_TYPE],
         field: Field[INPUT_TYPE],
-        reverse_mapping: Callable[OUTPUT_TYPE, INPUT_TYPE] = None,
+        reverse_mapping: Callable[[OUTPUT_TYPE], INPUT_TYPE] = None,
     ):
         self._forward_mapping = forward_mapping
         self._reverse_mapping = reverse_mapping
@@ -152,7 +151,7 @@ class Scan:
         self.axis_set = axis_set
         self._phase_id = Field(self.width, self.height, FieldType.DISCRETE, values=phase_id_values)
         self.euler_angles = None
-        self.euler_angles_degrees = Field(self.width, self.height, FieldType.VECTOR_3D, values=euler_angle_degrees_values)
+        self.euler_angles_degrees = Field(self.width, self.height, FieldType.VECTOR, values=euler_angle_degrees_values)
         self.pattern_quality = Field(self.width, self.height, FieldType.SCALAR, values=pattern_quality_values)
         self.index_quality = Field(self.width, self.height, FieldType.SCALAR, values=index_quality_values)
         self._reduced_euler_rotation_matrix = None
@@ -180,7 +179,7 @@ class Scan:
         if file_reference is None:
             file_reference = data_path.split("/")[-1].split(".")[0].lstrip("p")
 
-        with open(data_path, "r") as file:
+        with open(data_path, "r", encoding="utf-8") as file:
             materials = dict()
             file_materials = get_materials(materials_path)
             file.readline()
@@ -275,7 +274,7 @@ class Scan:
             show_orientation_cluster=show_orientation_cluster,
         )
 
-        with open(path, "w") as file:
+        with open(path, "w", encoding="utf-8") as file:
             for row in rows:
                 file.write(f"{row}\n")
 
@@ -451,10 +450,10 @@ class Scan:
                 columns: list[str] = list()
 
                 if show_scan_coordinates:
-                    columns += [x, y]
+                    columns += [str(x), str(y)]
 
                 if show_phase:
-                    columns += [self._phase_id.get_value_at(x, y)]
+                    columns += [str(self._phase_id.get_value_at(x, y))]
 
                 if show_euler_angles:
                     columns += [str(angle) for angle in self.euler_angles_degrees.get_value_at(x, y)]
@@ -498,13 +497,18 @@ class Scan:
 
     @property
     def euler_angles_degrees(self) -> FunctionalFieldMapper[tuple[float, float, float], tuple[float, float, float]]:
-        def tuple_degrees(angles: tuple[float, ...]) -> tuple[float, ...]: return tuple(math.degrees(angle) for angle in angles)
-        def tuple_radians(angles: tuple[float, ...]) -> tuple[float, ...]: return tuple(math.radians(angle) for angle in angles)
+        def tuple_degrees(angles: tuple[float, float, float]) -> tuple[float, float, float]:
+            return math.degrees(angles[0]), math.degrees(angles[1]), math.degrees(angles[2])
+
+        def tuple_radians(angles: tuple[float, float, float]) -> tuple[float, float, float,]:
+            return math.radians(angles[0]), math.radians(angles[1]), math.radians(angles[2])
         return FunctionalFieldMapper(tuple_degrees, self.euler_angles, tuple_radians)
 
     @euler_angles_degrees.setter
     def euler_angles_degrees(self, value: Field[tuple[float, float, float]]) -> None:
-        def tuple_radians(angles: tuple[float, ...]) -> tuple[float, ...]: return tuple(math.radians(angle) for angle in angles)
+        def tuple_radians(angles: tuple[float, float, float]) -> tuple[float, float, float,]:
+            return math.radians(angles[0]), math.radians(angles[1]), math.radians(angles[2])
+
         euler_angle_values = list()
 
         for y in range(self.height):
@@ -513,7 +517,7 @@ class Scan:
             for x in range(self.width):
                 euler_angle_values[y].append(tuple_radians(value.get_value_at(x, y)))
 
-        self.euler_angles = Field(self.width, self.height, FieldType.VECTOR_3D, values=euler_angle_values)
+        self.euler_angles = Field(self.width, self.height, FieldType.VECTOR, values=euler_angle_values)
 
     @property
     def reduced_euler_rotation_matrix(self) -> Field[ndarray]:
@@ -547,7 +551,13 @@ class Scan:
 
     @property
     def kernel_average_misorientation_degrees(self) -> FunctionalFieldMapper[float, float]:
-        return FunctionalFieldMapper(math.degrees, self.kernel_average_misorientation)
+        def degrees_alias(angle: float) -> float:
+            return math.degrees(angle)
+
+        def radians_alias(angle: float) -> float:
+            return math.radians(angle)
+
+        return FunctionalFieldMapper(degrees_alias, self.kernel_average_misorientation, radians_alias)
 
     @property
     def pixel_size_micrometres(self) -> float | None:
@@ -558,7 +568,10 @@ class Scan:
 
     @pixel_size_micrometres.setter
     def pixel_size_micrometres(self, value: float) -> None:
-        self.pixel_size = value * 10 ** -6
+        if value is None:
+            self.pixel_size = None
+        else:
+            self.pixel_size = value * 10 ** -6
 
     def misrotation_tensor(self, axis: Axis, pixel_size_micrometres: float = None) -> Field[ndarray]:
         if None in (self._misrotation_x_tensor, self._misrotation_y_tensor) or (pixel_size_micrometres is not None and self.pixel_size_micrometres != pixel_size_micrometres):
@@ -600,7 +613,7 @@ class Scan:
         return self._geometrically_necessary_dislocation_density
 
     def geometrically_necessary_dislocation_density_logarithmic(self, pixel_size: float = None) -> FunctionalFieldMapper[float, float]:
-        def log_or_zero(value): 0.0 if value == 0.0 else math.log10(value)
+        def log_or_zero(value): return 0.0 if value == 0.0 else math.log10(value)
         return FunctionalFieldMapper(log_or_zero, self.geometrically_necessary_dislocation_density(pixel_size))
 
     @property
@@ -622,7 +635,10 @@ class Scan:
 
     @beam_tilt_degrees.setter
     def beam_tilt_degrees(self, value: float) -> None:
-        self.beam_tilt = math.radians(value)
+        if value is None:
+            self.beam_tilt = None
+        else:
+            self.beam_tilt = math.radians(value)
 
     def channelling_fraction(
         self,
@@ -655,7 +671,10 @@ class Scan:
 
     @neighbourhood_radius_degrees.setter
     def neighbourhood_radius_degrees(self, value: float) -> None:
-        self.neighbourhood_radius = math.radians(value)
+        if value is None:
+            self.neighbourhood_radius = None
+        else:
+            self.neighbourhood_radius = math.radians(value)
 
     def orientation_clustering_category(
         self,
@@ -711,7 +730,7 @@ class Scan:
         self._reduced_euler_rotation_matrix = field
 
     def _gen_inverse_pole_figure_coordinates(self, axis: Axis) -> Field[tuple[float, float]]:
-        field = Field(self.width, self.height, FieldType.VECTOR_2D, default_value=(0.0, 0.0))
+        field = Field(self.width, self.height, FieldType.VECTOR, default_value=(0.0, 0.0))
 
         for y in range(self.height):
             for x in range(self.width):
@@ -719,7 +738,7 @@ class Scan:
                     continue
                 else:
                     rotation_matrix = self.reduced_euler_rotation_matrix.get_value_at(x, y)
-                    value = forward_stereographic(*dot(rotation_matrix, axis.value).tolist())
+                    value = forward_stereographic(*dot(rotation_matrix, array(axis.value)).tolist())
                     field.set_value_at(x, y, value)
 
         return field
@@ -829,7 +848,7 @@ class Scan:
                 if self.phase.get_value_at(x, y).global_id == UNINDEXED_PHASE_ID:
                     continue
                 else:
-                    nye_tensor_norm = sum(abs(element) for element in self.nye_tensor().get_value_at(x, y))
+                    nye_tensor_norm = sum(abs(element) for row in self.nye_tensor().get_value_at(x, y).tolist() for element in row)
                     close_pack_distance = self.phase.get_value_at(x, y).close_pack_distance
                     value = (GND_DENSITY_CORRECTIVE_FACTOR / close_pack_distance) * nye_tensor_norm
                     field.set_value_at(x, y, value)
@@ -850,7 +869,7 @@ class Scan:
                     continue
                 else:
                     rotation_matrix = self.reduced_euler_rotation_matrix.get_value_at(x, y)
-                    effective_beam_vector = dot(rotation_matrix, self.beam_vector).to_list()
+                    effective_beam_vector = dot(rotation_matrix, self.beam_vector).tolist()
                     value = fraction(effective_beam_vector, channel_data[self._phase_id.get_value_at(x, y)])
                     field.set_value_at(x, y, value)
 

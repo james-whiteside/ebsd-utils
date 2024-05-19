@@ -1,3 +1,4 @@
+import copy
 import math
 from enum import Enum
 import numpy
@@ -9,9 +10,9 @@ class Axis(Enum):
     Enumeration of the three Cartesian axes.
     """
 
-    X = numpy.array((1, 0, 0))
-    Y = numpy.array((0, 1, 0))
-    Z = numpy.array((1, 0, 1))
+    X = (1, 0, 0)
+    Y = (0, 1, 0)
+    Z = (1, 0, 1)
 
 
 class AxisSet(Enum):
@@ -88,6 +89,7 @@ def reduce_vector(v: tuple[float, float, float], lattice_type: BravaisLattice) -
     :param lattice_type: The Bravais lattice type.
     :return: The reduced vector.
     """
+
     x, y, z = v
     crystal_family = lattice_type.get_family()
 
@@ -112,22 +114,26 @@ def reduce_matrix(R: numpy.ndarray, symmetry: CrystalFamily) -> numpy.ndarray:
     :param symmetry: The crystal symmetry of the Bravais lattice type.
     :return: The reduced matrix.
     """
-    if symmetry is CrystalFamily.C:
-        if R[2][2] > 0:
-            R = numpy.dot(numpy.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, -1.0]]), R)
+    reduced_R = copy.deepcopy(R)
 
-        if R[1][2] > 0:
-            R = numpy.dot(numpy.array([[1.0, 0.0, 0.0], [0.0, -1.0, 0.0], [0.0, 0.0, 1.0]]), R)
+    if symmetry is CrystalFamily.NONE:
+        pass
+    elif symmetry is CrystalFamily.C:
+        if reduced_R[2][2] > 0:
+            reduced_R = numpy.dot(numpy.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, -1.0]]), reduced_R)
 
-        if R[0][2] > 0:
-            R = numpy.dot(numpy.array([[-1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]), R)
+        if reduced_R[1][2] > 0:
+            reduced_R = numpy.dot(numpy.array([[1.0, 0.0, 0.0], [0.0, -1.0, 0.0], [0.0, 0.0, 1.0]]), reduced_R)
 
-        if R[1][2] > R[0][2]:
-            R = numpy.dot(numpy.array([[0.0, 1.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0, 1.0]]), R)
+        if reduced_R[0][2] > 0:
+            reduced_R = numpy.dot(numpy.array([[-1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]), reduced_R)
+
+        if reduced_R[1][2] > reduced_R[0][2]:
+            reduced_R = numpy.dot(numpy.array([[0.0, 1.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0, 1.0]]), reduced_R)
     else:
         raise NotImplementedError
 
-    return R
+    return reduced_R
 
 
 def euler_angles(rotation_matrix: numpy.ndarray, axis_set: AxisSet) -> tuple[float, float, float]:

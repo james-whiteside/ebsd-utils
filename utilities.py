@@ -376,9 +376,6 @@ class ProgressBar:
 			self.print_function(output + padding, end='\r')
 			print_length = max(self.last_print_length, len(output))
 
-		if self.current_step == self.total_steps:
-			self.print_function()
-
 		self.last_print_length = print_length
 
 	def increment_print(self) -> None:
@@ -398,3 +395,4 @@ class ProgressBar:
 
 		self.terminate()
 		self.print()
+		self.print_function()

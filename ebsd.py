@@ -306,7 +306,7 @@ def keyIPF(lattice_type, size, guides):
 	return IPF
 
 def calV(R: numpy.ndarray, axis: Axis) -> tuple[float, float]:
-	x, y, z = numpy.dot(R, axis.value).tolist()
+	x, y, z = numpy.dot(R, numpy.array(axis.value)).tolist()
 	X, Y = forward_stereographic(x, y, z)
 	return X, Y
 

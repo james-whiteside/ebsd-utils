@@ -5,6 +5,7 @@
 
 import math
 import copy
+import os
 from itertools import permutations
 import numpy
 from scipy import special, constants, optimize
@@ -228,7 +229,7 @@ def gen_crit_data(beam_z, target_id, beam_energy, max_range, max_index):
 	materials = fileloader.get_materials()
 	Z1 = beam_z
 	Z2 = materials[target_id].atomic_number
-	lType = materials[target_id].lattice_type
+	lType = materials[target_id].lattice_type.value
 	diamond = materials[target_id].has_diamond_structure
 	
 	if lType == 'cP':
@@ -239,11 +240,14 @@ def gen_crit_data(beam_z, target_id, beam_energy, max_range, max_index):
 		lattice = 'diamond'
 	elif lType == 'cF':
 		lattice = 'fcc'
+	else:
+		raise NotImplementedError()
 	
 	alat = 10 * materials[target_id].lattice_constants[0]
 	xrms = 10 * materials[target_id].vibration_amplitude
 	base = get_base(lattice)
 	fileref = '[' + str(target_id) + '][' + str(beam_z) + '][' + str(beam_energy) + ']'
+	os.makedirs('channelling', exist_ok=True)
 	file_emin_a = open('channelling/' + fileref + 'emin-a.txt', 'w')
 	file_emin_p = open('channelling/' + fileref + 'emin-p.txt', 'w')
 	file_psicrit_a = open('channelling/' + fileref + 'psicrit-a.txt', 'w')
@@ -523,7 +527,7 @@ def fraction(effective_beam_vector: tuple[float, float, float], crit_data: dict)
 	eperpcrit_p = crit_data['data']['eperpcrit_p']
 	u_percentiles_p = crit_data['data']['u_percentiles_p']
 	
-	output = 0
+	output = 0.0
 	dirx = numpy.cos(theta)
 	diry = numpy.sin(theta) * numpy.cos(phi)
 	dirz = numpy.sin(theta) * numpy.sin(phi)
@@ -537,7 +541,7 @@ def fraction(effective_beam_vector: tuple[float, float, float], crit_data: dict)
 			psi = numpy.arccos(dirx * dirmx + diry * dirmy + dirz * dirmz)
 			ulim = eperpcrit - e * psi ** 2
 			prob = numpy.interp(ulim, u_percentiles, range(100), left=0, right=100)
-			output = max(output, prob)
+			output = max(output, float(prob))
 	
 	if planar:
 		for h, k, l, eperpcrit, u_percentiles in zip(hps, kps, lps, eperpcrit_p, u_percentiles_p):
@@ -556,6 +560,6 @@ def fraction(effective_beam_vector: tuple[float, float, float], crit_data: dict)
 							psi = abs(numpy.arcsin(dirx * dirmx + diry * dirmy + dirz * dirmz))
 							ulim = eperpcrit - e * psi ** 2
 							prob = numpy.interp(ulim, u_percentiles, range(100), left=0, right=100)
-							output = max(output, prob)
+							output = max(output, float(prob))
 
 	return output
