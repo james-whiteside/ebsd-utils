@@ -15,10 +15,10 @@ def get_materials(path: str = "materials/materials.csv") -> dict[int, Material]:
 		
 		for line in file:
 			args = line.split(',')
-			material_id = int(args[0])
+			global_id = int(args[0])
 
 			material = Material(
-				global_id=material_id,
+				global_id=global_id,
 				name=args[1],
 				atomic_number=float(args[2]),
 				atomic_weight=float(args[3]),
@@ -30,7 +30,7 @@ def get_materials(path: str = "materials/materials.csv") -> dict[int, Material]:
 				has_diamond_structure=args == "Y",
 			)
 
-			materials[material_id] = material
+			materials[global_id] = material
 	
 	return materials
 
