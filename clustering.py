@@ -2,6 +2,8 @@
 
 import math
 from enum import Enum
+from typing import Self
+
 import numpy
 from numba import jit
 
@@ -10,6 +12,18 @@ class ClusterCategory(Enum):
     CORE = 1
     BORDER = 2
     NOISE = 3
+
+    @property
+    def code(self) -> str:
+        return self.name[0]
+
+    @classmethod
+    def from_code(cls, code: str) -> Self:
+        for category in ClusterCategory:
+            if category.name[0] == code:
+                return category
+
+        raise ValueError(f"Value is not a valid cluster category code: {code}")
 
 
 @jit(nopython=True)
