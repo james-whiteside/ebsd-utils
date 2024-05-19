@@ -1,7 +1,13 @@
 # -*- coding: utf-8 -*-
 
+import math
+from collections.abc import Iterator, Callable
 from enum import Enum
+from typing import Self
+
 from numpy import ndarray, array, zeros, eye, dot
+
+from fileloader import get_materials
 from geometry import (
     Axis,
     AxisSet,
@@ -31,14 +37,14 @@ class FieldType(Enum):
     MATRIX = ndarray
 
 
-class Field[T]:
+class Field[VALUE_TYPE]:
     def __init__(
         self,
         width: int,
         height: int,
         field_type: FieldType,
-        default_value: T = None,
-        values: list[list[T]] = None,
+        default_value: VALUE_TYPE = None,
+        values: list[list[VALUE_TYPE]] = None,
     ):
         self.width = width
         self.height = height
@@ -70,13 +76,13 @@ class Field[T]:
                 else:
                     self._values.append(self.default_value)
 
-    def get_value_at(self, x: int, y: int) -> T:
+    def get_value_at(self, x: int, y: int) -> VALUE_TYPE:
         if not 0 <= x < self.width or not 0 <= y < self.height:
             raise IndexError(f"Coordinate ({x}, {y}) is out of bounds of field.")
         else:
             return self._values[y][x]
 
-    def set_value_at(self, x: int, y: int, value: T) -> None:
+    def set_value_at(self, x: int, y: int, value: VALUE_TYPE) -> None:
         if not 0 <= x < self.width or not 0 <= y < self.height:
             raise IndexError(f"Coordinate ({x}, {y}) is out of bounds of field.")
         elif not isinstance(value, self.field_type.value):
@@ -85,25 +91,48 @@ class Field[T]:
             self._values[y][x] = value
 
 
-class DiscreteFieldMapper[T]:
-    def __init__(self, mapping: dict[int, T], discrete_field: Field[int]):
+class DiscreteFieldMapper[VALUE_TYPE]:
+    def __init__(self, mapping: dict[int, VALUE_TYPE], discrete_field: Field[int]):
         self._mapping = mapping
         self._field = discrete_field
 
-    def get_value_at(self, x: int, y: int) -> T:
+    def get_value_at(self, x: int, y: int) -> VALUE_TYPE:
         key = self._field.get_value_at(x, y)
         return self._mapping[key]
 
-    def set_value_at(self, x: int, y: int, value: T) -> None:
+    def set_value_at(self, x: int, y: int, value: VALUE_TYPE) -> None:
         for key in self._mapping:
             if self._mapping[key] == value:
                 self._field.set_value_at(x, y, key)
                 return
 
-        raise KeyError(f"Value is not within permitted values of discrete-valued field.")
+        raise KeyError(f"Value is not within permitted values of discrete-valued field: {value}")
+
+
+class FunctionalFieldMapper[INPUT_TYPE, OUTPUT_TYPE]:
+    def __init__(
+        self,
+        forward_mapping: Callable[INPUT_TYPE, OUTPUT_TYPE],
+        field: Field[INPUT_TYPE],
+        reverse_mapping: Callable[OUTPUT_TYPE, INPUT_TYPE] = None,
+    ):
+        self._forward_mapping = forward_mapping
+        self._reverse_mapping = reverse_mapping
+        self._field = field
+
+    def get_value_at(self, x: int, y: int) -> OUTPUT_TYPE:
+        return self._forward_mapping(self._field.get_value_at(x, y))
+
+    def set_value_at(self, x: int, y: int, value: OUTPUT_TYPE) -> None:
+        if self._reverse_mapping is None:
+            raise AttributeError("Functional field mapper does not have a reverse mapping defined.")
+        else:
+            self._field.set_value_at(x, y, self._reverse_mapping(value))
 
 
 class Scan:
+    beam_axis = Axis.Y
+
     def __init__(
         self,
         file_reference: str,
@@ -111,7 +140,7 @@ class Scan:
         height: int,
         phases: dict[int, Material],
         phase_id_values: list[list[int]],
-        euler_angle_values: list[list[tuple[float, float, float]]],
+        euler_angle_degrees_values: list[list[tuple[float, float, float]]],
         pattern_quality_values: list[list[float]],
         index_quality_values: list[list[float]],
         axis_set: AxisSet = AxisSet.ZXZ,
@@ -122,7 +151,8 @@ class Scan:
         self.phases = phases
         self.axis_set = axis_set
         self._phase_id = Field(self.width, self.height, FieldType.DISCRETE, values=phase_id_values)
-        self.euler_angles = Field(self.width, self.height, FieldType.VECTOR_3D, values=euler_angle_values)
+        self.euler_angles = None
+        self.euler_angles_degrees = Field(self.width, self.height, FieldType.VECTOR_3D, values=euler_angle_degrees_values)
         self.pattern_quality = Field(self.width, self.height, FieldType.SCALAR, values=pattern_quality_values)
         self.index_quality = Field(self.width, self.height, FieldType.SCALAR, values=index_quality_values)
         self._reduced_euler_rotation_matrix = None
@@ -137,7 +167,7 @@ class Scan:
         self._geometrically_necessary_dislocation_density = None
         self.beam_atomic_number = None
         self.beam_energy = None
-        self.beam_vector = None
+        self.beam_tilt = None
         self._channelling_fraction = None
         self.core_point_neighbour_threshold = None
         self.neighbourhood_radius = None
@@ -148,6 +178,25 @@ class Scan:
     @property
     def phase(self) -> DiscreteFieldMapper[Material]:
         return DiscreteFieldMapper(self.phases, self._phase_id)
+
+    @property
+    def euler_angles_degrees(self) -> FunctionalFieldMapper[tuple[float, float, float], tuple[float, float, float]]:
+        def tuple_degrees(angles: tuple[float, ...]) -> tuple[float, ...]: return tuple(math.degrees(angle) for angle in angles)
+        def tuple_radians(angles: tuple[float, ...]) -> tuple[float, ...]: return tuple(math.radians(angle) for angle in angles)
+        return FunctionalFieldMapper(tuple_degrees, self.euler_angles, tuple_radians)
+
+    @euler_angles_degrees.setter
+    def euler_angles_degrees(self, value: Field[tuple[float, float, float]]) -> None:
+        def tuple_radians(angles: tuple[float, ...]) -> tuple[float, ...]: return tuple(math.radians(angle) for angle in angles)
+        euler_angle_values = list()
+
+        for y in range(self.height):
+            euler_angle_values.append(list())
+
+            for x in range(self.width):
+                euler_angle_values[y].append(tuple_radians(value.get_value_at(x, y)))
+
+        self.euler_angles = Field(self.width, self.height, FieldType.VECTOR_3D, values=euler_angle_values)
 
     @property
     def reduced_euler_rotation_matrix(self) -> Field[ndarray]:
@@ -179,9 +228,24 @@ class Scan:
 
         return self._kernel_average_misorientation
 
-    def misrotation_tensor(self, axis: Axis, pixel_size: float = None) -> Field[ndarray]:
-        if None in (self._misrotation_x_tensor, self._misrotation_y_tensor) or (pixel_size is not None and self.pixel_size != pixel_size):
-            self.pixel_size = pixel_size if pixel_size is not None else self.pixel_size
+    @property
+    def kernel_average_misorientation_degrees(self) -> FunctionalFieldMapper[float, float]:
+        return FunctionalFieldMapper(math.degrees, self.kernel_average_misorientation)
+
+    @property
+    def pixel_size_micrometres(self) -> float | None:
+        if self.pixel_size is None:
+            return None
+        else:
+            return self.pixel_size * 10 ** 6
+
+    @pixel_size_micrometres.setter
+    def pixel_size_micrometres(self, value: float) -> None:
+        self.pixel_size = value * 10 ** -6
+
+    def misrotation_tensor(self, axis: Axis, pixel_size_micrometres: float = None) -> Field[ndarray]:
+        if None in (self._misrotation_x_tensor, self._misrotation_y_tensor) or (pixel_size_micrometres is not None and self.pixel_size_micrometres != pixel_size_micrometres):
+            self.pixel_size_micrometres = pixel_size_micrometres if pixel_size_micrometres is not None else self.pixel_size_micrometres
 
             if self.pixel_size is None:
                 raise AttributeError("Misrotation tensor fields not initialised and initialisation arguments were not provided.")
@@ -196,9 +260,9 @@ class Scan:
             case Axis.Z:
                 raise ValueError("Misrotation data not available for z-axis intervals.")
 
-    def nye_tensor(self, pixel_size: float = None) -> Field[ndarray]:
-        if self._nye_tensor is None or (pixel_size is not None and self.pixel_size != pixel_size):
-            self.pixel_size = pixel_size if pixel_size is not None else self.pixel_size
+    def nye_tensor(self, pixel_size_micrometres: float = None) -> Field[ndarray]:
+        if self._nye_tensor is None or (pixel_size_micrometres is not None and self.pixel_size_micrometres != pixel_size_micrometres):
+            self.pixel_size_micrometres = pixel_size_micrometres if pixel_size_micrometres is not None else self.pixel_size_micrometres
 
             if self.pixel_size is None:
                 raise AttributeError("Nye tensor field not initialised and initialisation arguments were not provided.")
@@ -207,9 +271,9 @@ class Scan:
 
         return self._nye_tensor
 
-    def geometrically_necessary_dislocation_density(self, pixel_size: float = None) -> Field[float]:
-        if self._geometrically_necessary_dislocation_density is None or (pixel_size is not None and self.pixel_size != pixel_size):
-            self.pixel_size = pixel_size if pixel_size is not None else self.pixel_size
+    def geometrically_necessary_dislocation_density(self, pixel_size_micrometres: float = None) -> Field[float]:
+        if self._geometrically_necessary_dislocation_density is None or (pixel_size_micrometres is not None and self.pixel_size_micrometres != pixel_size_micrometres):
+            self.pixel_size_micrometres = pixel_size_micrometres if pixel_size_micrometres is not None else self.pixel_size_micrometres
 
             if self.pixel_size is None:
                 raise AttributeError("Geometrically necessary dislocation density field not initialised and initialisation arguments were not provided.")
@@ -218,39 +282,75 @@ class Scan:
 
         return self._geometrically_necessary_dislocation_density
 
+    def geometrically_necessary_dislocation_density_logarithmic(self, pixel_size: float = None) -> FunctionalFieldMapper[float, float]:
+        def log_or_zero(value): 0.0 if value == 0.0 else math.log10(value)
+        return FunctionalFieldMapper(log_or_zero, self.geometrically_necessary_dislocation_density(pixel_size))
+
+    @property
+    def beam_vector(self) -> ndarray:
+        match self.beam_axis:
+            case Axis.X:
+                raise NotImplementedError()
+            case Axis.Y:
+                return array((0, -math.sin(self.beam_tilt), math.cos(self.beam_tilt)))
+            case Axis.Z:
+                raise NotImplementedError()
+
+    @property
+    def beam_tilt_degrees(self) -> float | None:
+        if self.beam_tilt is None:
+            return None
+        else:
+            return math.degrees(self.beam_tilt)
+
+    @beam_tilt_degrees.setter
+    def beam_tilt_degrees(self, value: float) -> None:
+        self.beam_tilt = math.radians(value)
+
     def channelling_fraction(
         self,
         beam_atomic_number: int = None,
         beam_energy: float = None,
-        beam_vector: tuple[float, float, float] = None
+        beam_tilt_degrees: float = None,
     ) -> Field[float]:
         if self._channelling_fraction is None or any((
             beam_atomic_number is not None and self.beam_atomic_number != beam_atomic_number,
             beam_energy is not None and self.beam_energy != beam_energy,
-            beam_vector is not None and self.beam_atomic_number != beam_vector,
+            beam_tilt_degrees is not None and self.beam_tilt_degrees != beam_tilt_degrees,
         )):
             self.beam_atomic_number = beam_atomic_number if beam_atomic_number is not None else self.beam_atomic_number
             self.beam_energy = beam_energy if beam_energy is not None else self.beam_energy
-            self.beam_vector = beam_vector if beam_vector is not None else self.beam_vector
+            self.beam_tilt_degrees = beam_tilt_degrees if beam_tilt_degrees is not None else self.beam_tilt_degrees
 
-            if None in (self.beam_atomic_number, self.beam_energy, self.beam_vector):
+            if None in (self.beam_atomic_number, self.beam_energy, self.beam_tilt):
                 raise AttributeError("Channelling fraction field not initialised and initialisation arguments were not provided.")
 
             self._init_channelling_fraction()
 
         return self._channelling_fraction
 
+    @property
+    def neighbourhood_radius_degrees(self) -> float | None:
+        if self.neighbourhood_radius is None:
+            return None
+        else:
+            return math.degrees(self.neighbourhood_radius)
+
+    @neighbourhood_radius_degrees.setter
+    def neighbourhood_radius_degrees(self, value: float) -> None:
+        self.neighbourhood_radius = math.radians(value)
+
     def orientation_clustering_category(
         self,
         core_point_neighbourhood_threshold: int = None,
-        neighbourhood_radius: float = None,
+        neighbourhood_radius_degrees: float = None,
     ) -> DiscreteFieldMapper[ClusterCategory]:
         if self._orientation_clustering_category_id is None or any((
             core_point_neighbourhood_threshold is not None and self.core_point_neighbour_threshold != core_point_neighbourhood_threshold,
-            neighbourhood_radius is not None and self.neighbourhood_radius != neighbourhood_radius,
+            neighbourhood_radius_degrees is not None and self.neighbourhood_radius_degrees != neighbourhood_radius_degrees,
         )):
             self.core_point_neighbour_threshold = core_point_neighbourhood_threshold if core_point_neighbourhood_threshold is not None else self.core_point_neighbour_threshold
-            self.neighbourhood_radius = neighbourhood_radius if neighbourhood_radius is not None else self.neighbourhood_radius
+            self.neighbourhood_radius_degrees = neighbourhood_radius_degrees if neighbourhood_radius_degrees is not None else self.neighbourhood_radius_degrees
 
             if None in (self.core_point_neighbour_threshold, self.neighbourhood_radius):
                 raise AttributeError("Orientation cluster fields not initialised and initialisation arguments were not provided.")
