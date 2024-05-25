@@ -894,5 +894,5 @@ class Scan:
         )
 
         self.cluster_count = cluster_count
-        self._orientation_clustering_category_id = Field(self.width, self.height, FieldType.DISCRETE, values=category_id_array.tolist())
-        self._orientation_cluster_id = Field(self.width, self.height, FieldType.DISCRETE, values=cluster_id_array.tolist())
+        self._orientation_clustering_category_id = Field(self.width, self.height, FieldType.DISCRETE, values=category_id_array.astype(int).tolist())
+        self._orientation_cluster_id = Field(self.width, self.height, FieldType.DISCRETE, values=cluster_id_array.astype(int).tolist())
