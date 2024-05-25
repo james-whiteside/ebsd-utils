@@ -12,7 +12,7 @@ class Axis(Enum):
 
     X = (1, 0, 0)
     Y = (0, 1, 0)
-    Z = (1, 0, 1)
+    Z = (0, 0, 1)
 
 
 class AxisSet(Enum):
