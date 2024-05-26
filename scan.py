@@ -49,7 +49,7 @@ class Scan:
         self.axis_set = axis_set
         self._phase_id = Field(self.width, self.height, FieldType.DISCRETE, values=phase_id_values)
         self.euler_angles = None
-        self.euler_angles_degrees = Field(self.width, self.height, FieldType.VECTOR, values=euler_angle_degrees_values)
+        self.euler_angles_degrees = Field(self.width, self.height, FieldType.VECTOR_3D, values=euler_angle_degrees_values)
         self.pattern_quality = Field(self.width, self.height, FieldType.SCALAR, values=pattern_quality_values)
         self.index_quality = Field(self.width, self.height, FieldType.SCALAR, values=index_quality_values)
         self._reduced_euler_rotation_matrix = None
@@ -415,7 +415,7 @@ class Scan:
             for x in range(self.width):
                 euler_angle_values[y].append(tuple_radians(value.get_value_at(x, y)))
 
-        self.euler_angles = Field(self.width, self.height, FieldType.VECTOR, values=euler_angle_values)
+        self.euler_angles = Field(self.width, self.height, FieldType.VECTOR_3D, values=euler_angle_values)
 
     @property
     def reduced_euler_rotation_matrix(self) -> Field[ndarray]:
@@ -628,7 +628,7 @@ class Scan:
         self._reduced_euler_rotation_matrix = field
 
     def _gen_inverse_pole_figure_coordinates(self, axis: Axis) -> Field[tuple[float, float]]:
-        field = Field(self.width, self.height, FieldType.VECTOR, default_value=(0.0, 0.0))
+        field = Field(self.width, self.height, FieldType.VECTOR_2D, default_value=(0.0, 0.0))
 
         for y in range(self.height):
             for x in range(self.width):
