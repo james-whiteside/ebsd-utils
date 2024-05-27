@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+
 import datetime
 import glob
 import sys
@@ -7,6 +8,26 @@ import math
 import copy
 from typing import Callable
 from PIL import Image
+
+
+def log_or_zero(value: float) -> float:
+	return 0.0 if value == 0.0 else math.log10(value)
+
+
+def float_degrees(angle: float) -> float:
+	return math.degrees(angle)
+
+
+def float_radians(angle: float) -> float:
+	return math.radians(angle)
+
+
+def tuple_degrees(angles: tuple[float, float, float]) -> tuple[float, float, float]:
+	return float_degrees(angles[0]), float_degrees(angles[1]), float_degrees(angles[2])
+
+
+def tuple_radians(angles: tuple[float, float, float]) -> tuple[float, float, float,]:
+	return float_radians(angles[0]), float_radians(angles[1]), float_radians(angles[2])
 
 
 def highest_common_factor(numbers: list[int]) -> int:

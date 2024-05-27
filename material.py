@@ -2,6 +2,12 @@ import math
 from enum import Enum
 
 
+UNINDEXED_PHASE_ID = 0
+GENERIC_BCC_PHASE_ID = 4294967294
+GENERIC_FCC_PHASE_ID = 4294967295
+GENERIC_PHASE_IDS = (UNINDEXED_PHASE_ID, GENERIC_BCC_PHASE_ID, GENERIC_FCC_PHASE_ID)
+
+
 class CrystalFamily(Enum):
     """
     Enumeration of the crystal lattice types, as listed in Tab. A2.1.

@@ -54,16 +54,13 @@ def analyse(path: str = "data") -> None:
         output_path = f"{get_directory_path("analyses")}/q{fileref}.csv"
 
         if show_defect_density:
-            scan.pixel_size_micrometres = pixel_size_micrometres
+            scan.scale_parameters.set(pixel_size_micrometres)
 
         if show_channelling_fraction:
-            scan.beam_atomic_number = beam_atomic_number
-            scan.beam_energy = beam_energy
-            scan.beam_tilt_degrees = beam_tilt_degrees
+            scan.channelling_parameters.set(beam_atomic_number, beam_energy, beam_tilt_degrees)
 
         if show_orientation_cluster:
-            scan.core_point_neighbour_threshold = core_point_neighbour_threshold
-            scan.neighbourhood_radius_degrees = neighbourhood_radius_degrees
+            scan.clustering_parameters.set(core_point_neighbour_threshold, neighbourhood_radius_degrees)
 
         scan.to_pathfinder_file(
             path=output_path,

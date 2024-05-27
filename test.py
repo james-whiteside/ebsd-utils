@@ -15,16 +15,19 @@ start_time = datetime.now()
 #     cNum = int(input("  Enter resolution reduction factor (power of 2): "))
 
 if input("Perform defect density analysis? (Y/N): ").lower() == 'y':
-    scan.pixel_size_micrometres = 0.808  # float(input("  Input pixel width (μm) for p" + scan.file_reference + ": "))
+    pixel_size_micrometres = 0.808  # float(input("  Input pixel width (μm) for p" + scan.file_reference + ": "))
+    scan.scale_parameters.set(pixel_size_micrometres)
 
 if input('Perform channelling fraction analysis? (Y/N): ').lower() == "y":
-    scan.beam_atomic_number = 31  # int(input("  Enter beam species atomic number: "))
-    scan.beam_energy = 30000.0  # float(input("  Enter beam energy (eV): "))
-    scan.beam_tilt_degrees = 0.0  # float(input("  Enter beam tilt (deg): "))
+    beam_atomic_number = 31  # int(input("  Enter beam species atomic number: "))
+    beam_energy = 30000.0  # float(input("  Enter beam energy (eV): "))
+    beam_tilt_degrees = 0.0  # float(input("  Enter beam tilt (deg): "))
+    scan.channelling_parameters.set(beam_atomic_number, beam_energy, beam_tilt_degrees)
 
 if input("Perform orientation cluster analysis? (Y/N): ").lower() == "y":
-    scan.core_point_neighbour_threshold = 20  # int(input("  Enter core point neighbour threshold: "))
-    scan.neighbourhood_radius_degrees = 1.0  # float(input("  Enter point neighbourhood radius (deg): "))
+    core_point_neighbour_threshold = 20  # int(input("  Enter core point neighbour threshold: "))
+    neighbourhood_radius_degrees = 1.0  # float(input("  Enter point neighbourhood radius (deg): "))
+    scan.clustering_parameters.set(core_point_neighbour_threshold, neighbourhood_radius_degrees)
 
 scan.to_pathfinder_file(
     path=output_path,
@@ -32,7 +35,7 @@ scan.to_pathfinder_file(
     show_map_size=True,
     show_map_scale=True,
     show_channelling_params=True,
-    show_clustering_params=False,
+    show_clustering_params=True,
     show_scan_coordinates=True,
     show_phase=True,
     show_euler_angles=True,
@@ -43,8 +46,8 @@ scan.to_pathfinder_file(
     show_inverse_z_pole_figure_coordinates=True,
     show_kernel_average_misorientation=True,
     show_geometrically_necessary_dislocation_density=True,
-    show_channelling_fraction=False,
-    show_orientation_cluster=False,
+    show_channelling_fraction=True,
+    show_orientation_cluster=True,
 )
 
 print("Analysis completed in " + format_time_interval(int(round((datetime.now() - start_time).total_seconds()))) + ".")

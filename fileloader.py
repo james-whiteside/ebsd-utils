@@ -89,63 +89,6 @@ def getNyeMetadata(filepath):
 	
 	return output
 
-def getNyeData(filepath):
-	
-	output = dict()
-	
-	with open(filepath, 'r') as file:
-		output['fileref'] = filepath.split('/')[-1].split('.')[0].lstrip('p')
-		output['phases'] = dict()
-		materials = get_materials()
-		file.readline()
-		
-		while True:
-			line = file.readline().rstrip('\n').split(',')
-			
-			if line[0] == 'Map Size:':
-				break
-			
-			localID = int(line[0])
-			output['phases'][localID] = dict()
-			output['phases'][localID]['ID'] = int(line[2])
-			
-			try:
-				output['phases'][localID]['name'] = materials[output['phases'][localID]['ID']].name
-			except KeyError:
-				input('No material with ID ' + str(output['phases'][localID]['ID']) + '.')
-				sys.exit()
-			
-			output['phases'][localID]['Z'] = materials[output['phases'][localID]['ID']].atomic_number
-			output['phases'][localID]['A'] = materials[output['phases'][localID]['ID']].atomic_weight
-			output['phases'][localID]['density'] = materials[output['phases'][localID]['ID']].density
-			output['phases'][localID]['type'] = materials[output['phases'][localID]['ID']].lattice_type
-			output['phases'][localID]['constants'] = materials[output['phases'][localID]['ID']].lattice_constants
-			output['phases'][localID]['angles'] = materials[output['phases'][localID]['ID']].lattice_angles
-		
-		output['width'] = int(file.readline().rstrip('\n').split(',')[1])
-		output['height'] = int(file.readline().rstrip('\n').split(',')[1])
-		output['data'] = dict()
-		output['data']['phase'] = list()
-		output['data']['euler'] = list()
-		output['data']['IQ'] = list()
-		output['data']['PQ'] = list()
-		file.readline()
-		file.readline()
-		
-		for y in range(output['height']):
-			output['data']['phase'].append(list())
-			output['data']['euler'].append(list())
-			output['data']['IQ'].append(list())
-			output['data']['PQ'].append(list())
-			
-			for x in range(output['width']):
-				line = file.readline().rstrip('\n').split(',')
-				output['data']['phase'][y].append(int(line[2]))
-				output['data']['euler'][y].append(list((math.radians(float(line[3])), math.radians(float(line[4])), math.radians(float(line[5])))))
-				output['data']['IQ'][y].append(float(line[6]))
-				output['data']['PQ'][y].append(float(line[7]))
-	
-	return output
 
 def getNyeAnalysis(filepath):
 	
