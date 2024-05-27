@@ -50,7 +50,7 @@ class BravaisLattice(Enum):
             return CrystalFamily(self.value[0])
 
 
-class Material:
+class Phase:
     def __init__(
         self,
         global_id: int,
@@ -76,7 +76,7 @@ class Material:
         self.has_diamond_structure = has_diamond_structure
 
     def __eq__(self, other):
-        if not isinstance(other, Material):
+        if not isinstance(other, Phase):
             return False
 
         if self.global_id == other.global_id:
@@ -93,18 +93,4 @@ class Material:
         elif self.lattice_type is BravaisLattice.CF:
             return math.sqrt(2) * self.lattice_constants[0] / 2
         else:
-            raise NotImplementedError
-
-    def as_dict(self):
-        return {
-            "global_id": self.global_id,
-            "name": self.name,
-            "Z": self.atomic_number,
-            "A": self.atomic_weight,
-            "density": self.density,
-            "vibration": self.vibration_amplitude,
-            "type": self.lattice_type,
-            "constants": self.lattice_constants,
-            "angles": self.lattice_angles,
-            "diamond": self.has_diamond_structure,
-        }
+            raise NotImplementedError()

@@ -15,7 +15,7 @@ from geometry import (
     misrotation_tensor,
     forward_stereographic,
 )
-from material import Material, UNINDEXED_PHASE_ID
+from phase import Phase, UNINDEXED_PHASE_ID
 from channelling import load_crit_data, fraction
 from clustering import ClusterCategory, dbscan
 from parameter_groups import ScaleParameters, ChannellingParameters, ClusteringParameters
@@ -31,7 +31,7 @@ class Scan:
         file_reference: str,
         width: int,
         height: int,
-        phases: dict[int, Material],
+        phases: dict[int, Phase],
         phase_id_values: list[list[int]],
         euler_angle_degrees_values: list[list[tuple[float, float, float]]],
         pattern_quality_values: list[list[float]],
@@ -66,7 +66,7 @@ class Scan:
         self._orientation_cluster_id = None
 
     @property
-    def phase(self) -> DiscreteFieldMapper[Material]:
+    def phase(self) -> DiscreteFieldMapper[Phase]:
         return DiscreteFieldMapper(self.phases, self._phase_id)
 
     @property

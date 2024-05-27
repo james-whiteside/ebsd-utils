@@ -2,7 +2,7 @@ import copy
 import math
 from enum import Enum
 import numpy
-from material import CrystalFamily, BravaisLattice
+from phase import CrystalFamily, BravaisLattice
 
 
 class Axis(Enum):
@@ -102,7 +102,7 @@ def reduce_vector(v: tuple[float, float, float], lattice_type: BravaisLattice) -
         c = x * math.sqrt(3)
         a, b, c = abs(a) / max(abs(a), abs(b), abs(c)), abs(b) / max(abs(a), abs(b), abs(c)), abs(c) / max(abs(a), abs(b), abs(c))
     else:
-        raise NotImplementedError
+        raise NotImplementedError()
 
     return a, b, c
 
@@ -131,7 +131,7 @@ def reduce_matrix(R: numpy.ndarray, symmetry: CrystalFamily) -> numpy.ndarray:
         if reduced_R[1][2] > reduced_R[0][2]:
             reduced_R = numpy.dot(numpy.array([[0.0, 1.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0, 1.0]]), reduced_R)
     else:
-        raise NotImplementedError
+        raise NotImplementedError()
 
     return reduced_R
 
@@ -150,7 +150,7 @@ def euler_angles(rotation_matrix: numpy.ndarray, axis_set: AxisSet) -> tuple[flo
         phi2 = math.acos(-rotation_matrix[1][2] / math.sqrt(1 - rotation_matrix[2][2] ** 2))
         return phi1, Phi, phi2
     else:
-        raise NotImplementedError
+        raise NotImplementedError()
 
 
 def forward_stereographic(x: float, y: float, z: float) -> tuple[float, float]:

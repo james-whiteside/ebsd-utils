@@ -8,7 +8,7 @@ import numpy
 import utilities
 import fileloader
 import orientation
-from material import CrystalFamily, BravaisLattice
+from phase import CrystalFamily, BravaisLattice
 from geometry import Axis, AxisSet, euler_rotation_matrix, reduce_vector, reduce_matrix, euler_angles, \
 	inverse_stereographic, forward_stereographic, rotation_angle, misrotation_matrix
 

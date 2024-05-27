@@ -5,10 +5,10 @@ import sys
 import math
 import numpy
 from PIL import Image as image
-from material import Material, BravaisLattice
+from phase import Phase, BravaisLattice
 
 
-def get_materials(path: str = f"{os.getcwd()}/example_data/materials.csv".replace("\\", "/")) -> dict[int, Material]:
+def get_materials(path: str = f"{os.getcwd()}/example_data/materials.csv".replace("\\", "/")) -> dict[int, Phase]:
 	materials = dict()
 	
 	with open(path, "r") as file:
@@ -18,7 +18,7 @@ def get_materials(path: str = f"{os.getcwd()}/example_data/materials.csv".replac
 			args = line.split(',')
 			global_id = int(args[0])
 
-			material = Material(
+			material = Phase(
 				global_id=global_id,
 				name=args[1],
 				atomic_number=float(args[2]),
