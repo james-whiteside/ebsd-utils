@@ -67,11 +67,11 @@ class Scan:
 
     @property
     def phase(self) -> DiscreteFieldMapper[Phase]:
-        return DiscreteFieldMapper(self.phases, self._phase_id)
+        return DiscreteFieldMapper(FieldType.OBJECT, self._phase_id, self.phases)
 
     @property
     def euler_angles_degrees(self) -> FunctionalFieldMapper[tuple[float, float, float], tuple[float, float, float]]:
-        return FunctionalFieldMapper(tuple_degrees, self.euler_angles, tuple_radians)
+        return FunctionalFieldMapper(FieldType.VECTOR_3D, self.euler_angles, tuple_degrees, tuple_radians)
 
     @euler_angles_degrees.setter
     def euler_angles_degrees(self, value: Field[tuple[float, float, float]]) -> None:
@@ -117,7 +117,7 @@ class Scan:
 
     @property
     def kernel_average_misorientation_degrees(self) -> FunctionalFieldMapper[float, float]:
-        return FunctionalFieldMapper(float_degrees, self.kernel_average_misorientation, float_radians)
+        return FunctionalFieldMapper(FieldType.SCALAR, self.kernel_average_misorientation, float_degrees, float_radians)
 
     def misrotation_tensor(self, axis: Axis) -> Field[ndarray]:
         if None in (self._misrotation_x_tensor, self._misrotation_y_tensor):
@@ -147,7 +147,7 @@ class Scan:
 
     @property
     def geometrically_necessary_dislocation_density_logarithmic(self) -> FunctionalFieldMapper[float, float]:
-        return FunctionalFieldMapper(log_or_zero, self.geometrically_necessary_dislocation_density)
+        return FunctionalFieldMapper(FieldType.SCALAR, self.geometrically_necessary_dislocation_density, log_or_zero)
 
     @property
     def channelling_fraction(self) -> Field[float]:
@@ -169,7 +169,7 @@ class Scan:
             self._init_orientation_cluster()
 
         mapping = {category.value: category for category in ClusterCategory}
-        return DiscreteFieldMapper(mapping, self._orientation_clustering_category_id)
+        return DiscreteFieldMapper(FieldType.OBJECT, self._orientation_clustering_category_id, mapping)
 
     @property
     def orientation_cluster_id(self) -> Field[int]:

@@ -1,3 +1,5 @@
+from abc import ABC, abstractmethod
+from collections.abc import Iterator
 from enum import Enum
 from typing import Callable
 from numpy import ndarray
@@ -9,9 +11,71 @@ class FieldType(Enum):
     VECTOR_2D = tuple
     VECTOR_3D = tuple
     MATRIX = ndarray
+    OBJECT = object
+
+    @property
+    def comparable(self) -> bool:
+        if self in (FieldType.DISCRETE, FieldType.SCALAR):
+            return True
+        else:
+            return False
+
+    @property
+    def mappable(self) -> bool:
+        if self in (FieldType.DISCRETE, FieldType.SCALAR, FieldType.VECTOR_3D):
+            return True
+        else:
+            return False
 
 
-class Field[VALUE_TYPE]:
+class FieldLike[VALUE_TYPE](ABC):
+    def __init__(self, width: int, height: int, field_type: FieldType):
+        self.width = width
+        self.height = height
+        self.field_type = field_type
+
+    @abstractmethod
+    def get_value_at(self, x: int, y: int) -> VALUE_TYPE:
+        ...
+
+    @abstractmethod
+    def set_value_at(self, x: int, y: int, value: VALUE_TYPE) -> None:
+        ...
+
+    @property
+    def values(self) -> Iterator[VALUE_TYPE]:
+        for y in range(self.height):
+            for x in range(self.width):
+                yield self.get_value_at(x, y)
+
+    @property
+    def max_value(self):
+        if not self.field_type.comparable:
+            raise AttributeError(f"Field type is not comparable: {self.field_type.name}")
+        else:
+            max_value = None
+
+            for value in self.values:
+                if max_value is None or value > max_value:
+                    max_value = value
+
+        return max_value
+
+    @property
+    def min_value(self):
+        if not self.field_type.comparable:
+            raise AttributeError(f"Field type is not comparable: {self.field_type.name}")
+        else:
+            min_value = None
+
+            for value in self.values:
+                if min_value is None or value < min_value:
+                    min_value = value
+
+        return min_value
+
+
+class Field[VALUE_TYPE](FieldLike):
     def __init__(
         self,
         width: int,
@@ -20,9 +84,7 @@ class Field[VALUE_TYPE]:
         default_value: VALUE_TYPE = None,
         values: list[list[VALUE_TYPE]] = None,
     ):
-        self.width = width
-        self.height = height
-        self.field_type = field_type
+        super().__init__(width, height, field_type)
 
         if default_value is None and values is None:
             raise ValueError(f"Either default field value or array of field values must be provided.")
@@ -65,8 +127,9 @@ class Field[VALUE_TYPE]:
             self._values[y][x] = value
 
 
-class DiscreteFieldMapper[VALUE_TYPE]:
-    def __init__(self, mapping: dict[int, VALUE_TYPE], discrete_field: Field[int]):
+class DiscreteFieldMapper[VALUE_TYPE](FieldLike):
+    def __init__(self, field_type: FieldType, discrete_field: Field[int], mapping: dict[int, VALUE_TYPE]):
+        super().__init__(discrete_field.width, discrete_field.height, field_type)
         self._mapping = mapping
         self._field = discrete_field
 
@@ -83,13 +146,15 @@ class DiscreteFieldMapper[VALUE_TYPE]:
         raise KeyError(f"Value is not within permitted values of discrete-valued field: {value}")
 
 
-class FunctionalFieldMapper[INPUT_TYPE, OUTPUT_TYPE]:
+class FunctionalFieldMapper[INPUT_TYPE, OUTPUT_TYPE](FieldLike):
     def __init__(
         self,
-        forward_mapping: Callable[[INPUT_TYPE], OUTPUT_TYPE],
+        field_type: FieldType,
         field: Field[INPUT_TYPE],
+        forward_mapping: Callable[[INPUT_TYPE], OUTPUT_TYPE],
         reverse_mapping: Callable[[OUTPUT_TYPE], INPUT_TYPE] = None,
     ):
+        super().__init__(field.width, field.height, field_type)
         self._forward_mapping = forward_mapping
         self._reverse_mapping = reverse_mapping
         self._field = field
