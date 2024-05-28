@@ -1,7 +1,10 @@
+# -*- coding: utf-8 -*-
+
 from abc import ABC, abstractmethod
 from collections.abc import Iterator
 from enum import Enum
 from typing import Callable
+from PIL import Image
 from numpy import ndarray
 
 
@@ -15,17 +18,15 @@ class FieldType(Enum):
 
     @property
     def comparable(self) -> bool:
-        if self in (FieldType.DISCRETE, FieldType.SCALAR):
-            return True
-        else:
-            return False
+        return self in COMPARABLE_FIELD_TYPES
 
     @property
     def mappable(self) -> bool:
-        if self in (FieldType.DISCRETE, FieldType.SCALAR, FieldType.VECTOR_3D):
-            return True
-        else:
-            return False
+        return self in MAPPABLE_FIELD_TYPES
+
+
+COMPARABLE_FIELD_TYPES = (FieldType.DISCRETE, FieldType.SCALAR)
+MAPPABLE_FIELD_TYPES = (FieldType.DISCRETE, FieldType.SCALAR, FieldType.VECTOR_3D)
 
 
 class FieldLike[VALUE_TYPE](ABC):
@@ -89,8 +90,8 @@ class Field[VALUE_TYPE](FieldLike):
         if default_value is None and values is None:
             raise ValueError(f"Either default field value or array of field values must be provided.")
 
-        if default_value is not None and type(default_value) is not self.field_type.value:
-            raise ValueError(f"Type of default field value {type(default_value)} does not match field type {self.field_type.value}.")
+        if default_value is not None:
+            self._assert_value_permitted(default_value)
 
         self.default_value = default_value
         self._values = list()
@@ -105,9 +106,7 @@ class Field[VALUE_TYPE](FieldLike):
                     except IndexError:
                         raise IndexError(f"Coordinate ({x}, {y}) is out of bounds of provided value array.")
 
-                    if type(value) is not self.field_type.value:
-                        raise ValueError(f"Type of provided value {type(value)} does not match field type {self.field_type.value}.")
-
+                    self._assert_value_permitted(value)
                     self._values[y].append(value)
                 else:
                     self._values[y].append(self.default_value)
@@ -121,10 +120,13 @@ class Field[VALUE_TYPE](FieldLike):
     def set_value_at(self, x: int, y: int, value: VALUE_TYPE) -> None:
         if not 0 <= x < self.width or not 0 <= y < self.height:
             raise IndexError(f"Coordinate ({x}, {y}) is out of bounds of field.")
-        elif type(value) is not self.field_type.value:
-            raise ValueError(f"Type of provided value {type(value)} does not match field type {self.field_type.value}.")
         else:
+            self._assert_value_permitted(value)
             self._values[y][x] = value
+
+    def _assert_value_permitted(self, value: VALUE_TYPE):
+        if type(value) is not self.field_type.value:
+            raise ValueError(f"Type of provided value {type(value)} does not match field type {self.field_type.value}.")
 
 
 class DiscreteFieldMapper[VALUE_TYPE](FieldLike):
@@ -167,3 +169,36 @@ class FunctionalFieldMapper[INPUT_TYPE, OUTPUT_TYPE](FieldLike):
             raise AttributeError("Functional field mapper does not have a reverse mapping defined.")
         else:
             self._field.set_value_at(x, y, self._reverse_mapping(value))
+
+
+class MapField(Field):
+    def __init__(
+            self,
+            width: int,
+            height: int,
+            default_value: tuple[float, float, float] = None,
+            values: list[list[tuple[float, float, float]]] = None,
+    ):
+        super().__init__(width, height, FieldType.VECTOR_3D, default_value, values)
+
+    def _assert_value_permitted(self, value: tuple[float, float, float]):
+        if type(value) is not self.field_type.value:
+            raise ValueError(f"Type of provided value {type(value)} does not match field type {self.field_type.value}.")
+
+        if not all(0.0 <= item <= 1.0 for item in value):
+            raise ValueError(f"Map field may only take tuples of values between 0.0 and 1.0.")
+
+    def to_image(self) -> Image:
+        image = Image.new("RGB", (self.width, self.height))
+
+        for y in range(self.height):
+            for x in range(self.width):
+                pixel = (
+                    int(round(255 * self.get_value_at(x, y)[0])),
+                    int(round(255 * self.get_value_at(x, y)[1])),
+                    int(round(255 * self.get_value_at(x, y)[2])),
+                )
+
+                image.putpixel((x, y), pixel)
+
+        return image
