@@ -2,27 +2,10 @@
 
 from collections.abc import Iterator
 from typing import Self
-from numpy import ndarray, array, zeros, eye, dot
-from field import FieldType, Field, DiscreteFieldMapper, FunctionalFieldMapper
+from field_manager import FieldManager
 from fileloader import get_materials
-from geometry import (
-    Axis,
-    AxisSet,
-    euler_rotation_matrix,
-    reduce_matrix,
-    rotation_angle,
-    misrotation_matrix,
-    misrotation_tensor,
-    forward_stereographic,
-)
-from phase import Phase, UNINDEXED_PHASE_ID
-from channelling import load_crit_data, fraction
-from clustering import ClusterCategory, dbscan
-from parameter_groups import ScaleParameters, ChannellingParameters, ClusteringParameters
-from utilities import tuple_degrees, tuple_radians, float_degrees, float_radians, log_or_zero
-
-
-GND_DENSITY_CORRECTIVE_FACTOR = 3.6
+from geometry import Axis, AxisSet
+from phase import Phase
 
 
 class Scan:
@@ -39,325 +22,45 @@ class Scan:
         axis_set: AxisSet = AxisSet.ZXZ,
     ):
         self.file_reference = file_reference
-        self.width = width
-        self.height = height
-        self.phases = phases
-        self.axis_set = axis_set
-        self._phase_id = Field(self.width, self.height, FieldType.DISCRETE, values=phase_id_values)
-        self.euler_angles = None
-        self.euler_angles_degrees = Field(self.width, self.height, FieldType.VECTOR_3D, values=euler_angle_degrees_values)
-        self.pattern_quality = Field(self.width, self.height, FieldType.SCALAR, values=pattern_quality_values)
-        self.index_quality = Field(self.width, self.height, FieldType.SCALAR, values=index_quality_values)
-        self._reduced_euler_rotation_matrix = None
-        self._inverse_x_pole_figure_coordinates = None
-        self._inverse_y_pole_figure_coordinates = None
-        self._inverse_z_pole_figure_coordinates = None
-        self._kernel_average_misorientation = None
-        self.scale_parameters = ScaleParameters()
-        self._misrotation_x_tensor = None
-        self._misrotation_y_tensor = None
-        self._nye_tensor = None
-        self._geometrically_necessary_dislocation_density = None
-        self.channelling_parameters = ChannellingParameters()
-        self._channelling_fraction = None
-        self.clustering_parameters = ClusteringParameters()
-        self._cluster_count = None
-        self._orientation_clustering_category_id = None
-        self._orientation_cluster_id = None
+
+        self.field = FieldManager(
+            width,
+            height,
+            phases,
+            phase_id_values,
+            euler_angle_degrees_values,
+            pattern_quality_values,
+            index_quality_values,
+            axis_set,
+        )
 
     @property
-    def phase(self) -> DiscreteFieldMapper[Phase]:
-        return DiscreteFieldMapper(FieldType.OBJECT, self._phase_id, self.phases)
+    def width(self):
+        return self.field._width
 
     @property
-    def euler_angles_degrees(self) -> FunctionalFieldMapper[tuple[float, float, float], tuple[float, float, float]]:
-        return FunctionalFieldMapper(FieldType.VECTOR_3D, self.euler_angles, tuple_degrees, tuple_radians)
-
-    @euler_angles_degrees.setter
-    def euler_angles_degrees(self, value: Field[tuple[float, float, float]]) -> None:
-        euler_angle_values = list()
-
-        for y in range(self.height):
-            euler_angle_values.append(list())
-
-            for x in range(self.width):
-                euler_angle_values[y].append(tuple_radians(value.get_value_at(x, y)))
-
-        self.euler_angles = Field(self.width, self.height, FieldType.VECTOR_3D, values=euler_angle_values)
+    def height(self):
+        return self.field._height
 
     @property
-    def reduced_euler_rotation_matrix(self) -> Field[ndarray]:
-        if self._reduced_euler_rotation_matrix is None:
-            self._init_reduced_euler_rotation_matrices()
-
-        return self._reduced_euler_rotation_matrix
-
-    def inverse_pole_figure_coordinates(self, axis: Axis) -> Field[tuple[float, float]]:
-        if None in (
-            self._inverse_x_pole_figure_coordinates,
-            self._inverse_y_pole_figure_coordinates,
-            self._inverse_z_pole_figure_coordinates,
-        ):
-            self._init_inverse_pole_figure_coordinates()
-
-        match axis:
-            case Axis.X:
-                return self._inverse_x_pole_figure_coordinates
-            case Axis.Y:
-                return self._inverse_y_pole_figure_coordinates
-            case Axis.Z:
-                return self._inverse_z_pole_figure_coordinates
+    def phases(self):
+        return self.field._phases
 
     @property
-    def kernel_average_misorientation(self) -> Field[float]:
-        if self._kernel_average_misorientation is None:
-            self._init_kernel_average_misorientation()
-
-        return self._kernel_average_misorientation
+    def scale_parameters(self):
+        return self.field._scale_parameters
 
     @property
-    def kernel_average_misorientation_degrees(self) -> FunctionalFieldMapper[float, float]:
-        return FunctionalFieldMapper(FieldType.SCALAR, self.kernel_average_misorientation, float_degrees, float_radians)
-
-    def misrotation_tensor(self, axis: Axis) -> Field[ndarray]:
-        if None in (self._misrotation_x_tensor, self._misrotation_y_tensor):
-            self._init_misrotation_tensors()
-
-        match axis:
-            case Axis.X:
-                return self._misrotation_x_tensor
-            case Axis.Y:
-                return self._misrotation_y_tensor
-            case Axis.Z:
-                raise ValueError("Misrotation data not available for z-axis intervals.")
+    def channelling_parameters(self):
+        return self.field._channelling_parameters
 
     @property
-    def nye_tensor(self) -> Field[ndarray]:
-        if self._nye_tensor is None:
-            self._init_nye_tensor()
-
-        return self._nye_tensor
-
-    @property
-    def geometrically_necessary_dislocation_density(self) -> Field[float]:
-        if self._geometrically_necessary_dislocation_density is None:
-            self._init_geometrically_necessary_dislocation_density()
-
-        return self._geometrically_necessary_dislocation_density
-
-    @property
-    def geometrically_necessary_dislocation_density_logarithmic(self) -> FunctionalFieldMapper[float, float]:
-        return FunctionalFieldMapper(FieldType.SCALAR, self.geometrically_necessary_dislocation_density, log_or_zero)
-
-    @property
-    def channelling_fraction(self) -> Field[float]:
-        if self._channelling_fraction is None:
-            self._init_channelling_fraction()
-
-        return self._channelling_fraction
+    def clustering_parameters(self):
+        return self.field._clustering_parameters
 
     @property
     def cluster_count(self) -> int:
-        if self._cluster_count is None:
-            self._init_orientation_cluster()
-
-        return self._cluster_count
-
-    @property
-    def orientation_clustering_category(self) -> DiscreteFieldMapper[ClusterCategory]:
-        if self._orientation_clustering_category_id is None:
-            self._init_orientation_cluster()
-
-        mapping = {category.value: category for category in ClusterCategory}
-        return DiscreteFieldMapper(FieldType.OBJECT, self._orientation_clustering_category_id, mapping)
-
-    @property
-    def orientation_cluster_id(self) -> Field[int]:
-        if self._orientation_cluster_id is None:
-            self._init_orientation_cluster()
-
-        return self._orientation_cluster_id
-
-    def _init_reduced_euler_rotation_matrices(self) -> None:
-        field = Field(self.width, self.height, FieldType.MATRIX, default_value=eye(3))
-
-        for y in range(self.height):
-            for x in range(self.width):
-                axis_set = self.axis_set
-                euler_angles = self.euler_angles.get_value_at(x, y)
-                crystal_family = self.phase.get_value_at(x, y).lattice_type.get_family()
-                value = reduce_matrix(euler_rotation_matrix(axis_set, euler_angles), crystal_family)
-                field.set_value_at(x, y, value)
-
-        self._reduced_euler_rotation_matrix = field
-
-    def _gen_inverse_pole_figure_coordinates(self, axis: Axis) -> Field[tuple[float, float]]:
-        field = Field(self.width, self.height, FieldType.VECTOR_2D, default_value=(0.0, 0.0))
-
-        for y in range(self.height):
-            for x in range(self.width):
-                if self.phase.get_value_at(x, y).global_id == UNINDEXED_PHASE_ID:
-                    continue
-                else:
-                    rotation_matrix = self.reduced_euler_rotation_matrix.get_value_at(x, y)
-                    value = forward_stereographic(*dot(rotation_matrix, array(axis.value)).tolist())
-                    field.set_value_at(x, y, value)
-
-        return field
-
-    def _init_inverse_pole_figure_coordinates(self) -> None:
-        self._inverse_x_pole_figure_coordinates = self._gen_inverse_pole_figure_coordinates(Axis.X)
-        self._inverse_y_pole_figure_coordinates = self._gen_inverse_pole_figure_coordinates(Axis.Y)
-        self._inverse_z_pole_figure_coordinates = self._gen_inverse_pole_figure_coordinates(Axis.Z)
-
-    def _init_kernel_average_misorientation(self) -> None:
-        field = Field(self.width, self.height, FieldType.SCALAR, default_value=0.0)
-
-        for y in range(self.height):
-            for x in range(self.width):
-                if self.phase.get_value_at(x, y).global_id == UNINDEXED_PHASE_ID:
-                    continue
-                else:
-                    total = 0.0
-                    count = 4
-                    kernel = [(-1, 0), (+1, 0), (0, -1), (0, +1)]
-                    rotation_matrix_1 = self.reduced_euler_rotation_matrix.get_value_at(x, y)
-
-                    for dx, dy in kernel:
-                        try:
-                            if self.phase.get_value_at(x, y) == self.phase.get_value_at(x + dx, y + dy):
-                                rotation_matrix_2 = self.reduced_euler_rotation_matrix.get_value_at(x + dx, y + dy)
-                                total += rotation_angle(misrotation_matrix(rotation_matrix_1, rotation_matrix_2))
-                            else:
-                                count -= 1
-                        except IndexError:
-                            count -= 1
-
-                    if count == 0:
-                        continue
-                    else:
-                        value = total / count
-                        field.set_value_at(x, y, value)
-
-        self._kernel_average_misorientation = field
-
-    def _gen_misrotation_tensor(self, axis: Axis) -> Field[ndarray]:
-        field = Field(self.width, self.height, FieldType.MATRIX, default_value=zeros((3, 3)))
-
-        for y in range(self.height):
-            for x in range(self.width):
-                if self.phase.get_value_at(x, y).global_id == UNINDEXED_PHASE_ID:
-                    continue
-                else:
-                    total = zeros((3, 3))
-                    count = 2
-
-                    match axis:
-                        case Axis.X:
-                            kernel = [(-1, 0), (+1, 0)]
-                        case Axis.Y:
-                            kernel = [(0, -1), (0, +1)]
-                        case Axis.Z:
-                            raise ValueError("Misrotation data not available for z-axis intervals.")
-
-                    rotation_matrix_1 = self.reduced_euler_rotation_matrix.get_value_at(x, y)
-
-                    for dx, dy in kernel:
-                        try:
-                            if self.phase.get_value_at(x, y) == self.phase.get_value_at(x + dx, y + dy):
-                                rotation_matrix_2 = self.reduced_euler_rotation_matrix.get_value_at(x + dx, y + dy)
-                                total += misrotation_tensor(misrotation_matrix(rotation_matrix_1, rotation_matrix_2), self.scale_parameters.pixel_size)
-                            else:
-                                count -= 1
-                        except IndexError:
-                            count -= 1
-
-                    if count == 0:
-                        continue
-                    else:
-                        value = total / count
-                        field.set_value_at(x, y, value)
-
-        return field
-
-    def _init_misrotation_tensors(self) -> None:
-        self._misrotation_x_tensor = self._gen_misrotation_tensor(Axis.X)
-        self._misrotation_y_tensor = self._gen_misrotation_tensor(Axis.Y)
-
-    def _init_nye_tensor(self) -> None:
-        field = Field(self.width, self.height, FieldType.MATRIX, default_value=zeros((3, 3)))
-
-        for y in range(self.height):
-            for x in range(self.width):
-                if self.phase.get_value_at(x, y).global_id == UNINDEXED_PHASE_ID:
-                    continue
-                else:
-                    value = array((
-                        (0.0, self.misrotation_tensor(Axis.X).get_value_at(x, y)[2][0], -self.misrotation_tensor(Axis.X).get_value_at(x, y)[1][0]),
-                        (-self.misrotation_tensor(Axis.Y).get_value_at(x, y)[2][1], 0.0, self.misrotation_tensor(Axis.Y).get_value_at(x, y)[0][1]),
-                        (0.0, 0.0, self.misrotation_tensor(Axis.Y).get_value_at(x, y)[0][2] - self.misrotation_tensor(Axis.X).get_value_at(x, y)[1][2])
-                    ))
-
-                    field.set_value_at(x, y, value)
-
-        self._nye_tensor = field
-
-    def _init_geometrically_necessary_dislocation_density(self) -> None:
-        field = Field(self.width, self.height, FieldType.SCALAR, default_value=0.0)
-
-        for y in range(self.height):
-            for x in range(self.width):
-                if self.phase.get_value_at(x, y).global_id == UNINDEXED_PHASE_ID:
-                    continue
-                else:
-                    nye_tensor_norm = sum(abs(element) for row in self.nye_tensor.get_value_at(x, y).tolist() for element in row)
-                    close_pack_distance = self.phase.get_value_at(x, y).close_pack_distance
-                    value = (GND_DENSITY_CORRECTIVE_FACTOR / close_pack_distance) * nye_tensor_norm
-                    field.set_value_at(x, y, value)
-
-        self._geometrically_necessary_dislocation_density = field
-
-    def _init_channelling_fraction(self) -> None:
-        field = Field(self.width, self.height, FieldType.SCALAR, default_value=0.0)
-
-        channel_data = {
-            local_id: load_crit_data(self.channelling_parameters.beam_atomic_number, phase.global_id, self.channelling_parameters.beam_energy)
-            for local_id, phase in self.phases.items() if phase.global_id != UNINDEXED_PHASE_ID
-        }
-
-        for y in range(self.height):
-            for x in range(self.width):
-                if self.phase.get_value_at(x, y).global_id == UNINDEXED_PHASE_ID:
-                    continue
-                else:
-                    rotation_matrix = self.reduced_euler_rotation_matrix.get_value_at(x, y)
-                    effective_beam_vector = dot(rotation_matrix, self.channelling_parameters.beam_vector).tolist()
-                    value = fraction(effective_beam_vector, channel_data[self._phase_id.get_value_at(x, y)])
-                    field.set_value_at(x, y, value)
-
-        self._channelling_fraction = field
-
-    def _init_orientation_cluster(self) -> None:
-        phase = zeros((self.height, self.width))
-        reduced_euler_rotation_matrix = zeros((self.height, self.width, 3, 3))
-
-        for y in range(self.height):
-            for x in range(self.width):
-                phase[y][x] = self.phase.get_value_at(x, y).global_id
-                reduced_euler_rotation_matrix[y][x] = self.reduced_euler_rotation_matrix.get_value_at(x, y)
-
-        cluster_count, category_id_array, cluster_id_array = dbscan(
-            self.width,
-            self.height,
-            phase,
-            reduced_euler_rotation_matrix,
-            self.clustering_parameters.core_point_neighbour_threshold,
-            self.clustering_parameters.neighbourhood_radius
-        )
-
-        self._cluster_count = cluster_count
-        self._orientation_clustering_category_id = Field(self.width, self.height, FieldType.DISCRETE, values=category_id_array.astype(int).tolist())
-        self._orientation_cluster_id = Field(self.width, self.height, FieldType.DISCRETE, values=cluster_id_array.astype(int).tolist())
+        return self.field._get_cluster_count()
 
     @classmethod
     def from_pathfinder_file(cls, data_path: str, materials_path: str, file_reference: str = None) -> Self:
@@ -638,43 +341,43 @@ class Scan:
                     columns += [str(x), str(y)]
 
                 if show_phase:
-                    columns += [str(self._phase_id.get_value_at(x, y))]
+                    columns += [str(self.field._phase_id.get_value_at(x, y))]
 
                 if show_euler_angles:
-                    columns += [str(angle) for angle in self.euler_angles_degrees.get_value_at(x, y)]
+                    columns += [str(angle) for angle in self.field.euler_angles_degrees.get_value_at(x, y)]
 
                 if show_index_quality:
-                    columns += [str(self.index_quality.get_value_at(x, y))]
+                    columns += [str(self.field.index_quality.get_value_at(x, y))]
 
                 if show_pattern_quality:
-                    columns += [str(self.pattern_quality.get_value_at(x, y))]
+                    columns += [str(self.field.pattern_quality.get_value_at(x, y))]
 
                 if show_inverse_x_pole_figure_coordinates:
-                    self.euler_angles.get_value_at(x, y)
+                    self.field.euler_angles.get_value_at(x, y)
                     columns += [str(coordinate) for coordinate in
-                                (self.inverse_pole_figure_coordinates(Axis.X).get_value_at(x, y))]
+                                (self.field.inverse_pole_figure_coordinates(Axis.X).get_value_at(x, y))]
 
                 if show_inverse_y_pole_figure_coordinates:
                     columns += [str(coordinate) for coordinate in
-                                (self.inverse_pole_figure_coordinates(Axis.Y).get_value_at(x, y))]
+                                (self.field.inverse_pole_figure_coordinates(Axis.Y).get_value_at(x, y))]
 
                 if show_inverse_z_pole_figure_coordinates:
                     columns += [str(coordinate) for coordinate in
-                                (self.inverse_pole_figure_coordinates(Axis.Z).get_value_at(x, y))]
+                                (self.field.inverse_pole_figure_coordinates(Axis.Z).get_value_at(x, y))]
 
                 if show_kernel_average_misorientation:
-                    columns += [str(self.kernel_average_misorientation_degrees.get_value_at(x, y))]
+                    columns += [str(self.field.kernel_average_misorientation_degrees.get_value_at(x, y))]
 
                 if show_geometrically_necessary_dislocation_density:
-                    columns += [str(self.geometrically_necessary_dislocation_density_logarithmic.get_value_at(x, y))]
+                    columns += [str(self.field.geometrically_necessary_dislocation_density_logarithmic.get_value_at(x, y))]
 
                 if show_channelling_fraction:
-                    columns += [str(self.channelling_fraction.get_value_at(x, y))]
+                    columns += [str(self.field.channelling_fraction.get_value_at(x, y))]
 
                 if show_orientation_cluster:
                     columns += [
-                        str(self.orientation_clustering_category.get_value_at(x, y).code),
-                        str(self.orientation_cluster_id.get_value_at(x, y)),
+                        str(self.field.orientation_clustering_category.get_value_at(x, y).code),
+                        str(self.field.orientation_cluster_id.get_value_at(x, y)),
                     ]
 
                 yield ",".join(columns)
