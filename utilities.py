@@ -254,7 +254,7 @@ def get_file_path(directory_path: str, recursive: bool = False, extension: str =
 	return _get_file_paths(directory_path, recursive, extension, exclusions, prompt, False)[0]
 
 
-def colour_wheel(i: int, n: int) -> tuple[int, int, int]:
+def colour_wheel(i: int, n: int) -> tuple[float, float, float]:
 	"""
 	Returns the RGB values for a colour with maximum saturation and brightness, with hue determined by input arguments.
 	Hue is determined by the ratio of ``i`` to ``n``, where the range ``[0,n)`` of ``i`` maps onto the hue described by the angle ``[0,360)`` degrees.
@@ -263,32 +263,32 @@ def colour_wheel(i: int, n: int) -> tuple[int, int, int]:
 	:return: The RGB values of the colour.
 	"""
 
-	angle = 360 * i / n
+	angle = 360.0 * i / n
 
-	if 0 <= angle < 60:
-		r = 1
-		g = angle / 60
-		b = 0
-	elif 60 <= angle < 120:
-		r = (120 - angle) / 60
-		g = 1
-		b = 0
-	elif 120 <= angle < 180:
-		r = 0
-		g = 1
-		b = (angle - 120) / 60
-	elif 180 <= angle < 240:
-		r = 0
-		g = (240 - angle) / 60
-		b = 1
-	elif 240 <= angle < 300:
-		r = (angle - 240) / 60
-		g = 0
-		b = 1
-	elif 300 <= angle < 360:
-		r = 1
-		g = 0
-		b = (360 - angle) / 60
+	if 0.0 <= angle < 60.0:
+		r = 1.0
+		g = angle / 60.0
+		b = 0.0
+	elif 60.0 <= angle < 120.0:
+		r = (120.0 - angle) / 60.0
+		g = 1.0
+		b = 0.0
+	elif 120.0 <= angle < 180.0:
+		r = 0.0
+		g = 1.0
+		b = (angle - 120.0) / 60.0
+	elif 180.0 <= angle < 240.0:
+		r = 0.0
+		g = (240.0 - angle) / 60.0
+		b = 1.0
+	elif 240.0 <= angle < 300.0:
+		r = (angle - 240.0) / 60.0
+		g = 0.0
+		b = 1.0
+	elif 300.0 <= angle < 360.0:
+		r = 1.0
+		g = 0.0
+		b = (360.0 - angle) / 60.0
 	else:
 		raise ValueError("Values of 'i' and 'n' must satisfy: 0 <= i < n")
 
