@@ -6,6 +6,7 @@ from field_manager import FieldManager
 from fileloader import get_materials
 from geometry import Axis, AxisSet
 from map_manager import MapManager
+from parameter_groups import ScanParameters, ScaleParameters, ChannellingParameters, ClusteringParameters
 from phase import Phase
 
 
@@ -22,44 +23,44 @@ class Scan:
         index_quality_values: list[list[float]],
         axis_set: AxisSet = AxisSet.ZXZ,
     ):
-        self.file_reference = file_reference
+        self._scan_parameters = ScanParameters()
+        self.scale_parameters = ScaleParameters()
+        self.channelling_parameters = ChannellingParameters()
+        self.clustering_parameters = ClusteringParameters()
+        self._scan_parameters.set(file_reference, width, height, phases, axis_set)
 
         self.field = FieldManager(
-            width,
-            height,
-            phases,
+            self._scan_parameters,
+            self.scale_parameters,
+            self.channelling_parameters,
+            self.clustering_parameters,
             phase_id_values,
             euler_angle_degrees_values,
             pattern_quality_values,
             index_quality_values,
-            axis_set,
         )
 
         self.map = MapManager(self.field)
 
     @property
-    def width(self):
-        return self.field._width
+    def file_reference(self) -> str:
+        return self._scan_parameters.file_reference
 
     @property
-    def height(self):
-        return self.field._height
+    def width(self) -> int:
+        return self._scan_parameters.width
 
     @property
-    def phases(self):
-        return self.field._phases
+    def height(self) -> int:
+        return self._scan_parameters.height
 
     @property
-    def scale_parameters(self):
-        return self.field._scale_parameters
+    def phases(self) -> dict[int, Phase]:
+        return self._scan_parameters.phases
 
     @property
-    def channelling_parameters(self):
-        return self.field._channelling_parameters
-
-    @property
-    def clustering_parameters(self):
-        return self.field._clustering_parameters
+    def axis_set(self) -> AxisSet:
+        return self._scan_parameters.axis_set
 
     @property
     def cluster_count(self) -> int:

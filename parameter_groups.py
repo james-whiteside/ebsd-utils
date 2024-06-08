@@ -1,6 +1,72 @@
+# -*- coding: utf-8 -*-
+
 import math
 from numpy import ndarray, array
-from geometry import Axis
+from geometry import Axis, AxisSet
+from phase import Phase
+
+
+class ScanParameters:
+    def __init__(self):
+        self.are_set = False
+        self._file_reference = None
+        self._width = None
+        self._height = None
+        self._phases = None
+        self._axis_set = None
+
+    def set(
+        self,
+        file_reference: str,
+        width: int,
+        height: int,
+        phases: dict[int, Phase],
+        axis_set: AxisSet,
+    ) -> None:
+        if self.are_set:
+            raise RuntimeError("Scale parameters cannot be set more than once.")
+
+        self.are_set = True
+        self._file_reference = file_reference
+        self._width = width
+        self._height = height
+        self._phases = phases
+        self._axis_set = axis_set
+
+    @property
+    def file_reference(self) -> str:
+        if not self.are_set:
+            raise AttributeError("Scan parameters have not been set.")
+        else:
+            return self._file_reference
+
+    @property
+    def width(self) -> int:
+        if not self.are_set:
+            raise AttributeError("Scan parameters have not been set.")
+        else:
+            return self._width
+
+    @property
+    def height(self) -> int:
+        if not self.are_set:
+            raise AttributeError("Scan parameters have not been set.")
+        else:
+            return self._height
+
+    @property
+    def phases(self) -> dict[int, Phase]:
+        if not self.are_set:
+            raise AttributeError("Scan parameters have not been set.")
+        else:
+            return self._phases
+
+    @property
+    def axis_set(self) -> AxisSet:
+        if not self.are_set:
+            raise AttributeError("Scan parameters have not been set.")
+        else:
+            return self._axis_set
 
 
 class ScaleParameters:

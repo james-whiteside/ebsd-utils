@@ -4,7 +4,6 @@ from numpy import ndarray, array, zeros, eye, dot
 from field import FieldType, Field, DiscreteFieldMapper, FunctionalFieldMapper
 from geometry import (
     Axis,
-    AxisSet,
     euler_rotation_matrix,
     reduce_matrix,
     rotation_angle,
@@ -15,7 +14,7 @@ from geometry import (
 from phase import Phase, UNINDEXED_PHASE_ID
 from channelling import load_crit_data, fraction
 from clustering import ClusterCategory, dbscan
-from parameter_groups import ScaleParameters, ChannellingParameters, ClusteringParameters
+from parameter_groups import ScaleParameters, ChannellingParameters, ClusteringParameters, ScanParameters
 from utilities import tuple_degrees, tuple_radians, float_degrees, float_radians, log_or_zero
 
 
@@ -25,44 +24,41 @@ GND_DENSITY_CORRECTIVE_FACTOR = 3.6
 class FieldManager:
     def __init__(
         self,
-        width: int,
-        height: int,
-        phases: dict[int, Phase],
+        scan_parameters: ScanParameters,
+        scale_parameters: ScaleParameters,
+        channelling_parameters: ChannellingParameters,
+        clustering_parameters: ClusteringParameters,
         phase_id_values: list[list[int]],
         euler_angle_degrees_values: list[list[tuple[float, float, float]]],
         pattern_quality_values: list[list[float]],
         index_quality_values: list[list[float]],
-        axis_set: AxisSet = AxisSet.ZXZ,
     ):
-        self._width = width
-        self._height = height
-        self._phases = phases
-        self._axis_set = axis_set
-        self._phase_id = Field(self._width, self._height, FieldType.DISCRETE, values=phase_id_values)
+        self._scan_parameters = scan_parameters
+        self._scale_parameters = scale_parameters
+        self._channelling_parameters = channelling_parameters
+        self._clustering_parameters = clustering_parameters
+        self._phase_id = Field(self._scan_parameters.width, self._scan_parameters.height, FieldType.DISCRETE, values=phase_id_values)
         self.euler_angles = None
-        self.euler_angles_degrees = Field(self._width, self._height, FieldType.VECTOR_3D, values=euler_angle_degrees_values)
-        self.pattern_quality = Field(self._width, self._height, FieldType.SCALAR, values=pattern_quality_values)
-        self.index_quality = Field(self._width, self._height, FieldType.SCALAR, values=index_quality_values)
+        self.euler_angles_degrees = Field(self._scan_parameters.width, self._scan_parameters.height, FieldType.VECTOR_3D, values=euler_angle_degrees_values)
+        self.pattern_quality = Field(self._scan_parameters.width, self._scan_parameters.height, FieldType.SCALAR, values=pattern_quality_values)
+        self.index_quality = Field(self._scan_parameters.width, self._scan_parameters.height, FieldType.SCALAR, values=index_quality_values)
         self._reduced_euler_rotation_matrix = None
         self._inverse_x_pole_figure_coordinates = None
         self._inverse_y_pole_figure_coordinates = None
         self._inverse_z_pole_figure_coordinates = None
         self._kernel_average_misorientation = None
-        self._scale_parameters = ScaleParameters()
         self._misrotation_x_tensor = None
         self._misrotation_y_tensor = None
         self._nye_tensor = None
         self._geometrically_necessary_dislocation_density = None
-        self._channelling_parameters = ChannellingParameters()
         self._channelling_fraction = None
-        self._clustering_parameters = ClusteringParameters()
         self._cluster_count = None
         self._orientation_clustering_category_id = None
         self._orientation_cluster_id = None
 
     @property
     def phase(self) -> DiscreteFieldMapper[Phase]:
-        return DiscreteFieldMapper(FieldType.OBJECT, self._phase_id, self._phases)
+        return DiscreteFieldMapper(FieldType.OBJECT, self._phase_id, self._scan_parameters.phases)
 
     @property
     def euler_angles_degrees(self) -> FunctionalFieldMapper[tuple[float, float, float], tuple[float, float, float]]:
@@ -72,13 +68,13 @@ class FieldManager:
     def euler_angles_degrees(self, value: Field[tuple[float, float, float]]) -> None:
         euler_angle_values = list()
 
-        for y in range(self._height):
+        for y in range(self._scan_parameters.height):
             euler_angle_values.append(list())
 
-            for x in range(self._width):
+            for x in range(self._scan_parameters.width):
                 euler_angle_values[y].append(tuple_radians(value.get_value_at(x, y)))
 
-        self.euler_angles = Field(self._width, self._height, FieldType.VECTOR_3D, values=euler_angle_values)
+        self.euler_angles = Field(self._scan_parameters.width, self._scan_parameters.height, FieldType.VECTOR_3D, values=euler_angle_values)
 
     @property
     def reduced_euler_rotation_matrix(self) -> Field[ndarray]:
@@ -173,11 +169,11 @@ class FieldManager:
         return self._orientation_cluster_id
 
     def _init_reduced_euler_rotation_matrices(self) -> None:
-        field = Field(self._width, self._height, FieldType.MATRIX, default_value=eye(3))
+        field = Field(self._scan_parameters.width, self._scan_parameters.height, FieldType.MATRIX, default_value=eye(3))
 
-        for y in range(self._height):
-            for x in range(self._width):
-                axis_set = self._axis_set
+        for y in range(self._scan_parameters.height):
+            for x in range(self._scan_parameters.width):
+                axis_set = self._scan_parameters.axis_set
                 euler_angles = self.euler_angles.get_value_at(x, y)
                 crystal_family = self.phase.get_value_at(x, y).lattice_type.get_family()
                 value = reduce_matrix(euler_rotation_matrix(axis_set, euler_angles), crystal_family)
@@ -186,10 +182,10 @@ class FieldManager:
         self._reduced_euler_rotation_matrix = field
 
     def _gen_inverse_pole_figure_coordinates(self, axis: Axis) -> Field[tuple[float, float]]:
-        field = Field(self._width, self._height, FieldType.VECTOR_2D, default_value=(0.0, 0.0))
+        field = Field(self._scan_parameters.width, self._scan_parameters.height, FieldType.VECTOR_2D, default_value=(0.0, 0.0))
 
-        for y in range(self._height):
-            for x in range(self._width):
+        for y in range(self._scan_parameters.height):
+            for x in range(self._scan_parameters.width):
                 if self.phase.get_value_at(x, y).global_id == UNINDEXED_PHASE_ID:
                     continue
                 else:
@@ -205,10 +201,10 @@ class FieldManager:
         self._inverse_z_pole_figure_coordinates = self._gen_inverse_pole_figure_coordinates(Axis.Z)
 
     def _init_kernel_average_misorientation(self) -> None:
-        field = Field(self._width, self._height, FieldType.SCALAR, default_value=0.0)
+        field = Field(self._scan_parameters.width, self._scan_parameters.height, FieldType.SCALAR, default_value=0.0)
 
-        for y in range(self._height):
-            for x in range(self._width):
+        for y in range(self._scan_parameters.height):
+            for x in range(self._scan_parameters.width):
                 if self.phase.get_value_at(x, y).global_id == UNINDEXED_PHASE_ID:
                     continue
                 else:
@@ -236,10 +232,10 @@ class FieldManager:
         self._kernel_average_misorientation = field
 
     def _gen_misrotation_tensor(self, axis: Axis) -> Field[ndarray]:
-        field = Field(self._width, self._height, FieldType.MATRIX, default_value=zeros((3, 3)))
+        field = Field(self._scan_parameters.width, self._scan_parameters.height, FieldType.MATRIX, default_value=zeros((3, 3)))
 
-        for y in range(self._height):
-            for x in range(self._width):
+        for y in range(self._scan_parameters.height):
+            for x in range(self._scan_parameters.width):
                 if self.phase.get_value_at(x, y).global_id == UNINDEXED_PHASE_ID:
                     continue
                 else:
@@ -279,10 +275,10 @@ class FieldManager:
         self._misrotation_y_tensor = self._gen_misrotation_tensor(Axis.Y)
 
     def _init_nye_tensor(self) -> None:
-        field = Field(self._width, self._height, FieldType.MATRIX, default_value=zeros((3, 3)))
+        field = Field(self._scan_parameters.width, self._scan_parameters.height, FieldType.MATRIX, default_value=zeros((3, 3)))
 
-        for y in range(self._height):
-            for x in range(self._width):
+        for y in range(self._scan_parameters.height):
+            for x in range(self._scan_parameters.width):
                 if self.phase.get_value_at(x, y).global_id == UNINDEXED_PHASE_ID:
                     continue
                 else:
@@ -297,10 +293,10 @@ class FieldManager:
         self._nye_tensor = field
 
     def _init_geometrically_necessary_dislocation_density(self) -> None:
-        field = Field(self._width, self._height, FieldType.SCALAR, default_value=0.0)
+        field = Field(self._scan_parameters.width, self._scan_parameters.height, FieldType.SCALAR, default_value=0.0)
 
-        for y in range(self._height):
-            for x in range(self._width):
+        for y in range(self._scan_parameters.height):
+            for x in range(self._scan_parameters.width):
                 if self.phase.get_value_at(x, y).global_id == UNINDEXED_PHASE_ID:
                     continue
                 else:
@@ -313,15 +309,15 @@ class FieldManager:
         self._geometrically_necessary_dislocation_density = field
 
     def _init_channelling_fraction(self) -> None:
-        field = Field(self._width, self._height, FieldType.SCALAR, default_value=0.0)
+        field = Field(self._scan_parameters.width, self._scan_parameters.height, FieldType.SCALAR, default_value=0.0)
 
         channel_data = {
             local_id: load_crit_data(self._channelling_parameters.beam_atomic_number, phase.global_id, self._channelling_parameters.beam_energy)
-            for local_id, phase in self._phases.items() if phase.global_id != UNINDEXED_PHASE_ID
+            for local_id, phase in self._scan_parameters.phases.items() if phase.global_id != UNINDEXED_PHASE_ID
         }
 
-        for y in range(self._height):
-            for x in range(self._width):
+        for y in range(self._scan_parameters.height):
+            for x in range(self._scan_parameters.width):
                 if self.phase.get_value_at(x, y).global_id == UNINDEXED_PHASE_ID:
                     continue
                 else:
@@ -333,17 +329,17 @@ class FieldManager:
         self._channelling_fraction = field
 
     def _init_orientation_cluster(self) -> None:
-        phase = zeros((self._height, self._width))
-        reduced_euler_rotation_matrix = zeros((self._height, self._width, 3, 3))
+        phase = zeros((self._scan_parameters.height, self._scan_parameters.width))
+        reduced_euler_rotation_matrix = zeros((self._scan_parameters.height, self._scan_parameters.width, 3, 3))
 
-        for y in range(self._height):
-            for x in range(self._width):
+        for y in range(self._scan_parameters.height):
+            for x in range(self._scan_parameters.width):
                 phase[y][x] = self.phase.get_value_at(x, y).global_id
                 reduced_euler_rotation_matrix[y][x] = self.reduced_euler_rotation_matrix.get_value_at(x, y)
 
         cluster_count, category_id_array, cluster_id_array = dbscan(
-            self._width,
-            self._height,
+            self._scan_parameters.width,
+            self._scan_parameters.height,
             phase,
             reduced_euler_rotation_matrix,
             self._clustering_parameters.core_point_neighbour_threshold,
@@ -351,5 +347,5 @@ class FieldManager:
         )
 
         self._cluster_count = cluster_count
-        self._orientation_clustering_category_id = Field(self._width, self._height, FieldType.DISCRETE, values=category_id_array.astype(int).tolist())
-        self._orientation_cluster_id = Field(self._width, self._height, FieldType.DISCRETE, values=cluster_id_array.astype(int).tolist())
+        self._orientation_clustering_category_id = Field(self._scan_parameters.width, self._scan_parameters.height, FieldType.DISCRETE, values=category_id_array.astype(int).tolist())
+        self._orientation_cluster_id = Field(self._scan_parameters.width, self._scan_parameters.height, FieldType.DISCRETE, values=cluster_id_array.astype(int).tolist())
