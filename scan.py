@@ -5,6 +5,7 @@ from typing import Self
 from field_manager import FieldManager
 from fileloader import get_materials
 from geometry import Axis, AxisSet
+from map_manager import MapManager
 from phase import Phase
 
 
@@ -33,6 +34,8 @@ class Scan:
             index_quality_values,
             axis_set,
         )
+
+        self.map = MapManager(self.field)
 
     @property
     def width(self):
