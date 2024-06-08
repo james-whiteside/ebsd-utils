@@ -40,7 +40,13 @@ class Scan:
             index_quality_values,
         )
 
-        self.map = MapManager(self.field)
+        self.map = MapManager(
+            self._scan_parameters,
+            self.scale_parameters,
+            self.channelling_parameters,
+            self.clustering_parameters,
+            self.field
+        )
 
     @property
     def file_reference(self) -> str:

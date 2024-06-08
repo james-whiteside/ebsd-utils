@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+
 from enum import Enum
 from PIL.Image import Image
 from field import Field, FieldType, FieldLike, MapField
@@ -70,7 +71,6 @@ class Map[VALUE_TYPE]:
                         if self._phase is not None and self._phase.get_value_at(x, y).global_id == UNINDEXED_PHASE_ID:
                             continue
                         else:
-                            print(self._values.get_value_at(x, y), self._max_value)
                             value = colour_wheel(self._values.get_value_at(x, y), self._max_value)
                             field.set_value_at(x, y, value)
 
