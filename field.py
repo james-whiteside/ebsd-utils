@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Iterator
 from enum import Enum
 from typing import Callable
-from PIL import Image
+from PIL.Image import Image, new as new_image
 from numpy import ndarray
 
 
@@ -173,11 +173,11 @@ class FunctionalFieldMapper[INPUT_TYPE, OUTPUT_TYPE](FieldLike):
 
 class MapField(Field):
     def __init__(
-            self,
-            width: int,
-            height: int,
-            default_value: tuple[float, float, float] = None,
-            values: list[list[tuple[float, float, float]]] = None,
+        self,
+        width: int,
+        height: int,
+        default_value: tuple[float, float, float] = None,
+        values: list[list[tuple[float, float, float]]] = None,
     ):
         super().__init__(width, height, FieldType.VECTOR_3D, default_value, values)
 
@@ -189,7 +189,7 @@ class MapField(Field):
             raise ValueError(f"Map field may only take tuples of values between 0.0 and 1.0.")
 
     def to_image(self) -> Image:
-        image = Image.new("RGB", (self.width, self.height))
+        image = new_image("RGB", (self.width, self.height))
 
         for y in range(self.height):
             for x in range(self.width):
