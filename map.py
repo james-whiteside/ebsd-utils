@@ -1,44 +1,110 @@
-from field import Field, FieldType, FieldLike
-from phase import Phase
+# -*- coding: utf-8 -*-
+from enum import Enum
+from PIL.Image import Image
+from field import Field, FieldType, FieldLike, MapField
+from phase import Phase, UNINDEXED_PHASE_ID
+from utilities import colour_wheel
+
+
+class MapType(Enum):
+    P = "phase"
+    PQ = "pattern quality"
+    IQ = "index quality"
 
 
 class Map[VALUE_TYPE]:
     def __init__(
         self,
+        map_type: MapType,
         value_field: FieldLike[VALUE_TYPE],
-        phase_field: FieldLike[Phase],
+        phase_field: FieldLike[Phase] = None,
         coordinates_field: FieldLike[tuple] = None,
         max_value: VALUE_TYPE = None,
         min_value: VALUE_TYPE = None,
     ):
+        self.map_type = map_type
+
         if not value_field.field_type.mappable:
             raise ValueError(f"Value field is not a mappable field type: {value_field.field_type.name}")
         else:
-            self.values = value_field
+            self._values = value_field
 
-        self.phase = phase_field
+        self._phase = phase_field
 
         if coordinates_field is None:
             coordinate_values = list()
 
-            for y in range(self.values.height):
+            for y in range(self._values.height):
                 coordinate_values.append(list())
 
-                for x in range(self.values.width):
+                for x in range(self._values.width):
                     coordinate_values[y].append((x, y))
 
-            self.coordinates = Field(self.values.width, self.values.height, FieldType.VECTOR_2D, values=coordinate_values)
+            self._coordinates = Field(self._values.width, self._values.height, FieldType.VECTOR_2D, values=coordinate_values)
         elif coordinates_field.field_type is not FieldType.VECTOR_2D:
             raise ValueError(f"Coordinate field must be {FieldType.VECTOR_2D.name}, not {coordinates_field.field_type.name}.")
         else:
-            self.coordinates = coordinates_field
+            self._coordinates = coordinates_field
 
         if max_value is None:
-            self.max_value = self.values.max_value
+            self._max_value = self._values.max_value
         else:
-            self.max_value = max_value
+            self._max_value = max_value
 
         if min_value is None:
-            self.min_value = self.values.min_value
+            self._min_value = self._values.min_value
         else:
-            self.min_value = min_value
+            self._min_value = min_value
+
+        self._width = self._values.width
+        self._height = self._values.height
+
+    @property
+    def field(self) -> MapField:
+        match self._values.field_type:
+            case FieldType.DISCRETE:
+                field = MapField(self._width, self._height, default_value=(0.0, 0.0, 0.0))
+
+                for y in range(self._height):
+                    for x in range(self._width):
+                        if self._phase is not None and self._phase.get_value_at(x, y).global_id == UNINDEXED_PHASE_ID:
+                            continue
+                        else:
+                            print(self._values.get_value_at(x, y), self._max_value)
+                            value = colour_wheel(self._values.get_value_at(x, y), self._max_value)
+                            field.set_value_at(x, y, value)
+
+            case FieldType.SCALAR:
+                field = MapField(self._width, self._height, default_value=(1.0, 0.0, 0.0))
+
+                for y in range(self._height):
+                    for x in range(self._width):
+                        if self._phase is not None and self._phase.get_value_at(x, y).global_id == UNINDEXED_PHASE_ID:
+                            continue
+                        else:
+                            rgb_intensity = (self._values.get_value_at(x, y) - self._min_value) / (self._max_value - self._min_value)
+                            value = (rgb_intensity, rgb_intensity, rgb_intensity)
+                            field.set_value_at(x, y, value)
+
+            case FieldType.VECTOR_3D:
+                field = MapField(self._width, self._height, default_value=(0.0, 0.0, 0.0))
+
+                for y in range(self._height):
+                    for x in range(self._width):
+                        if self._phase is not None and self._phase.get_value_at(x, y).global_id == UNINDEXED_PHASE_ID:
+                            continue
+                        else:
+                            r_intensity = (self._values.get_value_at(x, y)[0] - self._min_value) / (self._max_value - self._min_value)
+                            g_intensity = (self._values.get_value_at(x, y)[1] - self._min_value) / (self._max_value - self._min_value)
+                            b_intensity = (self._values.get_value_at(x, y)[2] - self._min_value) / (self._max_value - self._min_value)
+                            value = (r_intensity, g_intensity, b_intensity)
+                            field.set_value_at(x, y, value)
+
+            case _:
+                raise NotImplementedError()
+
+        return field
+
+    @property
+    def image(self) -> Image:
+        return self.field.to_image()
