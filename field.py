@@ -186,7 +186,7 @@ class MapField(Field):
             raise ValueError(f"Type of provided value {type(value)} does not match field type {self.field_type.value}.")
 
         if not all(0.0 <= item <= 1.0 for item in value):
-            raise ValueError(f"Map field may only take tuples of values between 0.0 and 1.0.")
+            raise ValueError(f"Map field may only take tuples of values between 0.0 and 1.0. Provided tuple: {value}")
 
     def to_image(self) -> Image:
         image = new_image("RGB", (self.width, self.height))
