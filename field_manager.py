@@ -38,23 +38,23 @@ class FieldManager:
         self._channelling_parameters = channelling_parameters
         self._clustering_parameters = clustering_parameters
         self._phase_id = Field(self._scan_parameters.width, self._scan_parameters.height, FieldType.DISCRETE, values=phase_id_values)
-        self.euler_angles = None
+        self.euler_angles: Field[tuple[float, float, float]] = None
         self.euler_angles_degrees = Field(self._scan_parameters.width, self._scan_parameters.height, FieldType.VECTOR_3D, values=euler_angle_degrees_values)
         self.pattern_quality = Field(self._scan_parameters.width, self._scan_parameters.height, FieldType.SCALAR, values=pattern_quality_values)
         self.index_quality = Field(self._scan_parameters.width, self._scan_parameters.height, FieldType.SCALAR, values=index_quality_values)
-        self._reduced_euler_rotation_matrix = None
-        self._inverse_x_pole_figure_coordinates = None
-        self._inverse_y_pole_figure_coordinates = None
-        self._inverse_z_pole_figure_coordinates = None
-        self._kernel_average_misorientation = None
-        self._misrotation_x_tensor = None
-        self._misrotation_y_tensor = None
-        self._nye_tensor = None
-        self._geometrically_necessary_dislocation_density = None
-        self._channelling_fraction = None
-        self._cluster_count = None
-        self._orientation_clustering_category_id = None
-        self._orientation_cluster_id = None
+        self._reduced_euler_rotation_matrix: Field[ndarray] = None
+        self._inverse_x_pole_figure_coordinates: Field[tuple[float, float]] = None
+        self._inverse_y_pole_figure_coordinates: Field[tuple[float, float]] = None
+        self._inverse_z_pole_figure_coordinates: Field[tuple[float, float]] = None
+        self._kernel_average_misorientation: Field[float] = None
+        self._misrotation_x_tensor: Field[ndarray] = None
+        self._misrotation_y_tensor: Field[ndarray] = None
+        self._nye_tensor: Field[ndarray] = None
+        self._geometrically_necessary_dislocation_density: Field[float] = None
+        self._channelling_fraction: Field[float] = None
+        self._cluster_count: int = None
+        self._orientation_clustering_category_id: Field[int] = None
+        self._orientation_cluster_id: Field[int] = None
 
     @property
     def phase(self) -> DiscreteFieldMapper[Phase]:
