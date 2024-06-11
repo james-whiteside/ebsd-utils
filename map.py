@@ -94,9 +94,9 @@ class Map[VALUE_TYPE]:
                         if self._phase is not None and self._phase.get_value_at(x, y).global_id == UNINDEXED_PHASE_ID:
                             continue
                         else:
-                            r_intensity = (self._values.get_value_at(x, y)[0] - self._min_value) / (self._max_value - self._min_value)
-                            g_intensity = (self._values.get_value_at(x, y)[1] - self._min_value) / (self._max_value - self._min_value)
-                            b_intensity = (self._values.get_value_at(x, y)[2] - self._min_value) / (self._max_value - self._min_value)
+                            r_intensity = (self._values.get_value_at(x, y)[0] - self._min_value[0]) / (self._max_value[0] - self._min_value[0])
+                            g_intensity = (self._values.get_value_at(x, y)[1] - self._min_value[1]) / (self._max_value[1] - self._min_value[1])
+                            b_intensity = (self._values.get_value_at(x, y)[2] - self._min_value[2]) / (self._max_value[2] - self._min_value[2])
                             value = (r_intensity, g_intensity, b_intensity)
                             field.set_value_at(x, y, value)
 
