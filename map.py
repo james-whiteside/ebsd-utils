@@ -9,8 +9,12 @@ from utilities import colour_wheel
 
 class MapType(Enum):
     P = "phase"
+    EA = "euler angle"
     PQ = "pattern quality"
     IQ = "index quality"
+    OX = "x-axis orientation"
+    OY = "y-axis orientation"
+    OZ = "z-axis orientation"
 
 
 class Map[VALUE_TYPE]:

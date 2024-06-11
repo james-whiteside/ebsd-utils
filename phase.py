@@ -87,11 +87,20 @@ class Phase:
 
     @property
     def close_pack_distance(self) -> float:
-        if self.lattice_type is BravaisLattice.CP:
-            return self.lattice_constants[0]
-        elif self.lattice_type is BravaisLattice.CI:
-            return math.sqrt(3) * self.lattice_constants[0] / 2
-        elif self.lattice_type is BravaisLattice.CF:
-            return math.sqrt(2) * self.lattice_constants[0] / 2
-        else:
-            raise NotImplementedError()
+        match self.lattice_type:
+            case BravaisLattice.CP:
+                return self.lattice_constants[0]
+            case BravaisLattice.CI:
+                return math.sqrt(3) * self.lattice_constants[0] / 2
+            case BravaisLattice.CF:
+                return math.sqrt(2) * self.lattice_constants[0] / 2
+            case _:
+                raise NotImplementedError()
+
+    @property
+    def max_euler_angles(self) -> tuple[float, float, float]:
+        match self.lattice_type.family:
+            case CrystalFamily.C:
+                return 2 * math.pi, math.acos(math.sqrt(3) / 3), 0.5 * math.pi
+            case _:
+                raise NotImplementedError()
