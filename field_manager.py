@@ -175,7 +175,7 @@ class FieldManager:
             for x in range(self._scan_parameters.width):
                 axis_set = self._scan_parameters.axis_set
                 euler_angles = self.euler_angles.get_value_at(x, y)
-                crystal_family = self.phase.get_value_at(x, y).lattice_type.get_family()
+                crystal_family = self.phase.get_value_at(x, y).lattice_type.family
                 value = reduce_matrix(euler_rotation_matrix(axis_set, euler_angles), crystal_family)
                 field.set_value_at(x, y, value)
 

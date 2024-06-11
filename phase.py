@@ -43,7 +43,8 @@ class BravaisLattice(Enum):
     AP = "aP"
     NONE = "None"
 
-    def get_family(self) -> CrystalFamily:
+    @property
+    def family(self) -> CrystalFamily:
         if self is BravaisLattice.NONE:
             return CrystalFamily.NONE
         else:
