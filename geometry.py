@@ -1,8 +1,10 @@
+# -*- coding: utf-8 -*-
+
 import copy
 import math
 from enum import Enum
 import numpy
-from phase import CrystalFamily, BravaisLattice
+from phase import CrystalFamily
 
 
 class Axis(Enum):
@@ -80,31 +82,6 @@ def euler_rotation_matrix(axis_set: AxisSet, angles: tuple[float, float, float])
     R = numpy.dot(single_rotation_matrix(axis_set.value[1], angles[1]), R)
     R = numpy.dot(single_rotation_matrix(axis_set.value[2], angles[2]), R)
     return R
-
-
-def reduce_vector(v: tuple[float, float, float], lattice_type: BravaisLattice) -> tuple[float, float, float]:
-    """
-    Reduces a lattice vector ``v`` into the fundamental unit triangle of its Bravais lattice by reflection.
-    :param v: The lattice vector ``v``.
-    :param lattice_type: The Bravais lattice type.
-    :return: The reduced vector.
-    """
-
-    x, y, z = v
-    crystal_family = lattice_type.get_family()
-
-    if crystal_family is CrystalFamily.NONE:
-        a, b, c = z, y, x
-    elif crystal_family is CrystalFamily.C:
-        z, y, x = sorted((-abs(x), -abs(y), -abs(z)))
-        a = z - y
-        b = (y - x) * math.sqrt(2)
-        c = x * math.sqrt(3)
-        a, b, c = abs(a) / max(abs(a), abs(b), abs(c)), abs(b) / max(abs(a), abs(b), abs(c)), abs(c) / max(abs(a), abs(b), abs(c))
-    else:
-        raise NotImplementedError()
-
-    return a, b, c
 
 
 def reduce_matrix(R: numpy.ndarray, symmetry: CrystalFamily) -> numpy.ndarray:

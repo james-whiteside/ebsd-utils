@@ -9,9 +9,34 @@ import utilities
 import fileloader
 import orientation
 from phase import CrystalFamily, BravaisLattice
-from geometry import Axis, AxisSet, euler_rotation_matrix, reduce_vector, reduce_matrix, euler_angles, \
+from geometry import Axis, AxisSet, euler_rotation_matrix, reduce_matrix, euler_angles, \
 	inverse_stereographic, forward_stereographic, rotation_angle, misrotation_matrix
 
+
+def inverse_pole_figure_colour(v: tuple[float, float, float], lattice_type: BravaisLattice) -> tuple[float, float, float]:
+    """
+    This docstring is out of date.
+    Reduces a lattice vector ``v`` into the fundamental unit triangle of its Bravais lattice by reflection.
+    :param v: The lattice vector ``v``.
+    :param lattice_type: The Bravais lattice type.
+    :return: The reduced vector.
+    """
+
+    x, y, z = v
+    crystal_family = lattice_type.family
+
+    if crystal_family is CrystalFamily.NONE:
+        a, b, c = z, y, x
+    elif crystal_family is CrystalFamily.C:
+        z, y, x = sorted((-abs(x), -abs(y), -abs(z)))
+        a = z - y
+        b = (y - x) * math.sqrt(2)
+        c = x * math.sqrt(3)
+        a, b, c = abs(a) / max(abs(a), abs(b), abs(c)), abs(b) / max(abs(a), abs(b), abs(c)), abs(c) / max(abs(a), abs(b), abs(c))
+    else:
+        raise NotImplementedError()
+
+    return a, b, c
 
 def mapGND(data, phaseID=None):
 	
@@ -66,7 +91,7 @@ def mapIPF(data, axis, phaseID=None):
 				euler = data['data']['euler'][y][x]
 				lattice_type = BravaisLattice(data['phases'][data['data']['phase'][y][x]]['type'])
 				v = numpy.dot(euler_rotation_matrix(AxisSet.ZXZ, euler), refV).tolist()
-				v = reduce_vector(v, lattice_type)
+				v = inverse_pole_figure_colour(v, lattice_type)
 				IPF[y].append(v)
 	
 	return IPF
@@ -87,7 +112,7 @@ def keyIPF(lattice_type, size, guides):
 				IPF[Y].append(list((0, 0, 0)))
 			else:
 				v = (x, y, z)
-				v = reduce_vector(v, lattice_type)
+				v = inverse_pole_figure_colour(v, lattice_type)
 				IPF[Y].append(v)
 	
 	return IPF
@@ -149,7 +174,7 @@ def mapSGP(data, metadata, size, plot, phaseID=None, trim=True):
 				vY = math.tan(math.radians(22.5)) * Y / (size - 1)
 				v = inverse_stereographic(vX, vY)
 				lattice_type = BravaisLattice.CP
-				v = reduce_vector(v, lattice_type)
+				v = inverse_pole_figure_colour(v, lattice_type)
 				try:
 					SGP[int(round((size - 1) * vY / math.tan(math.radians(22.5))))][int(round((size - 1) * vX / math.tan(math.radians(22.5))))] = list(v)
 				except IndexError:
@@ -173,7 +198,7 @@ def mapSGP(data, metadata, size, plot, phaseID=None, trim=True):
 				vX, vY = data['data']['SGP'][y][x]
 				v = inverse_stereographic(vX, vY)
 				lattice_type = BravaisLattice(data['phases'][data['data']['phase'][y][x]]['type'])
-				v = reduce_vector(v, lattice_type)
+				v = inverse_pole_figure_colour(v, lattice_type)
 				try:
 					SGP[int(round((size - 1) * vY / math.tan(math.radians(22.5))))][int(round((size - 1) * vX / math.tan(math.radians(22.5))))] = list(v)
 				except IndexError:
