@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
 
 import math
-from field import DiscreteFieldMapper, FieldType, Field
+
+from clustering import ClusterCategory
+from field import DiscreteFieldMapper, FieldType, Field, FunctionalFieldMapper
 from field_manager import FieldManager
 from geometry import Axis, inverse_stereographic
 from map import Map, MapType
 from parameter_groups import ScanParameters, ScaleParameters, ChannellingParameters, ClusteringParameters
-from phase import UNINDEXED_PHASE_ID, CrystalFamily
+from phase import UNINDEXED_PHASE_ID, CrystalFamily, Phase
 
 
 class MapManager:
@@ -23,6 +25,40 @@ class MapManager:
         self._channelling_parameters = channelling_parameters
         self._clustering_parameters = clustering_parameters
         self._field_manager = field_manager
+
+    @property
+    def _indexed_phase_filter(self) -> FunctionalFieldMapper[Phase, bool]:
+        return FunctionalFieldMapper(FieldType.BOOLEAN, self._field_manager.phase, lambda phase: phase.global_id != UNINDEXED_PHASE_ID)
+
+    @property
+    def _core_point_filter(self) -> FunctionalFieldMapper[ClusterCategory, bool]:
+        return FunctionalFieldMapper(FieldType.BOOLEAN, self._field_manager.orientation_clustering_category, lambda category: category is not ClusterCategory.NOISE)
+
+    @property
+    def _populated_kernel_filter(self) -> Field[bool]:
+        field = Field(self._scan_parameters.width, self._scan_parameters.height, FieldType.BOOLEAN, default_value=False)
+
+        for y in range(self._scan_parameters.height):
+            for x in range(self._scan_parameters.width):
+                if self._field_manager.phase.get_value_at(x, y).global_id == UNINDEXED_PHASE_ID:
+                    continue
+                else:
+                    kernel = [(-1, 0), (+1, 0), (0, -1), (0, +1)]
+                    count = len(kernel)
+
+                    for dx, dy in kernel:
+                        try:
+                            if self._field_manager.phase.get_value_at(x, y) != self._field_manager.phase.get_value_at(x + dx, y + dy):
+                                count -= 1
+                        except IndexError:
+                            count -= 1
+
+                    if count == 0:
+                        continue
+                    else:
+                        field.set_value_at(x, y, True)
+
+        return field
 
     @property
     def _euler_angle_colours(self) -> Field[tuple[float, float, float]]:
@@ -96,11 +132,12 @@ class MapManager:
         sorted_phases = sorted(self._scan_parameters.phases.items(), key=lambda item: item[1].global_id)
         sorted_local_ids = [local_id for local_id, phase in sorted_phases if phase.global_id != UNINDEXED_PHASE_ID]
         mapping = {local_id: index for index, local_id in enumerate(sorted_local_ids)}
+        value_field = DiscreteFieldMapper(FieldType.DISCRETE, self._field_manager._phase_id, mapping)
 
         return Map(
             map_type=MapType.P,
-            value_field=DiscreteFieldMapper(FieldType.DISCRETE, self._field_manager._phase_id, mapping),
-            phase_field=self._field_manager.phase,
+            value_field=value_field,
+            filter_field=self._indexed_phase_filter,
             max_value=len(mapping),
             min_value=0,
         )
@@ -110,7 +147,7 @@ class MapManager:
         return Map(
             map_type=MapType.EA,
             value_field=self._euler_angle_colours,
-            phase_field=self._field_manager.phase,
+            filter_field=self._indexed_phase_filter,
             max_value=(1.0, 1.0, 1.0),
             min_value=(0.0, 0.0, 0.0),
         )
@@ -145,7 +182,7 @@ class MapManager:
         return Map(
             map_type=map_type,
             value_field=self._inverse_pole_figure_colours(axis),
-            phase_field=self._field_manager.phase,
+            filter_field=self._indexed_phase_filter,
             max_value=(1.0, 1.0, 1.0),
             min_value=(0.0, 0.0, 0.0),
         )
