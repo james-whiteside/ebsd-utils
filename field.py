@@ -9,6 +9,7 @@ from numpy import ndarray
 
 
 class FieldType(Enum):
+    BOOLEAN = bool
     DISCRETE = int
     SCALAR = float
     VECTOR_2D = tuple
