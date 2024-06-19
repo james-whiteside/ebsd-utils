@@ -209,8 +209,8 @@ class FieldManager:
                     continue
                 else:
                     total = 0.0
-                    count = 4
                     kernel = [(-1, 0), (+1, 0), (0, -1), (0, +1)]
+                    count = len(kernel)
                     rotation_matrix_1 = self.reduced_euler_rotation_matrix.get_value_at(x, y)
 
                     for dx, dy in kernel:
@@ -240,7 +240,6 @@ class FieldManager:
                     continue
                 else:
                     total = zeros((3, 3))
-                    count = 2
 
                     match axis:
                         case Axis.X:
@@ -250,6 +249,7 @@ class FieldManager:
                         case Axis.Z:
                             raise ValueError("Misrotation data not available for z-axis intervals.")
 
+                    count = len(kernel)
                     rotation_matrix_1 = self.reduced_euler_rotation_matrix.get_value_at(x, y)
 
                     for dx, dy in kernel:
