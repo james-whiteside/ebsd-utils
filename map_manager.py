@@ -126,6 +126,14 @@ class MapManager:
                 return self.orientation(Axis.Y)
             case MapType.OZ:
                 return self.orientation(Axis.Z)
+            case MapType.KAM:
+                return self.kernel_average_misorientation
+            case MapType.GND:
+                return self.geometrically_necessary_dislocation_density
+            case MapType.CF:
+                return self.channelling_fraction
+            case MapType.OC:
+                return self.orientation_cluster
 
     @property
     def phase(self) -> Map:
@@ -185,4 +193,43 @@ class MapManager:
             filter_field=self._indexed_phase_filter,
             max_value=(1.0, 1.0, 1.0),
             min_value=(0.0, 0.0, 0.0),
+        )
+
+    @property
+    def kernel_average_misorientation(self) -> Map:
+        return Map(
+            map_type=MapType.KAM,
+            value_field=self._field_manager.kernel_average_misorientation,
+            filter_field=self._populated_kernel_filter,
+            min_value=0.0,
+        )
+
+    @property
+    def geometrically_necessary_dislocation_density(self) -> Map:
+        return Map(
+            map_type=MapType.GND,
+            value_field=self._field_manager.geometrically_necessary_dislocation_density_logarithmic,
+            filter_field=self._populated_kernel_filter,
+        )
+
+    @property
+    def channelling_fraction(self) -> Map:
+        return Map(
+            map_type=MapType.CF,
+            value_field=self._field_manager.channelling_fraction,
+            filter_field=self._indexed_phase_filter,
+            max_value=100.0,
+            min_value=0.0,
+        )
+
+    @property
+    def orientation_cluster(self) -> Map:
+        value_field = FunctionalFieldMapper(FieldType.DISCRETE, self._field_manager.orientation_cluster_id, lambda id: id - 1, lambda id: id + 1)
+
+        return Map(
+            map_type=MapType.OC,
+            value_field=value_field,
+            filter_field=self._core_point_filter,
+            max_value=self._field_manager._get_cluster_count(),
+            min_value=0,
         )

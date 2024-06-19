@@ -14,6 +14,10 @@ class MapType(Enum):
     OX = "x-axis orientation"
     OY = "y-axis orientation"
     OZ = "z-axis orientation"
+    KAM = "kernel average misorientation"
+    GND = "geometrically necessary dislocation density"
+    CF = "channelling fraction"
+    OC = "orientation cluster"
 
 
 class Map[VALUE_TYPE]:
