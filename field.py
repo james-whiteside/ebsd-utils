@@ -131,7 +131,7 @@ class Field[VALUE_TYPE](FieldLike):
 
 
 class DiscreteFieldMapper[VALUE_TYPE](FieldLike):
-    def __init__(self, field_type: FieldType, discrete_field: Field[int], mapping: dict[int, VALUE_TYPE]):
+    def __init__(self, field_type: FieldType, discrete_field: FieldLike[int], mapping: dict[int, VALUE_TYPE]):
         super().__init__(discrete_field.width, discrete_field.height, field_type)
         self._mapping = mapping
         self._field = discrete_field
@@ -153,7 +153,7 @@ class FunctionalFieldMapper[INPUT_TYPE, OUTPUT_TYPE](FieldLike):
     def __init__(
         self,
         field_type: FieldType,
-        field: Field[INPUT_TYPE],
+        field: FieldLike[INPUT_TYPE],
         forward_mapping: Callable[[INPUT_TYPE], OUTPUT_TYPE],
         reverse_mapping: Callable[[OUTPUT_TYPE], INPUT_TYPE] = None,
     ):
