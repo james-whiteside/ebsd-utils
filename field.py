@@ -31,10 +31,11 @@ MAPPABLE_FIELD_TYPES = (FieldType.DISCRETE, FieldType.SCALAR, FieldType.VECTOR_3
 
 
 class FieldLike[VALUE_TYPE](ABC):
-    def __init__(self, width: int, height: int, field_type: FieldType):
+    def __init__(self, width: int, height: int, field_type: FieldType, nullable: bool = False):
         self.width = width
         self.height = height
         self.field_type = field_type
+        self.nullable = nullable
 
     @abstractmethod
     def get_value_at(self, x: int, y: int) -> VALUE_TYPE:
@@ -48,33 +49,24 @@ class FieldLike[VALUE_TYPE](ABC):
     def values(self) -> Iterator[VALUE_TYPE]:
         for y in range(self.height):
             for x in range(self.width):
-                yield self.get_value_at(x, y)
+                try:
+                    yield self.get_value_at(x, y)
+                except ValueError:
+                    continue
 
     @property
     def max_value(self):
         if not self.field_type.comparable:
             raise AttributeError(f"Field type is not comparable: {self.field_type.name}")
         else:
-            max_value = None
-
-            for value in self.values:
-                if max_value is None or value > max_value:
-                    max_value = value
-
-        return max_value
+            return max(self.values)
 
     @property
     def min_value(self):
         if not self.field_type.comparable:
             raise AttributeError(f"Field type is not comparable: {self.field_type.name}")
         else:
-            min_value = None
-
-            for value in self.values:
-                if min_value is None or value < min_value:
-                    min_value = value
-
-        return min_value
+            return min(self.values)
 
 
 class Field[VALUE_TYPE](FieldLike):
@@ -85,8 +77,9 @@ class Field[VALUE_TYPE](FieldLike):
         field_type: FieldType,
         default_value: VALUE_TYPE = None,
         values: list[list[VALUE_TYPE]] = None,
+        nullable: bool = False,
     ):
-        super().__init__(width, height, field_type)
+        super().__init__(width, height, field_type, nullable)
 
         if default_value is None and values is None:
             raise ValueError(f"Either default field value or array of field values must be provided.")
@@ -116,7 +109,12 @@ class Field[VALUE_TYPE](FieldLike):
         if not 0 <= x < self.width or not 0 <= y < self.height:
             raise IndexError(f"Coordinate ({x}, {y}) is out of bounds of field.")
         else:
-            return self._values[y][x]
+            value = self._values[y][x]
+
+            if value is None:
+                raise ValueError(f"Field is null at coordinate ({x}, {y}).")
+            else:
+                return value
 
     def set_value_at(self, x: int, y: int, value: VALUE_TYPE) -> None:
         if not 0 <= x < self.width or not 0 <= y < self.height:
@@ -126,13 +124,19 @@ class Field[VALUE_TYPE](FieldLike):
             self._values[y][x] = value
 
     def _assert_value_permitted(self, value: VALUE_TYPE):
+        if value is None:
+            if self.nullable:
+                return
+            else:
+                raise ValueError(f"Provided value is None but field is not nullable.")
+
         if type(value) is not self.field_type.value:
             raise ValueError(f"Type of provided value {type(value)} does not match field type {self.field_type.value}.")
 
 
 class DiscreteFieldMapper[VALUE_TYPE](FieldLike):
     def __init__(self, field_type: FieldType, discrete_field: FieldLike[int], mapping: dict[int, VALUE_TYPE]):
-        super().__init__(discrete_field.width, discrete_field.height, field_type)
+        super().__init__(discrete_field.width, discrete_field.height, field_type, discrete_field.nullable)
         self._mapping = mapping
         self._field = discrete_field
 
@@ -157,7 +161,7 @@ class FunctionalFieldMapper[INPUT_TYPE, OUTPUT_TYPE](FieldLike):
         forward_mapping: Callable[[INPUT_TYPE], OUTPUT_TYPE],
         reverse_mapping: Callable[[OUTPUT_TYPE], INPUT_TYPE] = None,
     ):
-        super().__init__(field.width, field.height, field_type)
+        super().__init__(field.width, field.height, field_type, field.nullable)
         self._forward_mapping = forward_mapping
         self._reverse_mapping = reverse_mapping
         self._field = field
@@ -180,9 +184,13 @@ class MapField(Field):
         default_value: tuple[float, float, float] = None,
         values: list[list[tuple[float, float, float]]] = None,
     ):
-        super().__init__(width, height, FieldType.VECTOR_3D, default_value, values)
+        nullable = False
+        super().__init__(width, height, FieldType.VECTOR_3D, default_value, values, nullable)
 
     def _assert_value_permitted(self, value: tuple[float, float, float]):
+        if value is None:
+            raise ValueError(f"Provided value is None but map fields are not nullable.")
+
         if type(value) is not self.field_type.value:
             raise ValueError(f"Type of provided value {type(value)} does not match field type {self.field_type.value}.")
 
