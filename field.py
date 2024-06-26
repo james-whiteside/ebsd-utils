@@ -19,15 +19,33 @@ class FieldType(Enum):
 
     @property
     def comparable(self) -> bool:
-        return self in COMPARABLE_FIELD_TYPES
+        return self in (FieldType.DISCRETE, FieldType.SCALAR)
 
     @property
     def mappable(self) -> bool:
-        return self in MAPPABLE_FIELD_TYPES
+        return self in (FieldType.DISCRETE, FieldType.SCALAR, FieldType.VECTOR_3D)
 
+    @property
+    def serializable(self) -> bool:
+        return self in (FieldType.BOOLEAN, FieldType.DISCRETE, FieldType.SCALAR, FieldType.VECTOR_2D, FieldType.VECTOR_3D)
 
-COMPARABLE_FIELD_TYPES = (FieldType.DISCRETE, FieldType.SCALAR)
-MAPPABLE_FIELD_TYPES = (FieldType.DISCRETE, FieldType.SCALAR, FieldType.VECTOR_3D)
+    @property
+    def size(self) -> int:
+        match self:
+            case self.BOOLEAN:
+                return 1
+            case self.DISCRETE:
+                return 1
+            case self.SCALAR:
+                return 1
+            case self.VECTOR_2D:
+                return 2
+            case self.VECTOR_3D:
+                return 3
+            case self.MATRIX:
+                raise AttributeError(f"Field type is not serializable: {self.name}")
+            case self.OBJECT:
+                raise AttributeError(f"Field type is not serializable: {self.name}")
 
 
 class FieldNullError(ValueError):
@@ -71,6 +89,21 @@ class FieldLike[VALUE_TYPE](ABC):
             raise AttributeError(f"Field type is not comparable: {self.field_type.name}")
         else:
             return min(self.values)
+
+    def serialize_value_at(self, x: int, y: int) -> list[str]:
+        if not self.field_type.serializable:
+            raise AttributeError(f"Field type is not serializable: {self.field_type.name}")
+        else:
+            if self.field_type.size == 1:
+                try:
+                    return [str(self.get_value_at(x, y))]
+                except FieldNullError:
+                    return [""]
+            else:
+                try:
+                    return [str(element) for element in self.get_value_at(x, y)]
+                except FieldNullError:
+                    return ["" for _ in range(self.field_type.size)]
 
 
 class Field[VALUE_TYPE](FieldLike):
@@ -137,6 +170,9 @@ class Field[VALUE_TYPE](FieldLike):
         if type(value) is not self.field_type.value:
             raise ValueError(f"Type of provided value {type(value)} does not match field type {self.field_type.value}.")
 
+        if self.field_type.value is tuple and len(value) != self.field_type.size:
+            raise ValueError(f"Length of provided tuple value is {len(value)} and does not match field type size {self.field_type.size}.")
+
 
 class DiscreteFieldMapper[VALUE_TYPE](FieldLike):
     def __init__(self, field_type: FieldType, discrete_field: FieldLike[int], mapping: dict[int, VALUE_TYPE]):
@@ -192,11 +228,7 @@ class MapField(Field):
         super().__init__(width, height, FieldType.VECTOR_3D, default_value, values, nullable)
 
     def _assert_value_permitted(self, value: tuple[float, float, float]):
-        if value is None:
-            raise ValueError(f"Provided value is None but map fields are not nullable.")
-
-        if type(value) is not self.field_type.value:
-            raise ValueError(f"Type of provided value {type(value)} does not match field type {self.field_type.value}.")
+        super()._assert_value_permitted(value)
 
         if not all(0.0 <= item <= 1.0 for item in value):
             raise ValueError(f"Map field may only take tuples of values between 0.0 and 1.0. Provided tuple: {value}")
