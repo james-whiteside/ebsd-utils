@@ -30,6 +30,10 @@ COMPARABLE_FIELD_TYPES = (FieldType.DISCRETE, FieldType.SCALAR)
 MAPPABLE_FIELD_TYPES = (FieldType.DISCRETE, FieldType.SCALAR, FieldType.VECTOR_3D)
 
 
+class FieldNullError(ValueError):
+    pass
+
+
 class FieldLike[VALUE_TYPE](ABC):
     def __init__(self, width: int, height: int, field_type: FieldType, nullable: bool = False):
         self.width = width
@@ -51,7 +55,7 @@ class FieldLike[VALUE_TYPE](ABC):
             for x in range(self.width):
                 try:
                     yield self.get_value_at(x, y)
-                except ValueError:
+                except FieldNullError:
                     continue
 
     @property
@@ -112,7 +116,7 @@ class Field[VALUE_TYPE](FieldLike):
             value = self._values[y][x]
 
             if value is None:
-                raise ValueError(f"Field is null at coordinate ({x}, {y}).")
+                raise FieldNullError(f"Field is null at coordinate ({x}, {y}).")
             else:
                 return value
 
