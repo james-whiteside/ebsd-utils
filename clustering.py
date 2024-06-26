@@ -72,12 +72,6 @@ def dbscan(
     category = numpy.zeros((height, width))
     cluster_id = numpy.zeros((height, width))
     
-    for y in range(height):
-        for x in range(width):
-            if global_phase_id[y][x] == 0:
-                # This point is a noise point.
-                category[y][x] = 3
-    
     for y0 in range(height):
         for x0 in range(width):
             if category[y0][x0] == 0:

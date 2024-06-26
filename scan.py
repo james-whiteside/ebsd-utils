@@ -7,7 +7,7 @@ from fileloader import get_materials
 from geometry import Axis, AxisSet
 from map_manager import MapManager
 from parameter_groups import ScanParameters, ScaleParameters, ChannellingParameters, ClusteringParameters
-from phase import Phase
+from phase import Phase, UNINDEXED_PHASE_ID
 
 
 class Scan:
@@ -18,7 +18,7 @@ class Scan:
         height: int,
         phases: dict[int, Phase],
         phase_id_values: list[list[int]],
-        euler_angle_degrees_values: list[list[tuple[float, float, float]]],
+        euler_angle_degrees_values: list[list[tuple[float, float, float] | None]],
         pattern_quality_values: list[list[float]],
         index_quality_values: list[list[float]],
         axis_set: AxisSet = AxisSet.ZXZ,
@@ -100,10 +100,10 @@ class Scan:
 
             width = int(file.readline().rstrip("\n").split(",")[1])
             height = int(file.readline().rstrip("\n").split(",")[1])
-            phase_id_values = list()
-            euler_angle_degrees_values = list()
-            index_quality_values = list()
-            pattern_quality_values = list()
+            phase_id_values: list[list[int]] = list()
+            euler_angle_degrees_values: list[list[tuple[float, float, float] | None]] = list()
+            index_quality_values: list[list[float]] = list()
+            pattern_quality_values: list[list[float]] = list()
             file.readline()
             file.readline()
 
@@ -115,8 +115,14 @@ class Scan:
 
                 for x in range(width):
                     line = file.readline().rstrip("\n").split(",")
-                    phase_id_values[y].append(int(line[2]))
-                    euler_angle_degrees_values[y].append((float(line[3]), float(line[4]), float(line[5])))
+                    local_phase_id = int(line[2])
+                    phase_id_values[y].append(local_phase_id)
+
+                    if materials[local_phase_id].global_id == UNINDEXED_PHASE_ID:
+                        euler_angle_degrees_values[y].append(None)
+                    else:
+                        euler_angle_degrees_values[y].append((float(line[3]), float(line[4]), float(line[5])))
+
                     index_quality_values[y].append(float(line[6]))
                     pattern_quality_values[y].append(float(line[7]))
 
@@ -351,43 +357,37 @@ class Scan:
                     columns += [str(x), str(y)]
 
                 if show_phase:
-                    columns += [str(self.field._phase_id.get_value_at(x, y))]
+                    columns += self.field._phase_id.serialize_value_at(x, y)
 
                 if show_euler_angles:
-                    columns += [str(angle) for angle in self.field.euler_angles_degrees.get_value_at(x, y)]
+                    columns += self.field.euler_angles_degrees.serialize_value_at(x, y)
 
                 if show_index_quality:
-                    columns += [str(self.field.index_quality.get_value_at(x, y))]
+                    columns += self.field.index_quality.serialize_value_at(x, y)
 
                 if show_pattern_quality:
-                    columns += [str(self.field.pattern_quality.get_value_at(x, y))]
+                    columns += self.field.pattern_quality.serialize_value_at(x, y)
 
                 if show_inverse_x_pole_figure_coordinates:
-                    self.field.euler_angles.get_value_at(x, y)
-                    columns += [str(coordinate) for coordinate in
-                                (self.field.inverse_pole_figure_coordinates(Axis.X).get_value_at(x, y))]
+                    columns += self.field.inverse_pole_figure_coordinates(Axis.X).serialize_value_at(x, y)
 
                 if show_inverse_y_pole_figure_coordinates:
-                    columns += [str(coordinate) for coordinate in
-                                (self.field.inverse_pole_figure_coordinates(Axis.Y).get_value_at(x, y))]
+                    columns += self.field.inverse_pole_figure_coordinates(Axis.Y).serialize_value_at(x, y)
 
                 if show_inverse_z_pole_figure_coordinates:
-                    columns += [str(coordinate) for coordinate in
-                                (self.field.inverse_pole_figure_coordinates(Axis.Z).get_value_at(x, y))]
+                    columns += self.field.inverse_pole_figure_coordinates(Axis.Z).serialize_value_at(x, y)
 
                 if show_kernel_average_misorientation:
-                    columns += [str(self.field.kernel_average_misorientation_degrees.get_value_at(x, y))]
+                    columns += self.field.kernel_average_misorientation_degrees.serialize_value_at(x, y)
 
                 if show_geometrically_necessary_dislocation_density:
-                    columns += [str(self.field.geometrically_necessary_dislocation_density_logarithmic.get_value_at(x, y))]
+                    columns += self.field.geometrically_necessary_dislocation_density_logarithmic.serialize_value_at(x, y)
 
                 if show_channelling_fraction:
-                    columns += [str(self.field.channelling_fraction.get_value_at(x, y))]
+                    columns += self.field.channelling_fraction.serialize_value_at(x, y)
 
                 if show_orientation_cluster:
-                    columns += [
-                        str(self.field.orientation_clustering_category.get_value_at(x, y).code),
-                        str(self.field.orientation_cluster_id.get_value_at(x, y)),
-                    ]
+                    columns += [self.field.orientation_clustering_category.get_value_at(x, y).code]
+                    columns += self.field.orientation_cluster_id.serialize_value_at(x, y)
 
                 yield ",".join(columns)
