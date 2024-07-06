@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 import math
-import utilities
-from phase import BravaisLattice, Phase
+from src import utilities
+from src.phase import BravaisLattice, Phase
 
 
 def decode_lattice_type(value):

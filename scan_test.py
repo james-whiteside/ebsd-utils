@@ -2,9 +2,9 @@
 
 import os
 from datetime import datetime
-from map import MapType
-from utilities import get_file_paths, get_directory_path, format_time_interval
-from scan import Scan
+from src.map import MapType
+from src.utilities import get_file_paths, get_directory_path, format_time_interval
+from src.scan import Scan
 
 
 def analyse(path: str = "data") -> None:

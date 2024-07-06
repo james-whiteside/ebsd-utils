@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 
 import math
-from field import DiscreteFieldMapper, FieldType, Field, FunctionalFieldMapper, FieldNullError
-from field_manager import FieldManager
-from geometry import Axis, inverse_stereographic
-from map import Map, MapType
-from parameter_groups import ScanParameters, ScaleParameters, ChannellingParameters, ClusteringParameters
-from phase import UNINDEXED_PHASE_ID, CrystalFamily
+from src.field import DiscreteFieldMapper, FieldType, Field, FunctionalFieldMapper, FieldNullError
+from src.field_manager import FieldManager
+from src.geometry import Axis, inverse_stereographic
+from src.map import Map, MapType
+from src.parameter_groups import ScanParameters, ScaleParameters, ChannellingParameters, ClusteringParameters
+from src.phase import UNINDEXED_PHASE_ID, CrystalFamily
 
 
 class MapManager:

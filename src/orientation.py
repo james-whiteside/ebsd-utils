@@ -2,7 +2,7 @@
 
 import itertools
 import numpy
-import utilities
+from src.utilities import highest_common_factor
 
 
 def numpy_cross(a: numpy.ndarray, b: numpy.ndarray) -> numpy.ndarray:
@@ -23,7 +23,7 @@ def get_plane_family(indices: tuple[int, int, int]) -> list[tuple[int, int, int]
 	:return: The list of planes in the family.
 	"""
 	
-	hcf = utilities.highest_common_factor(list(indices))
+	hcf = highest_common_factor(list(indices))
 	
 	if hcf != 0:
 		reduced_indices = tuple(index // hcf for index in indices)

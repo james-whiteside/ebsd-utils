@@ -4,7 +4,7 @@ import copy
 import math
 from enum import Enum
 import numpy
-from phase import CrystalFamily
+from src.phase import CrystalFamily
 
 
 class Axis(Enum):

@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 from numpy import ndarray, array, zeros, dot
-from config import Config
-from field import FieldType, Field, DiscreteFieldMapper, FunctionalFieldMapper, FieldNullError
-from geometry import (
+from src.config import Config
+from src.field import FieldType, Field, DiscreteFieldMapper, FunctionalFieldMapper, FieldNullError
+from src.geometry import (
     Axis,
     euler_rotation_matrix,
     reduce_matrix,
@@ -12,11 +12,11 @@ from geometry import (
     misrotation_tensor,
     forward_stereographic,
 )
-from phase import Phase, UNINDEXED_PHASE_ID
-from channelling import load_crit_data, fraction
-from clustering import ClusterCategory, dbscan
-from parameter_groups import ScaleParameters, ChannellingParameters, ClusteringParameters, ScanParameters
-from utilities import tuple_degrees, tuple_radians, float_degrees, float_radians, log_or_zero
+from src.phase import Phase, UNINDEXED_PHASE_ID
+from src.channelling import load_crit_data, fraction
+from src.clustering import ClusterCategory, dbscan
+from src.parameter_groups import ScaleParameters, ChannellingParameters, ClusteringParameters, ScanParameters
+from src.utilities import tuple_degrees, tuple_radians, float_degrees, float_radians, log_or_zero
 
 
 GND_DENSITY_CORRECTIVE_FACTOR = Config().gnd_density_corrective_factor

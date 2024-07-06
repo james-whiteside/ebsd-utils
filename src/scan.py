@@ -2,12 +2,12 @@
 
 from collections.abc import Iterator
 from typing import Self
-from field import FieldNullError
-from field_manager import FieldManager
-from geometry import Axis, AxisSet
-from map_manager import MapManager
-from parameter_groups import ScanParameters, ScaleParameters, ChannellingParameters, ClusteringParameters
-from phase import Phase, UNINDEXED_PHASE_ID
+from src.field import FieldNullError
+from src.field_manager import FieldManager
+from src.geometry import Axis, AxisSet
+from src.map_manager import MapManager
+from src.parameter_groups import ScanParameters, ScaleParameters, ChannellingParameters, ClusteringParameters
+from src.phase import Phase, UNINDEXED_PHASE_ID
 
 
 class Scan:

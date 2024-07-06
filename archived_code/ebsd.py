@@ -5,11 +5,10 @@ import itertools
 import sys
 import os
 import numpy
-import utilities
 import fileloader
-import orientation
-from phase import CrystalFamily, BravaisLattice
-from geometry import Axis, AxisSet, euler_rotation_matrix, reduce_matrix, euler_angles, inverse_stereographic, forward_stereographic, rotation_angle, misrotation_matrix
+from src import orientation, utilities
+from src.phase import CrystalFamily, BravaisLattice
+from src.geometry import Axis, AxisSet, euler_rotation_matrix, reduce_matrix, euler_angles, inverse_stereographic, forward_stereographic, rotation_angle, misrotation_matrix
 
 
 def inverse_pole_figure_colour(v: tuple[float, float, float], lattice_type: BravaisLattice) -> tuple[float, float, float]:

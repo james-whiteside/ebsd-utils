@@ -9,11 +9,11 @@ import os
 from itertools import permutations
 import numpy
 from scipy import special, constants, optimize
-from config import Config
-from phase import Phase
-from utilities import ProgressBar
+from src.config import Config
+from src.phase import Phase
+from src.utilities import ProgressBar
 
-CHANNELLING_DIR = Config().channelling_cache_dir
+CHANNELLING_DIR = Config().channelling_cache_dir + "/"
 
 
 def get_base(lattice):
