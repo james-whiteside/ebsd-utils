@@ -2,6 +2,7 @@
 
 from collections.abc import Iterator
 from typing import Self
+from field import FieldNullError
 from field_manager import FieldManager
 from fileloader import get_materials
 from geometry import Axis, AxisSet
@@ -100,7 +101,7 @@ class Scan:
 
             width = int(file.readline().rstrip("\n").split(",")[1])
             height = int(file.readline().rstrip("\n").split(",")[1])
-            phase_id_values: list[list[int]] = list()
+            phase_id_values: list[list[int | None]] = list()
             euler_angle_degrees_values: list[list[tuple[float, float, float] | None]] = list()
             index_quality_values: list[list[float]] = list()
             pattern_quality_values: list[list[float]] = list()
@@ -116,11 +117,12 @@ class Scan:
                 for x in range(width):
                     line = file.readline().rstrip("\n").split(",")
                     local_phase_id = int(line[2])
-                    phase_id_values[y].append(local_phase_id)
 
                     if materials[local_phase_id].global_id == UNINDEXED_PHASE_ID:
+                        phase_id_values[y].append(None)
                         euler_angle_degrees_values[y].append(None)
                     else:
+                        phase_id_values[y].append(local_phase_id)
                         euler_angle_degrees_values[y].append((float(line[3]), float(line[4]), float(line[5])))
 
                     index_quality_values[y].append(float(line[6]))

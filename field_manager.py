@@ -359,9 +359,8 @@ class FieldManager:
 
         for y in range(self._scan_parameters.height):
             for x in range(self._scan_parameters.width):
-                phase[y][x] = self.phase.get_value_at(x, y).global_id
-
                 try:
+                    phase[y][x] = self.phase.get_value_at(x, y).global_id
                     reduced_euler_rotation_matrix[y][x] = self.reduced_euler_rotation_matrix.get_value_at(x, y)
                 except FieldNullError:
                     pass

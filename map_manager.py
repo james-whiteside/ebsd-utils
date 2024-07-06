@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import math
-from field import DiscreteFieldMapper, FieldType, Field, FunctionalFieldMapper
+from field import DiscreteFieldMapper, FieldType, Field, FunctionalFieldMapper, FieldNullError
 from field_manager import FieldManager
 from geometry import Axis, inverse_stereographic
 from map import Map, MapType
@@ -30,19 +30,19 @@ class MapManager:
 
         for y in range(self._scan_parameters.height):
             for x in range(self._scan_parameters.width):
-                if self._field_manager.phase.get_value_at(x, y).global_id == UNINDEXED_PHASE_ID:
-                    continue
-                else:
+                try:
                     euler_angles = self._field_manager.euler_angles.get_value_at(x, y)
                     max_euler_angles = self._field_manager.phase.get_value_at(x, y).max_euler_angles
+                except FieldNullError:
+                    continue
 
-                    value = (
-                        euler_angles[0] / max_euler_angles[0],
-                        euler_angles[1] / max_euler_angles[1],
-                        euler_angles[2] / max_euler_angles[2],
-                    )
+                value = (
+                    euler_angles[0] / max_euler_angles[0],
+                    euler_angles[1] / max_euler_angles[1],
+                    euler_angles[2] / max_euler_angles[2],
+                )
 
-                    field.set_value_at(x, y, value)
+                field.set_value_at(x, y, value)
 
         return field
 
@@ -51,26 +51,26 @@ class MapManager:
 
         for y in range(self._scan_parameters.height):
             for x in range(self._scan_parameters.width):
-                if self._field_manager.phase.get_value_at(x, y).global_id == UNINDEXED_PHASE_ID:
-                    continue
-                else:
+                try:
                     a, b, c = inverse_stereographic(*self._field_manager.inverse_pole_figure_coordinates(axis).get_value_at(x, y))
                     crystal_family = self._field_manager.phase.get_value_at(x, y).lattice_type.family
+                except FieldNullError:
+                    continue
 
-                    match crystal_family:
-                        case CrystalFamily.C:
-                            c, b, a = sorted((-abs(a), -abs(b), -abs(c)))
-                            a, b, c = c - b, (b - a) * math.sqrt(2), a * math.sqrt(3)
+                match crystal_family:
+                    case CrystalFamily.C:
+                        c, b, a = sorted((-abs(a), -abs(b), -abs(c)))
+                        a, b, c = c - b, (b - a) * math.sqrt(2), a * math.sqrt(3)
 
-                            value = (
-                                abs(a) / max(abs(a), abs(b), abs(c)),
-                                abs(b) / max(abs(a), abs(b), abs(c)),
-                                abs(c) / max(abs(a), abs(b), abs(c)),
-                            )
-                        case _:
-                            raise NotImplementedError()
+                        value = (
+                            abs(a) / max(abs(a), abs(b), abs(c)),
+                            abs(b) / max(abs(a), abs(b), abs(c)),
+                            abs(c) / max(abs(a), abs(b), abs(c)),
+                        )
+                    case _:
+                        raise NotImplementedError()
 
-                    field.set_value_at(x, y, value)
+                field.set_value_at(x, y, value)
 
         return field
 
