@@ -9,13 +9,13 @@ from numpy import ndarray
 
 
 class FieldType(Enum):
-    BOOLEAN = bool
-    DISCRETE = int
-    SCALAR = float
-    VECTOR_2D = tuple
-    VECTOR_3D = tuple
-    MATRIX = ndarray
-    OBJECT = object
+    BOOLEAN = "boolean"
+    DISCRETE = "discrete"
+    SCALAR = "scalar"
+    VECTOR_2D = "vector 2d"
+    VECTOR_3D = "vector 3d"
+    MATRIX = "matrix"
+    OBJECT = "object"
 
     @property
     def comparable(self) -> bool:
@@ -28,6 +28,24 @@ class FieldType(Enum):
     @property
     def serializable(self) -> bool:
         return self in (FieldType.BOOLEAN, FieldType.DISCRETE, FieldType.SCALAR, FieldType.VECTOR_2D, FieldType.VECTOR_3D)
+
+    @property
+    def type(self) -> type:
+        match self:
+            case self.BOOLEAN:
+                return bool
+            case self.DISCRETE:
+                return int
+            case self.SCALAR:
+                return float
+            case self.VECTOR_2D:
+                return tuple
+            case self.VECTOR_3D:
+                return tuple
+            case self.MATRIX:
+                return ndarray
+            case self.OBJECT:
+                return object
 
     @property
     def size(self) -> int:
@@ -167,10 +185,10 @@ class Field[VALUE_TYPE](FieldLike):
             else:
                 raise ValueError(f"Provided value is None but field is not nullable.")
 
-        if type(value) is not self.field_type.value:
-            raise ValueError(f"Type of provided value {type(value)} does not match field type {self.field_type.value}.")
+        if type(value) is not self.field_type.type:
+            raise ValueError(f"Type of provided value {type(value)} does not match field type {self.field_type.type}.")
 
-        if self.field_type.value is tuple and len(value) != self.field_type.size:
+        if self.field_type.type is tuple and len(value) != self.field_type.size:
             raise ValueError(f"Length of provided tuple value is {len(value)} and does not match field type size {self.field_type.size}.")
 
 
