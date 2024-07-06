@@ -3,12 +3,13 @@
 import math
 from enum import Enum
 from typing import Self
+from config import Config
 
-UNINDEXED_PHASE_ID = 0
-GENERIC_BCC_PHASE_ID = 4294967294
-GENERIC_FCC_PHASE_ID = 4294967295
+UNINDEXED_PHASE_ID = Config().unindexed_phase_id
+GENERIC_BCC_PHASE_ID = Config().generic_bcc_phase_id
+GENERIC_FCC_PHASE_ID = Config().generic_fcc_phase_id
 GENERIC_PHASE_IDS = (UNINDEXED_PHASE_ID, GENERIC_BCC_PHASE_ID, GENERIC_FCC_PHASE_ID)
-MATERIALS_FILE = "example_data/materials.csv"
+MATERIALS_FILE = Config().materials_file
 
 
 class CrystalFamily(Enum):

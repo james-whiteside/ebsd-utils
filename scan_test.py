@@ -18,7 +18,7 @@ def analyse(path: str = "data") -> None:
 
     if input("Perform defect density analysis? (Y/N): ").lower() == "y":
         show_defect_density = True
-        pixel_size_micrometres = float(input("  Enter pixel size (μm): "))
+        pixel_size_micrometres = 0.808 # float(input("  Enter pixel size (μm): "))
 
         # if reduce_resolution:
         #     pixel_size_micrometres *= 2 ** reduction_factor
@@ -28,16 +28,16 @@ def analyse(path: str = "data") -> None:
 
     if input("Perform channelling fraction analysis? (Y/N): ").lower() == "y":
         show_channelling_fraction = True
-        beam_atomic_number = int(input("  Enter beam species atomic number: "))
-        beam_energy = float(input("  Enter beam energy (eV): "))
-        beam_tilt_degrees = float(input("  Enter beam tilt (deg): "))
+        beam_atomic_number = 31 # int(input("  Enter beam species atomic number: "))
+        beam_energy = 30000.0 # float(input("  Enter beam energy (eV): "))
+        beam_tilt_degrees = 0.0 # float(input("  Enter beam tilt (deg): "))
     else:
         show_channelling_fraction = False
 
     if input("Perform orientation cluster analysis? (Y/N): ").lower() == "y":
         show_orientation_cluster = True
-        core_point_neighbour_threshold = int(input("  Enter core point neighbour threshold: "))
-        neighbourhood_radius_degrees = float(input("  Enter point neighbourhood radius (deg): "))
+        core_point_neighbour_threshold = 20 # int(input("  Enter core point neighbour threshold: "))
+        neighbourhood_radius_degrees = 1.0 # float(input("  Enter point neighbourhood radius (deg): "))
     else:
         show_orientation_cluster = False
 

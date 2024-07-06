@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from numpy import ndarray, array, zeros, dot
+from config import Config
 from field import FieldType, Field, DiscreteFieldMapper, FunctionalFieldMapper, FieldNullError
 from geometry import (
     Axis,
@@ -18,7 +19,7 @@ from parameter_groups import ScaleParameters, ChannellingParameters, ClusteringP
 from utilities import tuple_degrees, tuple_radians, float_degrees, float_radians, log_or_zero
 
 
-GND_DENSITY_CORRECTIVE_FACTOR = 3.6
+GND_DENSITY_CORRECTIVE_FACTOR = Config().gnd_density_corrective_factor
 
 
 class FieldManager:
