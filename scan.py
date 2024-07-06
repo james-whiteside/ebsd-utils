@@ -4,7 +4,6 @@ from collections.abc import Iterator
 from typing import Self
 from field import FieldNullError
 from field_manager import FieldManager
-from fileloader import get_materials
 from geometry import Axis, AxisSet
 from map_manager import MapManager
 from parameter_groups import ScanParameters, ScaleParameters, ChannellingParameters, ClusteringParameters
@@ -80,7 +79,7 @@ class Scan:
 
         with open(data_path, "r", encoding="utf-8") as file:
             materials = dict()
-            file_materials = get_materials(materials_path)
+            file_materials = Phase.load_from_materials_file()
             file.readline()
 
             while True:

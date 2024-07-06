@@ -2,7 +2,6 @@
 
 import math
 import utilities
-import fileloader
 from phase import BravaisLattice, Phase
 
 
@@ -43,7 +42,7 @@ def decode_lattice_type(value):
 def add(database):
 	print()
 	IDs = utilities.parse_ids(input('Enter material IDs to add separated by commas/hyphens: '))
-	materials = fileloader.get_materials()
+	materials = Phase.load_from_materials_file()
 
 	for ID in IDs:
 		print()

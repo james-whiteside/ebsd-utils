@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from numpy import ndarray, array, zeros, eye, dot
+from numpy import ndarray, array, zeros, dot
 from field import FieldType, Field, DiscreteFieldMapper, FunctionalFieldMapper, FieldNullError
 from geometry import (
     Axis,

@@ -1,10 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import os
-import sys
 import math
-import numpy
-from PIL import Image as image
 from phase import Phase, BravaisLattice
 
 
@@ -35,8 +32,8 @@ def get_materials(path: str = f"{os.getcwd()}/example_data/materials.csv".replac
 	
 	return materials
 
+
 def getVariantList():
-	
 	output = dict()
 	
 	with open('orientation/vars.csv', 'r') as file:
@@ -54,8 +51,8 @@ def getVariantList():
 	
 	return output
 
+
 def getTwinList():
-	
 	output = dict()
 	
 	with open('orientation/twin.csv', 'r') as file:
@@ -68,8 +65,8 @@ def getTwinList():
 	
 	return output
 
+
 def getNyeMetadata(filepath):
-	
 	output = dict()
 	
 	with open(filepath, 'r') as file:
@@ -91,7 +88,6 @@ def getNyeMetadata(filepath):
 
 
 def getNyeAnalysis(filepath):
-	
 	output = dict()
 	metadata = getNyeMetadata('/'.join(filepath.split('/')[:-2]) + '/metadata.csv')
 	
@@ -184,17 +180,3 @@ def getNyeAnalysis(filepath):
 					linePos += 2
 	
 	return output
-
-def getImage(filepath):
-	
-	output = dict()
-	
-	with image.open(filepath, 'r').convert('L') as img:
-		output['width'], output['height'] = img.size
-		output['pixels'] = numpy.array(list(img.getdata())).reshape((output['height'], output['width']))
-	
-	return output
-
-if __name__ == '__main__':
-	print('This is a support module.')
-	input('Press ENTER to close: ')

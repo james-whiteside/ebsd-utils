@@ -3,7 +3,6 @@
 import math
 from enum import Enum
 from typing import Self
-
 import numpy
 from numba import jit
 

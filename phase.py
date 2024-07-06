@@ -1,11 +1,14 @@
+# -*- coding: utf-8 -*-
+
 import math
 from enum import Enum
-
+from typing import Self
 
 UNINDEXED_PHASE_ID = 0
 GENERIC_BCC_PHASE_ID = 4294967294
 GENERIC_FCC_PHASE_ID = 4294967295
 GENERIC_PHASE_IDS = (UNINDEXED_PHASE_ID, GENERIC_BCC_PHASE_ID, GENERIC_FCC_PHASE_ID)
+MATERIALS_FILE = "example_data/materials.csv"
 
 
 class CrystalFamily(Enum):
@@ -104,3 +107,32 @@ class Phase:
                 return 2 * math.pi, math.acos(math.sqrt(3) / 3), 0.5 * math.pi
             case _:
                 raise NotImplementedError()
+
+    @classmethod
+    def load_from_materials_file(cls, path: str = MATERIALS_FILE) -> dict[int, Self]:
+        phases = dict()
+
+        with open(path, "r") as file:
+            file.readline()
+
+            for line in file:
+                args = line.split(',')
+                global_id = int(args[0])
+
+                phase = Phase(
+                    global_id=global_id,
+                    name=args[1],
+                    atomic_number=float(args[2]),
+                    atomic_weight=float(args[3]),
+                    density=float(args[4]),
+                    vibration_amplitude=float(args[5]),
+                    lattice_type=BravaisLattice(args[6]),
+                    lattice_constants=(float(args[7]), float(args[8]), float(args[9])),
+                    lattice_angles=(
+                    math.radians(float(args[10])), math.radians(float(args[11])), math.radians(float(args[12]))),
+                    has_diamond_structure=args == "Y",
+                )
+
+                phases[global_id] = phase
+
+        return phases
