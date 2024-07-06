@@ -254,7 +254,7 @@ class Scan:
             show_clustering_params: bool = False,
     ) -> str:
         if show_phases:
-            yield "Phases"
+            yield "Phases:"
 
             for local_id, phase in self.phases.items():
                 yield f"{local_id},{phase.name},{phase.global_id}"
@@ -359,7 +359,7 @@ class Scan:
                     columns += [str(x), str(y)]
 
                 if show_phase:
-                    columns += self.field._phase_id.serialize_value_at(x, y)
+                    columns += self.field._phase_id.serialize_value_at(x, y, null_serialization=str(UNINDEXED_PHASE_ID))
 
                 if show_euler_angles:
                     columns += self.field.euler_angles_degrees.serialize_value_at(x, y)

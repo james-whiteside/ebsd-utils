@@ -108,7 +108,7 @@ class FieldLike[VALUE_TYPE](ABC):
         else:
             return min(self.values)
 
-    def serialize_value_at(self, x: int, y: int) -> list[str]:
+    def serialize_value_at(self, x: int, y: int, null_serialization: str = "") -> list[str]:
         if not self.field_type.serializable:
             raise AttributeError(f"Field type is not serializable: {self.field_type.name}")
         else:
@@ -116,12 +116,12 @@ class FieldLike[VALUE_TYPE](ABC):
                 try:
                     return [str(self.get_value_at(x, y))]
                 except FieldNullError:
-                    return [""]
+                    return [null_serialization]
             else:
                 try:
                     return [str(element) for element in self.get_value_at(x, y)]
                 except FieldNullError:
-                    return ["" for _ in range(self.field_type.size)]
+                    return [null_serialization for _ in range(self.field_type.size)]
 
 
 class Field[VALUE_TYPE](FieldLike):
