@@ -389,7 +389,11 @@ class Scan:
                     columns += self.field.channelling_fraction.serialize_value_at(x, y)
 
                 if show_orientation_cluster:
-                    columns += [self.field.orientation_clustering_category.get_value_at(x, y).code]
+                    try:
+                        columns += [self.field.orientation_clustering_category.get_value_at(x, y).code]
+                    except FieldNullError:
+                        columns += [""]
+
                     columns += self.field.orientation_cluster_id.serialize_value_at(x, y)
 
                 yield ",".join(columns)

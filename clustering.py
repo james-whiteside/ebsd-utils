@@ -71,6 +71,12 @@ def dbscan(
     cluster_count = 0
     category = numpy.zeros((height, width))
     cluster_id = numpy.zeros((height, width))
+
+    for y in range(height):
+        for x in range(width):
+            if global_phase_id[y][x] == 0:
+                # This point is an unindexed point.
+                category[y][x] = -1
     
     for y0 in range(height):
         for x0 in range(width):
@@ -167,5 +173,10 @@ def dbscan(
                                 cluster_id_of_minimum = cluster_id[y1][x1]
     
                 cluster_id[y0][x0] = cluster_id_of_minimum
+
+    for y in range(height):
+        for x in range(width):
+            if category[y][x] == -1:
+                category[y][x] = 0
     
     return cluster_count, category, cluster_id
