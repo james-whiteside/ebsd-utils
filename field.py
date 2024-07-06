@@ -3,7 +3,7 @@
 from abc import ABC, abstractmethod
 from collections.abc import Iterator
 from enum import Enum
-from typing import Callable
+from typing import Callable, Self
 from PIL.Image import Image, new as new_image
 from numpy import ndarray
 
@@ -130,18 +130,11 @@ class Field[VALUE_TYPE](FieldLike):
         width: int,
         height: int,
         field_type: FieldType,
-        default_value: VALUE_TYPE = None,
-        values: list[list[VALUE_TYPE]] = None,
+        default_value: VALUE_TYPE | None,
         nullable: bool = False,
     ):
         super().__init__(width, height, field_type, nullable)
-
-        if default_value is None and values is None:
-            raise ValueError(f"Either default field value or array of field values must be provided.")
-
-        if default_value is not None:
-            self._assert_value_permitted(default_value)
-
+        self._assert_value_permitted(default_value)
         self.default_value = default_value
         self._values = list()
 
@@ -149,16 +142,33 @@ class Field[VALUE_TYPE](FieldLike):
             self._values.append(list())
 
             for x in range(self.width):
-                if values is not None:
-                    try:
-                        value = values[y][x]
-                    except IndexError:
-                        raise IndexError(f"Coordinate ({x}, {y}) is out of bounds of provided value array.")
+                self._values[y].append(self.default_value)
 
-                    self._assert_value_permitted(value)
-                    self._values[y].append(value)
+    @classmethod
+    def from_array(
+        cls,
+        width: int,
+        height: int,
+        field_type: FieldType,
+        values: list[list[VALUE_TYPE | None]],
+        nullable: bool = False,
+    ) -> Self:
+        field = Field(width, height, field_type, default_value=None, nullable=True)
+
+        for y in range(field.height):
+            for x in range(field.width):
+                try:
+                    value = values[y][x]
+                except IndexError:
+                    raise IndexError(f"Coordinate ({x}, {y}) is out of bounds of provided value array.")
+
+                if not nullable and value is None:
+                    raise ValueError(f"Provided value is None but field is not nullable.")
                 else:
-                    self._values[y].append(self.default_value)
+                    field.set_value_at(x, y, value)
+
+        field.nullable = nullable
+        return field
 
     def get_value_at(self, x: int, y: int) -> VALUE_TYPE:
         if not 0 <= x < self.width or not 0 <= y < self.height:
@@ -171,14 +181,14 @@ class Field[VALUE_TYPE](FieldLike):
             else:
                 return value
 
-    def set_value_at(self, x: int, y: int, value: VALUE_TYPE) -> None:
+    def set_value_at(self, x: int, y: int, value: VALUE_TYPE | None) -> None:
         if not 0 <= x < self.width or not 0 <= y < self.height:
             raise IndexError(f"Coordinate ({x}, {y}) is out of bounds of field.")
         else:
             self._assert_value_permitted(value)
             self._values[y][x] = value
 
-    def _assert_value_permitted(self, value: VALUE_TYPE):
+    def _assert_value_permitted(self, value: VALUE_TYPE | None):
         if value is None:
             if self.nullable:
                 return
@@ -239,11 +249,9 @@ class MapField(Field):
         self,
         width: int,
         height: int,
-        default_value: tuple[float, float, float] = None,
-        values: list[list[tuple[float, float, float]]] = None,
+        default_value: tuple[float, float, float],
     ):
-        nullable = False
-        super().__init__(width, height, FieldType.VECTOR_3D, default_value, values, nullable)
+        super().__init__(width, height, FieldType.VECTOR_3D, default_value, nullable=False)
 
     def _assert_value_permitted(self, value: tuple[float, float, float]):
         super()._assert_value_permitted(value)

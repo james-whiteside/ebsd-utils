@@ -45,7 +45,7 @@ class Map[VALUE_TYPE]:
                 for x in range(self._values.width):
                     coordinate_values[y].append((x, y))
 
-            self._coordinates = Field(self._values.width, self._values.height, FieldType.VECTOR_2D, values=coordinate_values)
+            self._coordinates = Field.from_array(self._values.width, self._values.height, FieldType.VECTOR_2D, coordinate_values)
         elif coordinates_field.field_type is not FieldType.VECTOR_2D:
             raise ValueError(f"Coordinate field must be {FieldType.VECTOR_2D.name}, not {coordinates_field.field_type.name}.")
         else:

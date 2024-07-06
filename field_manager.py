@@ -28,7 +28,7 @@ class FieldManager:
         scale_parameters: ScaleParameters,
         channelling_parameters: ChannellingParameters,
         clustering_parameters: ClusteringParameters,
-        phase_id_values: list[list[int]],
+        phase_id_values: list[list[int | None]],
         euler_angle_degrees_values: list[list[tuple[float, float, float] | None]],
         pattern_quality_values: list[list[float]],
         index_quality_values: list[list[float]],
@@ -37,11 +37,11 @@ class FieldManager:
         self._scale_parameters = scale_parameters
         self._channelling_parameters = channelling_parameters
         self._clustering_parameters = clustering_parameters
-        self._phase_id = Field(self._scan_parameters.width, self._scan_parameters.height, FieldType.DISCRETE, values=phase_id_values)
+        self._phase_id = Field.from_array(self._scan_parameters.width, self._scan_parameters.height, FieldType.DISCRETE, phase_id_values, nullable=True)
         self.euler_angles: Field[tuple[float, float, float]] = None
-        self.euler_angles_degrees = Field(self._scan_parameters.width, self._scan_parameters.height, FieldType.VECTOR_3D, values=euler_angle_degrees_values, nullable=True)
-        self.pattern_quality = Field(self._scan_parameters.width, self._scan_parameters.height, FieldType.SCALAR, values=pattern_quality_values)
-        self.index_quality = Field(self._scan_parameters.width, self._scan_parameters.height, FieldType.SCALAR, values=index_quality_values)
+        self.euler_angles_degrees = Field.from_array(self._scan_parameters.width, self._scan_parameters.height, FieldType.VECTOR_3D, euler_angle_degrees_values, nullable=True)
+        self.pattern_quality = Field.from_array(self._scan_parameters.width, self._scan_parameters.height, FieldType.SCALAR, pattern_quality_values)
+        self.index_quality = Field.from_array(self._scan_parameters.width, self._scan_parameters.height, FieldType.SCALAR, index_quality_values)
         self._reduced_euler_rotation_matrix: Field[ndarray] = None
         self._inverse_x_pole_figure_coordinates: Field[tuple[float, float]] = None
         self._inverse_y_pole_figure_coordinates: Field[tuple[float, float]] = None
@@ -387,5 +387,5 @@ class FieldManager:
                     cluster_id_values[y][x] = None
 
         self._cluster_count = cluster_count
-        self._orientation_clustering_category_id = Field(self._scan_parameters.width, self._scan_parameters.height, FieldType.DISCRETE, values=category_id_values, nullable=True)
-        self._orientation_cluster_id = Field(self._scan_parameters.width, self._scan_parameters.height, FieldType.DISCRETE, values=cluster_id_values, nullable=True)
+        self._orientation_clustering_category_id = Field.from_array(self._scan_parameters.width, self._scan_parameters.height, FieldType.DISCRETE, category_id_values, nullable=True)
+        self._orientation_cluster_id = Field.from_array(self._scan_parameters.width, self._scan_parameters.height, FieldType.DISCRETE, cluster_id_values, nullable=True)
