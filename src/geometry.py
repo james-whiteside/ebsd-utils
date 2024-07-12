@@ -113,6 +113,16 @@ def reduce_matrix(R: numpy.ndarray, symmetry: CrystalFamily) -> numpy.ndarray:
     return reduced_R
 
 
+def orthogonalise_matrix(R: numpy.ndarray) -> numpy.ndarray:
+    """
+    Symmetrically orthogonalises a 3D pseudo-rotation matrix ``R`` by singular value decomposition.
+    :param R: The pseudo-rotation matrix ``R``.
+    :return: The orthogonalised matrix.
+    """
+    U, S, VT = numpy.linalg.svd(R)
+    return numpy.dot(U, VT)
+
+
 def euler_angles(rotation_matrix: numpy.ndarray, axis_set: AxisSet) -> tuple[float, float, float]:
     """
     Computes the Euler angles for a 3D rotation matrix.
