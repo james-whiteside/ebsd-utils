@@ -6,7 +6,7 @@ import sys
 import os
 import math
 import copy
-from typing import Callable
+from collections.abc import Callable
 from PIL import Image
 
 
