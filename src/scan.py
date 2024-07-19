@@ -40,13 +40,7 @@ class Scan:
             index_quality_values,
         )
 
-        self.map = MapManager(
-            self._scan_parameters,
-            self.scale_parameters,
-            self.channelling_parameters,
-            self.clustering_parameters,
-            self.field
-        )
+        self.map = MapManager(self.field)
 
     @property
     def file_reference(self) -> str:
@@ -70,7 +64,7 @@ class Scan:
 
     @property
     def cluster_count(self) -> int:
-        return self.field._get_cluster_count()
+        return self.field._cluster_count
 
     @classmethod
     def from_pathfinder_file(cls, data_path: str, materials_path: str, file_reference: str = None) -> Self:

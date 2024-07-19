@@ -53,7 +53,7 @@ class FieldManager:
         self._nye_tensor: Field[ndarray] = None
         self._geometrically_necessary_dislocation_density: Field[float] = None
         self._channelling_fraction: Field[float] = None
-        self._cluster_count: int = None
+        self._cluster_count_result: int = None
         self._orientation_clustering_category_id: Field[int] = None
         self._orientation_cluster_id: Field[int] = None
 
@@ -147,11 +147,12 @@ class FieldManager:
 
         return self._channelling_fraction
 
-    def _get_cluster_count(self) -> int:
-        if self._cluster_count is None:
+    @property
+    def _cluster_count(self) -> int:
+        if self._cluster_count_result is None:
             self._init_orientation_cluster()
 
-        return self._cluster_count
+        return self._cluster_count_result
 
     @property
     def orientation_clustering_category(self) -> DiscreteFieldMapper[ClusterCategory]:
@@ -386,6 +387,6 @@ class FieldManager:
                 if cluster_id_values[y][x] == 0:
                     cluster_id_values[y][x] = None
 
-        self._cluster_count = cluster_count
+        self._cluster_count_result = cluster_count
         self._orientation_clustering_category_id = Field.from_array(self._scan_parameters.width, self._scan_parameters.height, FieldType.DISCRETE, category_id_values, nullable=True)
         self._orientation_cluster_id = Field.from_array(self._scan_parameters.width, self._scan_parameters.height, FieldType.DISCRETE, cluster_id_values, nullable=True)

@@ -5,31 +5,19 @@ from src.field import DiscreteFieldMapper, FieldType, Field, FunctionalFieldMapp
 from src.field_manager import FieldManager
 from src.geometry import Axis, inverse_stereographic
 from src.map import Map, MapType
-from src.parameter_groups import ScanParameters, ScaleParameters, ChannellingParameters, ClusteringParameters
 from src.phase import UNINDEXED_PHASE_ID, CrystalFamily
 
 
 class MapManager:
-    def __init__(
-        self,
-        scan_parameters: ScanParameters,
-        scale_parameters: ScaleParameters,
-        channelling_parameters: ChannellingParameters,
-        clustering_parameters: ClusteringParameters,
-        field_manager: FieldManager
-    ):
-        self._scan_parameters = scan_parameters
-        self._scale_parameters = scale_parameters
-        self._channelling_parameters = channelling_parameters
-        self._clustering_parameters = clustering_parameters
+    def __init__(self, field_manager: FieldManager):
         self._field_manager = field_manager
 
     @property
     def _euler_angle_colours(self) -> Field[tuple[float, float, float]]:
-        field = Field(self._scan_parameters.width, self._scan_parameters.height, FieldType.VECTOR_3D, default_value=(0.0, 0.0, 0.0))
+        field = Field(self._field_manager._scan_parameters.width, self._field_manager._scan_parameters.height, FieldType.VECTOR_3D, default_value=(0.0, 0.0, 0.0))
 
-        for y in range(self._scan_parameters.height):
-            for x in range(self._scan_parameters.width):
+        for y in range(self._field_manager._scan_parameters.height):
+            for x in range(self._field_manager._scan_parameters.width):
                 try:
                     euler_angles = self._field_manager.euler_angles.get_value_at(x, y)
                     max_euler_angles = self._field_manager.phase.get_value_at(x, y).max_euler_angles
@@ -47,10 +35,10 @@ class MapManager:
         return field
 
     def _inverse_pole_figure_colours(self, axis: Axis) -> Field[tuple[float, float, float]]:
-        field = Field(self._scan_parameters.width, self._scan_parameters.height, FieldType.VECTOR_3D, default_value=(0.0, 0.0, 0.0))
+        field = Field(self._field_manager._scan_parameters.width, self._field_manager._scan_parameters.height, FieldType.VECTOR_3D, default_value=(0.0, 0.0, 0.0))
 
-        for y in range(self._scan_parameters.height):
-            for x in range(self._scan_parameters.width):
+        for y in range(self._field_manager._scan_parameters.height):
+            for x in range(self._field_manager._scan_parameters.width):
                 try:
                     a, b, c = inverse_stereographic(*self._field_manager.inverse_pole_figure_coordinates(axis).get_value_at(x, y))
                     crystal_family = self._field_manager.phase.get_value_at(x, y).lattice_type.family
@@ -101,7 +89,7 @@ class MapManager:
 
     @property
     def phase(self) -> Map:
-        sorted_phases = sorted(self._scan_parameters.phases.items(), key=lambda item: item[1].global_id)
+        sorted_phases = sorted(self._field_manager._scan_parameters.phases.items(), key=lambda item: item[1].global_id)
         sorted_local_ids = [local_id for local_id, phase in sorted_phases if phase.global_id != UNINDEXED_PHASE_ID]
         mapping = {local_id: index for index, local_id in enumerate(sorted_local_ids)}
         value_field = DiscreteFieldMapper(FieldType.DISCRETE, self._field_manager._phase_id, mapping)
@@ -187,6 +175,6 @@ class MapManager:
         return Map(
             map_type=MapType.OC,
             value_field=value_field,
-            max_value=self._field_manager._get_cluster_count(),
+            max_value=self._field_manager._cluster_count,
             min_value=0,
         )
