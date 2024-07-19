@@ -67,7 +67,7 @@ class Scan:
         return self.field._cluster_count
 
     @classmethod
-    def from_pathfinder_file(cls, data_path: str, materials_path: str, file_reference: str = None) -> Self:
+    def from_pathfinder_file(cls, data_path: str, file_reference: str = None) -> Self:
         if file_reference is None:
             file_reference = data_path.split("/")[-1].split(".")[0].lstrip("p")
 

@@ -42,8 +42,7 @@ def analyse(path: str = "data") -> None:
         show_orientation_cluster = False
 
     for filepath in filepaths:
-        materials_path = f"{get_directory_path("example_data")}/materials.csv"
-        scan = Scan.from_pathfinder_file(filepath, materials_path)
+        scan = Scan.from_pathfinder_file(filepath)
 
         fileref = scan.file_reference
         print(f"Making analysis for p{fileref}.")
