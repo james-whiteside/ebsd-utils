@@ -10,19 +10,15 @@ from src.scan import Scan
 def analyse(path: str = "data") -> None:
     filepaths = get_file_paths(directory_path=get_directory_path(path), recursive=True, extension="csv")
 
-    # if input('Reduce map resolution? (Y/N): ').lower() == 'y':
-    #     reduce_resolution = True
-    #     reduction_factor = int(input("  Enter resolution reduction factor (power of 2): "))
-    # else:
-    #     reduce_resolution = False
+    if input('Reduce map resolution? (Y/N): ').lower() == 'y':
+        reduce_resolution = True
+        reduction_factor = int(input("  Enter resolution reduction factor (power of 2): "))
+    else:
+        reduce_resolution = False
 
     if input("Perform defect density analysis? (Y/N): ").lower() == "y":
         show_defect_density = True
         pixel_size_micrometres = 0.808 # float(input("  Enter pixel size (μm): "))
-
-        # if reduce_resolution:
-        #     pixel_size_micrometres *= 2 ** reduction_factor
-
     else:
         show_defect_density = False
 
@@ -44,16 +40,8 @@ def analyse(path: str = "data") -> None:
     for filepath in filepaths:
         scan = Scan.from_pathfinder_file(filepath)
 
-        fileref = scan.file_reference
-        print(f"Making analysis for p{fileref}.")
+        print(f"Making analysis for p{scan.data_reference}.")
         start_time = datetime.now()
-
-        # if cNum >= 0:
-        #     fileref += '-' + str(cNum)
-        #     data = ebsd.crunches(data, cNum)
-
-        output_path = f"{get_directory_path("analyses")}/q{fileref}.csv"
-        os.makedirs(f"{get_directory_path("maps")}/{fileref}", exist_ok=True)
         map_types = [MapType.P, MapType.EA, MapType.PQ, MapType.IQ, MapType.OX, MapType.OY, MapType.OZ, MapType.KAM]
 
         if show_defect_density:
@@ -68,8 +56,14 @@ def analyse(path: str = "data") -> None:
             scan.clustering_parameters.set(core_point_neighbour_threshold, neighbourhood_radius_degrees)
             map_types.append(MapType.OC)
 
+        if reduce_resolution:
+            scan = scan.reduce_resolution(reduction_factor)
+
+        output_path = f"{get_directory_path("analyses")}/q{scan.analysis_reference}"
+        os.makedirs(f"{get_directory_path("maps")}/{scan.analysis_reference}", exist_ok=True)
+
         for map_type in map_types:
-            map_path = f"{get_directory_path("maps")}/{fileref}/{map_type.name}.png"
+            map_path = f"{get_directory_path("maps")}/{scan.analysis_reference}/{map_type.name}.png"
             print(map_type.name)
             scan.map.get(map_type).image.save(map_path)
 

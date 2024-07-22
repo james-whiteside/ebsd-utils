@@ -9,36 +9,39 @@ from src.phase import Phase
 class ScanParameters:
     def __init__(self):
         self.are_set = False
-        self._file_reference = None
+        self._data_reference = None
         self._width = None
         self._height = None
         self._phases = None
         self._axis_set = None
+        self._resolution_reduction_factor = None
 
     def set(
         self,
-        file_reference: str,
+        data_reference: str,
         width: int,
         height: int,
         phases: dict[int, Phase],
         axis_set: AxisSet,
+        resolution_reduction_factor,
     ) -> None:
         if self.are_set:
             raise RuntimeError("Scale parameters cannot be set more than once.")
 
         self.are_set = True
-        self._file_reference = file_reference
+        self._data_reference = data_reference
         self._width = width
         self._height = height
         self._phases = phases
         self._axis_set = axis_set
+        self._resolution_reduction_factor = resolution_reduction_factor
 
     @property
-    def file_reference(self) -> str:
+    def data_reference(self) -> str:
         if not self.are_set:
             raise AttributeError("Scan parameters have not been set.")
         else:
-            return self._file_reference
+            return self._data_reference
 
     @property
     def width(self) -> int:
@@ -67,6 +70,20 @@ class ScanParameters:
             raise AttributeError("Scan parameters have not been set.")
         else:
             return self._axis_set
+
+    @property
+    def resolution_reduction_factor(self) -> int:
+        if not self.are_set:
+            raise AttributeError("Scan parameters have not been set.")
+        else:
+            return self._resolution_reduction_factor
+
+    @property
+    def analysis_reference(self) -> str:
+        if self.resolution_reduction_factor == 0:
+            return f"{self.data_reference}"
+        else:
+            return f"{self.data_reference}-{self.resolution_reduction_factor}"
 
 
 class ScaleParameters:
