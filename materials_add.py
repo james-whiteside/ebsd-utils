@@ -2,7 +2,7 @@
 
 import math
 from src import utilities
-from src.phase import BravaisLattice, Phase
+from src.data_structures.phase import BravaisLattice, Phase
 
 
 def decode_lattice_type(value):

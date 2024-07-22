@@ -9,9 +9,9 @@ import os
 from itertools import permutations
 import numpy
 from scipy import special, constants, optimize
-from src.config import Config
-from src.phase import Phase
-from src.utilities import ProgressBar
+from src.utilities.config import Config
+from src.data_structures.phase import Phase
+from src.utilities.utilities import ProgressBar
 
 CHANNELLING_DIR = Config().channelling_cache_dir + "/"
 

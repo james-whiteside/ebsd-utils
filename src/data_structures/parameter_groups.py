@@ -2,8 +2,8 @@
 
 import math
 from numpy import ndarray, array
-from src.geometry import Axis, AxisSet
-from src.phase import Phase
+from src.utilities.geometry import Axis, AxisSet
+from src.data_structures.phase import Phase
 
 
 class ScanParameters:

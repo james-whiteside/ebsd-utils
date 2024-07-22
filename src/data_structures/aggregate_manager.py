@@ -3,11 +3,11 @@
 from functools import partial
 from numpy import ndarray, dot, array
 from aggregate import Aggregate, DiscreteAggregateMapper, FunctionalAggregateMapper
-from src.field import FieldType, FieldLike
-from src.field_manager import FieldManager
-from src.geometry import euler_angles, Axis, forward_stereographic
-from src.phase import Phase
-from src.utilities import tuple_degrees
+from src.data_structures.field import FieldType, FieldLike
+from src.data_structures.field_manager import FieldManager
+from src.utilities.geometry import euler_angles, Axis, forward_stereographic
+from src.data_structures.phase import Phase
+from src.utilities.utilities import tuple_degrees
 
 
 class AggregateManager:

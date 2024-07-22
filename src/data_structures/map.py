@@ -2,8 +2,8 @@
 
 from enum import Enum
 from PIL.Image import Image
-from src.field import Field, FieldType, FieldLike, MapField, FieldNullError
-from src.utilities import colour_wheel
+from src.data_structures.field import Field, FieldType, FieldLike, MapField, FieldNullError
+from src.utilities.utilities import colour_wheel
 
 
 class MapType(Enum):

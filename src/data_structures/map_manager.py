@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 
 import math
-from src.field import DiscreteFieldMapper, FieldType, Field, FunctionalFieldMapper, FieldNullError
-from src.field_manager import FieldManager
-from src.geometry import Axis, inverse_stereographic
-from src.map import Map, MapType
-from src.phase import UNINDEXED_PHASE_ID, CrystalFamily
+from src.data_structures.field import DiscreteFieldMapper, FieldType, Field, FunctionalFieldMapper, FieldNullError
+from src.data_structures.field_manager import FieldManager
+from src.utilities.geometry import Axis, inverse_stereographic
+from src.data_structures.map import Map, MapType
+from src.data_structures.phase import UNINDEXED_PHASE_ID, CrystalFamily
 
 
 class MapManager:

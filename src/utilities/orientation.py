@@ -2,7 +2,7 @@
 
 import itertools
 import numpy
-from src.utilities import highest_common_factor
+from src.utilities.utilities import highest_common_factor
 
 
 def numpy_cross(a: numpy.ndarray, b: numpy.ndarray) -> numpy.ndarray:

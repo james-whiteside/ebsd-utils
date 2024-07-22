@@ -2,7 +2,7 @@
 
 import os
 import math
-from src.phase import Phase, BravaisLattice
+from src.data_structures.phase import Phase, BravaisLattice
 
 
 def get_materials(path: str = f"{os.getcwd()}/example_data/materials.csv".replace("\\", "/")) -> dict[int, Phase]:

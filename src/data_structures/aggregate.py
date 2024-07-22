@@ -3,8 +3,8 @@
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from numpy import zeros, ndarray
-from src.field import FieldLike, FieldType, FieldNullError
-from src.geometry import orthogonalise_matrix
+from src.data_structures.field import FieldLike, FieldType, FieldNullError
+from src.utilities.geometry import orthogonalise_matrix
 
 
 class AggregateNullError(ValueError):
