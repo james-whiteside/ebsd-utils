@@ -44,8 +44,22 @@ class Scan:
             index_quality_values,
         )
 
-        self.map = MapManager(self.field)
-        self.cluster_aggregate = AggregateManager(self.field, self.field.orientation_cluster_id)
+        self._map = None
+        self._cluster_aggregate = None
+
+    @property
+    def map(self) -> MapManager:
+        if self._map is None:
+            self._map = MapManager(self.field)
+
+        return self._map
+
+    @property
+    def cluster_aggregate(self) -> AggregateManager:
+        if self._cluster_aggregate is None:
+            self._cluster_aggregate = AggregateManager(self.field, self.field.orientation_cluster_id)
+
+        return self._cluster_aggregate
 
     @property
     def data_reference(self) -> str:
