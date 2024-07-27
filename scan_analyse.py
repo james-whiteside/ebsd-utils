@@ -3,7 +3,7 @@
 import os
 from datetime import datetime
 from src.data_structures.map import MapType
-from src.utilities import get_file_paths, get_directory_path, format_time_interval
+from src.utilities.utilities import get_file_paths, get_directory_path, format_time_interval
 from src.scan import Scan
 
 
