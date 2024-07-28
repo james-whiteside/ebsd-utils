@@ -130,14 +130,29 @@ def euler_angles(rotation_matrix: numpy.ndarray, axis_set: AxisSet) -> tuple[flo
     :param axis_set: The set of Euler axes.
     :return: The Euler angles in ``rad``.
     """
+    angles: list[float] = list()
 
     if axis_set is AxisSet.ZXZ:
-        phi1 = math.acos(rotation_matrix[2][1] / math.sqrt(1 - rotation_matrix[2][2] ** 2))
-        Phi = math.acos(rotation_matrix[2][2])
-        phi2 = math.acos(-rotation_matrix[1][2] / math.sqrt(1 - rotation_matrix[2][2] ** 2))
-        return phi1, Phi, phi2
+        if rotation_matrix[2][2] == 1:
+            angles.append(0.0)
+            angles.append(0.0)
+            angles.append(math.atan2(-rotation_matrix[0][1], rotation_matrix[0][0]))
+        elif rotation_matrix[2][2] == -1:
+            angles.append(0.0)
+            angles.append(math.pi)
+            angles.append(-math.atan2(-rotation_matrix[0][1], rotation_matrix[0][0]))
+        else:
+            angles.append(math.atan2(rotation_matrix[2][0], rotation_matrix[2][1]))
+            angles.append(math.acos(rotation_matrix[2][2]))
+            angles.append(math.atan2(rotation_matrix[0][2], -rotation_matrix[1][2]))
     else:
         raise NotImplementedError()
+
+    for i, angle in enumerate(angles):
+        if angle < 0:
+            angles[i] += 2 * math.pi
+
+    return angles[0], angles[1], angles[2]
 
 
 def forward_stereographic(x: float, y: float, z: float) -> tuple[float, float]:
