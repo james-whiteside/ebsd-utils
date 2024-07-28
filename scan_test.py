@@ -59,7 +59,7 @@ def analyse(path: str = "data") -> None:
         if reduce_resolution:
             scan = scan.reduce_resolution(reduction_factor)
 
-        output_path = f"{get_directory_path("analyses")}/q{scan.analysis_reference}"
+        output_path = f"{get_directory_path("analyses")}/q{scan.analysis_reference}.csv"
         os.makedirs(f"{get_directory_path("maps")}/{scan.analysis_reference}", exist_ok=True)
 
         for map_type in map_types:
