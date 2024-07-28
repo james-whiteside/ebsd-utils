@@ -6,11 +6,15 @@ from numpy import zeros
 from src.data_structures.aggregate_manager import AggregateManager
 from src.data_structures.field import FieldNullError
 from src.data_structures.field_manager import FieldManager
+from src.utilities.config import Config
 from src.utilities.geometry import Axis, AxisSet, orthogonalise_matrix, euler_angles
 from src.data_structures.map_manager import MapManager
 from src.data_structures.parameter_groups import ScanParameters, ScaleParameters, ChannellingParameters, ClusteringParameters
 from src.data_structures.phase import Phase, UNINDEXED_PHASE_ID
 from src.utilities.utilities import tuple_degrees
+
+
+SCALING_TOLERANCE = Config().resolution_reduction_scaling_tolerance
 
 
 class Scan:
@@ -136,28 +140,34 @@ class Scan:
                 else:
                     phase_id = kernel_phases.pop()
                     count = 0
-                    reduced_euler_rotation_matrix_total = zeros((3, 3))
+                    euler_rotation_matrix_total = zeros((3, 3))
                     index_quality_total = 0.0
                     pattern_quality_total = 0.0
 
                     for dx, dy in kernel:
                         try:
                             self.field._phase_id.get_value_at(2 * x + dx, 2 * y + dy)
-                            reduced_euler_rotation_matrix = self.field.reduced_euler_rotation_matrix.get_value_at(2 * x + dx, 2 * y + dy)
+                            euler_rotation_matrix = self.field.euler_rotation_matrix.get_value_at(2 * x + dx, 2 * y + dy)
                             index_quality = self.field.index_quality.get_value_at(2 * x + dx, 2 * y + dy)
                             pattern_quality = self.field.pattern_quality.get_value_at(2 * x + dx, 2 * y + dy)
                         except FieldNullError:
                             continue
 
-                        reduced_euler_rotation_matrix_total += reduced_euler_rotation_matrix
+                        euler_rotation_matrix_total += euler_rotation_matrix
                         index_quality_total += index_quality
                         pattern_quality_total += pattern_quality
                         count += 1
 
-                    reduced_euler_rotation_matrix_aggregate = orthogonalise_matrix(reduced_euler_rotation_matrix_total / count)
-                    euler_angle_degrees_aggregate = tuple_degrees(euler_angles(reduced_euler_rotation_matrix_aggregate, axis_set))
-                    index_quality_aggregate = index_quality_total / count
-                    pattern_quality_aggregate = pattern_quality_total / len(kernel)
+                    try:
+                        euler_rotation_matrix_aggregate = orthogonalise_matrix(euler_rotation_matrix_total / count, SCALING_TOLERANCE)
+                        euler_angle_degrees_aggregate = tuple_degrees(euler_angles(euler_rotation_matrix_aggregate, axis_set))
+                        index_quality_aggregate = index_quality_total / count
+                        pattern_quality_aggregate = pattern_quality_total / len(kernel)
+                    except ArithmeticError:
+                        phase_id = None
+                        euler_angle_degrees_aggregate = None
+                        index_quality_aggregate = 0.0
+                        pattern_quality_aggregate = 0.0
 
                 phase_id_values[y].append(phase_id)
                 euler_angle_degrees_values[y].append(euler_angle_degrees_aggregate)

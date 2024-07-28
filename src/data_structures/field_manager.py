@@ -367,7 +367,7 @@ class FieldManager:
         for y in range(self._scan_parameters.height):
             for x in range(self._scan_parameters.width):
                 try:
-                    rotation_matrix = self.reduced_euler_rotation_matrix.get_value_at(x, y)
+                    rotation_matrix = self.euler_rotation_matrix.get_value_at(x, y)
                     phase_data = channel_data[self._phase_id.get_value_at(x, y)]
                 except FieldNullError:
                     continue

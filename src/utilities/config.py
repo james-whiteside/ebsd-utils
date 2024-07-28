@@ -17,6 +17,7 @@ class Config:
         self.unindexed_phase_id = self._int(parser["phases"]["unindexed_phase_id"])
         self.generic_bcc_phase_id = self._int(parser["phases"]["generic_bcc_phase_id"])
         self.generic_fcc_phase_id = self._int(parser["phases"]["generic_fcc_phase_id"])
+        self.resolution_reduction_scaling_tolerance = self._float(parser["resolution_reduction"]["scaling_tolerance"])
         self.gnd_density_corrective_factor = self._float(parser["dislocation_density"]["corrective_factor"])
 
     @staticmethod
