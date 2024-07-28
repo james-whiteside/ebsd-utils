@@ -113,13 +113,24 @@ def reduce_matrix(R: numpy.ndarray, symmetry: CrystalFamily) -> numpy.ndarray:
     return reduced_R
 
 
-def orthogonalise_matrix(R: numpy.ndarray) -> numpy.ndarray:
+def orthogonalise_matrix(R: numpy.ndarray, scaling_tolerance: float = None) -> numpy.ndarray:
     """
     Symmetrically orthogonalises a 3D pseudo-rotation matrix ``R`` by singular value decomposition.
+    If ``scaling_tolerance`` is specified, all scale factors in the scaling matrix must be between the tolerance and its reciprocal.
+    Throws an ``ArithmeticError`` if the scaling matrix includes a scale factor outside the tolerance range.
     :param R: The pseudo-rotation matrix ``R``.
+    :param scaling_tolerance:
     :return: The orthogonalised matrix.
     """
     U, S, VT = numpy.linalg.svd(R)
+
+    if scaling_tolerance is not None:
+        factor_bounds = sorted([scaling_tolerance, 1 / scaling_tolerance])
+
+        for factor in S.tolist():
+            if not factor_bounds[0] <= factor <= factor_bounds[1]:
+                raise ArithmeticError(f"Scale factor {factor} is outside of specified tolerance range: {factor_bounds[0]} - {factor_bounds[1]}")
+
     return numpy.dot(U, VT)
 
 
