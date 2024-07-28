@@ -96,13 +96,13 @@ def reduce_matrix(R: numpy.ndarray, symmetry: CrystalFamily) -> numpy.ndarray:
     if symmetry is CrystalFamily.NONE:
         pass
     elif symmetry is CrystalFamily.C:
-        if reduced_R[2][2] > 0:
+        if reduced_R[2][2] < 0:
             reduced_R = numpy.dot(numpy.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, -1.0]]), reduced_R)
 
         if reduced_R[1][2] > 0:
             reduced_R = numpy.dot(numpy.array([[1.0, 0.0, 0.0], [0.0, -1.0, 0.0], [0.0, 0.0, 1.0]]), reduced_R)
 
-        if reduced_R[0][2] > 0:
+        if reduced_R[0][2] < 0:
             reduced_R = numpy.dot(numpy.array([[-1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]), reduced_R)
 
         if reduced_R[1][2] > reduced_R[0][2]:
