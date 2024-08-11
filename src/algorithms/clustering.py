@@ -152,7 +152,7 @@ def _dbscan_gpu(
 
 
 @jit
-def _compute_misrotation_angle(inverse_matrix_1: numpy.ndarray, matrix_2: numpy.ndarray, cache: numpy.ndarray) -> float:
+def _misrotation_angle(inverse_matrix_1: numpy.ndarray, matrix_2: numpy.ndarray, cache: numpy.ndarray) -> float:
     for j in range(3):
         for i in range(3):
             cache[j][i] = inverse_matrix_1[j][0] * matrix_2[0][i]
@@ -230,7 +230,7 @@ def _assign_core_point_category(
             elif global_phase_id[thread_y][thread_x] != global_phase_id[y][x]:
                 continue
             else:
-                misrotation_angle = _compute_misrotation_angle(
+                misrotation_angle = _misrotation_angle(
                     inverse_euler_rotation_matrix[thread_y][thread_x],
                     reduced_euler_rotation_matrix[y][x],
                     misrotation_matrix_cache[thread_y][thread_x],
@@ -269,7 +269,7 @@ def _assign_border_point_category(
     for y in range(height):
         for x in range(width):
             if global_phase_id[thread_y][thread_x] == global_phase_id[y][x] and category[y][x] == 1:
-                misrotation_angle = _compute_misrotation_angle(
+                misrotation_angle = _misrotation_angle(
                     inverse_euler_rotation_matrix[thread_y][thread_x],
                     reduced_euler_rotation_matrix[y][x],
                     misrotation_matrix_cache[thread_y][thread_x],
@@ -366,7 +366,7 @@ def _grow_cluster_core(
         for x in range(width):
             if cluster_id[y][x] == cluster_count:
                 if global_phase_id[y][x] == global_phase_id[thread_y][thread_x] and category[thread_y][thread_x] == 1:
-                    misrotation_angle = _compute_misrotation_angle(
+                    misrotation_angle = _misrotation_angle(
                         inverse_euler_rotation_matrix[thread_y][thread_x],
                         reduced_euler_rotation_matrix[y][x],
                         misrotation_matrix_cache[thread_y][thread_x],
@@ -405,7 +405,7 @@ def _assign_border_point_cluster_id(
     for y in range(height):
         for x in range(width):
             if global_phase_id[thread_y][thread_x] == global_phase_id[y][x] and category[y][x] == 1:
-                misrotation_angle = _compute_misrotation_angle(
+                misrotation_angle = _misrotation_angle(
                     inverse_euler_rotation_matrix[thread_y][thread_x],
                     reduced_euler_rotation_matrix[y][x],
                     misrotation_matrix_cache[thread_y][thread_x]
