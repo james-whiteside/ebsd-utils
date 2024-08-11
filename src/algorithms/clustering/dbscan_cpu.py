@@ -1,45 +1,11 @@
 # -*- coding: utf-8 -*-
 
 import math
-from numpy import ndarray, zeros, dot
+from numpy import ndarray, array, zeros, dot
 from numpy.linalg import inv
 from numba import jit
 
 
-@jit
-def _rotation_angle(R: ndarray) -> float:
-    """
-    Computes the rotation angle ``θ`` of a rotation matrix ``R``.
-    Solves Eqn. 4.1.
-    :param R: The rotation matrix ``R``.
-    :return: The rotation angle ``θ``.
-    """
-
-    if 0.5 * (abs(R[0][0]) + abs(R[1][1]) + abs(R[2][2]) - 1) > 1:
-        theta = math.acos(1)
-    elif 0.5 * (abs(R[0][0]) + abs(R[1][1]) + abs(R[2][2]) - 1) < -1:
-        theta = math.acos(-1)
-    else:
-        theta = math.acos(0.5 * (abs(R[0][0]) + abs(R[1][1]) + abs(R[2][2]) - 1))
-
-    return theta
-
-
-@jit
-def _misrotation_matrix(R1: ndarray, R2: ndarray) -> ndarray:
-    """
-    Computes the misrotation matrix ``dR`` between two rotation matrices ``R1`` and ``R2``.
-    Solves Eqn. 4.2.
-    :param R1: The rotation matrix ``R1``.
-    :param R2: The rotation matrix ``R2``.
-    :return: The misrotation matrix ``dR``.
-    """
-
-    dR = dot(inv(R1), R2)
-    return dR
-
-
-@jit
 def _dbscan_cpu(
     width: int,
     height: int,
@@ -48,115 +14,324 @@ def _dbscan_cpu(
     core_point_neighbour_threshold: int,
     neighbourhood_radius: float,
 ) -> tuple[int, ndarray, ndarray]:
-    cluster_count = 0
     category = zeros((height, width))
     cluster_id = zeros((height, width))
+    inverse_euler_rotation_matrix = zeros((height, width, 3, 3))
 
+    _compute_inverted_matrices(
+        width,
+        height,
+        global_phase_id,
+        reduced_euler_rotation_matrix,
+        inverse_euler_rotation_matrix,
+    )
+
+    _assign_unindexed_point_category(
+        width,
+        height,
+        global_phase_id,
+        category,
+    )
+
+    _assign_core_point_category(
+        width,
+        height,
+        global_phase_id,
+        reduced_euler_rotation_matrix,
+        inverse_euler_rotation_matrix,
+        core_point_neighbour_threshold,
+        neighbourhood_radius,
+        category,
+    )
+
+    _assign_border_point_category(
+        width,
+        height,
+        global_phase_id,
+        reduced_euler_rotation_matrix,
+        inverse_euler_rotation_matrix,
+        neighbourhood_radius,
+        category,
+    )
+
+    _assign_noise_point_category(
+        width,
+        height,
+        category,
+    )
+
+    cluster_count = _assign_core_point_cluster_id(
+        width,
+        height,
+        global_phase_id,
+        reduced_euler_rotation_matrix,
+        inverse_euler_rotation_matrix,
+        neighbourhood_radius,
+        category,
+        cluster_id,
+    )
+
+    _assign_border_point_cluster_id(
+        width,
+        height,
+        global_phase_id,
+        reduced_euler_rotation_matrix,
+        inverse_euler_rotation_matrix,
+        neighbourhood_radius,
+        category,
+        cluster_id,
+    )
+
+    _reassign_unindexed_point_category(
+        width,
+        height,
+        category,
+    )
+
+    return cluster_count, category, cluster_id
+
+
+@jit
+def _misrotation_angle(inverse_matrix_1: ndarray, matrix_2: ndarray) -> float:
+    matrix = dot(inverse_matrix_1, matrix_2)
+
+    if 0.5 * (abs(matrix[0][0]) + abs(matrix[1][1]) + abs(matrix[2][2]) - 1) > 1:
+        angle = math.acos(1)
+    elif 0.5 * (abs(matrix[0][0]) + abs(matrix[1][1]) + abs(matrix[2][2]) - 1) < -1:
+        angle = math.acos(-1)
+    else:
+        angle = math.acos(0.5 * (abs(matrix[0][0]) + abs(matrix[1][1]) + abs(matrix[2][2]) - 1))
+
+    return angle
+
+
+@jit
+def _compute_inverted_matrices(
+    width: int,
+    height: int,
+    global_phase_id: ndarray,
+    reduced_euler_rotation_matrix: ndarray,
+    inverse_euler_rotation_matrix: ndarray,
+) -> None:
     for y in range(height):
         for x in range(width):
             if global_phase_id[y][x] == 0:
-                # This point is an unindexed point.
-                category[y][x] = -1
-
-    for y0 in range(height):
-        for x0 in range(width):
-            if category[y0][x0] == 0:
-                point_neighbours = 0
-
-                for y1 in range(height):
-                    for x1 in range(width):
-                        if x0 == x1 and y0 == y1:
-                            continue
-                        elif global_phase_id[y0][x0] != global_phase_id[y1][x1]:
-                            continue
-                        else:
-                            rotation_matrix_0 = reduced_euler_rotation_matrix[y0][x0]
-                            rotation_matrix_1 = reduced_euler_rotation_matrix[y1][x1]
-                            misrotation_angle = _rotation_angle(_misrotation_matrix(rotation_matrix_0, rotation_matrix_1))
-
-                            if misrotation_angle <= neighbourhood_radius and x0 != x1 and y0 != y1:
-                                point_neighbours += 1
-
-                            if point_neighbours >= core_point_neighbour_threshold:
-                                # This point is a core point.
-                                category[y0][x0] = 1
-                                break
-
-                    if category[y0][x0] == 1:
-                        break
-
-    for y0 in range(height):
-        for x0 in range(width):
-            if category[y0][x0] != 0:
                 continue
 
-            for y1 in range(height):
-                for x1 in range(width):
-                    if global_phase_id[y0][x0] == global_phase_id[y1][x1] and category[y1][x1] == 1:
-                        rotation_matrix_0 = reduced_euler_rotation_matrix[y0][x0]
-                        rotation_matrix_1 = reduced_euler_rotation_matrix[y1][x1]
-                        misrotation_angle = _rotation_angle(_misrotation_matrix(rotation_matrix_0, rotation_matrix_1))
+            inverse_euler_rotation_matrix[y][x] = inv(reduced_euler_rotation_matrix[y][x])
 
-                        if misrotation_angle <= neighbourhood_radius:
-                            # This point is a border point.
-                            category[y0][x0] = 2
+
+@jit
+def _assign_unindexed_point_category(
+    width: int,
+    height: int,
+    global_phase_id: ndarray,
+    category: ndarray,
+) -> None:
+    for iter_y in range(height):
+        for iter_x in range(width):
+            if global_phase_id[iter_y][iter_x] == 0:
+                category[iter_y][iter_x] = -1
+
+
+@jit
+def _assign_core_point_category(
+    width: int,
+    height: int,
+    global_phase_id: ndarray,
+    reduced_euler_rotation_matrix: ndarray,
+    inverse_euler_rotation_matrix: ndarray,
+    core_point_neighbour_threshold: int,
+    neighbourhood_radius: float,
+    category: ndarray,
+) -> None:
+    for iter_y in range(height):
+        for iter_x in range(width):
+            if category[iter_y][iter_x] != 0:
+                continue
+
+            point_neighbours = 0
+
+            for y in range(height):
+                for x in range(width):
+                    if iter_x == x and iter_y == y:
+                        continue
+                    elif global_phase_id[iter_y][iter_x] != global_phase_id[y][x]:
+                        continue
+                    else:
+                        misrotation_angle = _misrotation_angle(
+                            inverse_euler_rotation_matrix[iter_y][iter_x],
+                            reduced_euler_rotation_matrix[y][x],
+                        )
+
+                        if misrotation_angle <= neighbourhood_radius and iter_x != x and iter_y != y:
+                            point_neighbours += 1
+
+                        if point_neighbours >= core_point_neighbour_threshold:
+                            category[iter_y][iter_x] = 1
                             break
 
-                if category[y0][x0] == 2:
+                if category[iter_y][iter_x] == 1:
                     break
 
-    for y0 in range(height):
-        for x0 in range(width):
-            if category[y0][x0] == 0:
-                # This point is a noise point.
-                category[y0][x0] = 3
 
-    for y0 in range(height):
-        for x0 in range(width):
-            if category[y0][x0] == 1 and cluster_id[y0][x0] == 0:
-                cluster_count += 1
-                cluster_id[y0][x0] = cluster_count
-                cluster_core_complete = False
+@jit
+def _assign_border_point_category(
+    width: int,
+    height: int,
+    global_phase_id: ndarray,
+    reduced_euler_rotation_matrix: ndarray,
+    inverse_euler_rotation_matrix: ndarray,
+    neighbourhood_radius: float,
+    category: ndarray,
+):
+    for iter_y in range(height):
+        for iter_x in range(width):
+            if category[iter_y][iter_x] != 0:
+                continue
 
-                while not cluster_core_complete:
-                    cluster_core_complete = True
+            for y in range(height):
+                for x in range(width):
+                    if global_phase_id[iter_y][iter_x] == global_phase_id[y][x] and category[y][x] == 1:
+                        misrotation_angle = _misrotation_angle(
+                            inverse_euler_rotation_matrix[iter_y][iter_x],
+                            reduced_euler_rotation_matrix[y][x],
+                        )
 
-                    for y1 in range(height):
-                        for x1 in range(width):
-                            if cluster_id[y1][x1] == cluster_count:
-                                for y2 in range(height):
-                                    for x2 in range(width):
-                                        if global_phase_id[y1][x1] == global_phase_id[y2][x2] and category[y2][x2] == 1 and cluster_id[y2][x2] == 0:
-                                            rotation_matrix_1 = reduced_euler_rotation_matrix[y1][x1]
-                                            rotation_matrix_2 = reduced_euler_rotation_matrix[y2][x2]
-                                            misrotation_angle = _rotation_angle(_misrotation_matrix(rotation_matrix_1, rotation_matrix_2))
+                        if misrotation_angle <= neighbourhood_radius:
+                            category[iter_y][iter_x] = 2
+                            break
 
-                                            if misrotation_angle <= neighbourhood_radius:
-                                                cluster_id[y2][x2] = cluster_count
-                                                cluster_core_complete = False
+                if category[iter_y][iter_x] == 2:
+                    break
 
-    for y0 in range(height):
-        for x0 in range(width):
-            if category[y0][x0] == 2:
-                minimum_misrotation_angle = neighbourhood_radius
-                cluster_id_of_minimum = 0
 
-                for y1 in range(height):
-                    for x1 in range(width):
-                        if global_phase_id[y0][x0] == global_phase_id[y1][x1] and category[y1][x1] == 1:
-                            rotation_matrix_0 = reduced_euler_rotation_matrix[y0][x0]
-                            rotation_matrix_1 = reduced_euler_rotation_matrix[y1][x1]
-                            misrotation_angle = _rotation_angle(_misrotation_matrix(rotation_matrix_0, rotation_matrix_1))
+@jit
+def _assign_noise_point_category(
+    width: int,
+    height: int,
+    category: ndarray,
+) -> None:
+    for iter_y in range(height):
+        for iter_x in range(width):
+            if category[iter_y][iter_x] == 0:
+                category[iter_y][iter_x] = 3
 
-                            if misrotation_angle <= minimum_misrotation_angle:
-                                minimum_misrotation_angle = misrotation_angle
-                                cluster_id_of_minimum = cluster_id[y1][x1]
 
-                cluster_id[y0][x0] = cluster_id_of_minimum
+@jit
+def _assign_core_point_cluster_id(
+    width: int,
+    height: int,
+    global_phase_id: ndarray,
+    reduced_euler_rotation_matrix: ndarray,
+    inverse_euler_rotation_matrix: ndarray,
+    neighbourhood_radius: float,
+    category: ndarray,
+    cluster_id: ndarray,
+) -> int:
+    cluster_count = 0
 
     for y in range(height):
         for x in range(width):
-            if category[y][x] == -1:
-                category[y][x] = 0
+            if category[y][x] == 1 and cluster_id[y][x] == 0:
+                cluster_count += 1
+                cluster_id[y][x] = cluster_count
+                cluster_core_complete = array([False])
 
-    return cluster_count, category, cluster_id
+                while not cluster_core_complete[0]:
+                    cluster_core_complete[0] = True
+
+                    _grow_cluster_core(
+                        width,
+                        height,
+                        global_phase_id,
+                        reduced_euler_rotation_matrix,
+                        inverse_euler_rotation_matrix,
+                        neighbourhood_radius,
+                        cluster_count,
+                        category,
+                        cluster_id,
+                        cluster_core_complete,
+                    )
+
+    return cluster_count
+
+
+@jit
+def _grow_cluster_core(
+    width: int,
+    height: int,
+    global_phase_id: ndarray,
+    reduced_euler_rotation_matrix: ndarray,
+    inverse_euler_rotation_matrix: ndarray,
+    neighbourhood_radius: float,
+    cluster_count: int,
+    category: ndarray,
+    cluster_id: ndarray,
+    cluster_core_complete: ndarray,
+):
+    for iter_y in range(height):
+        for iter_x in range(width):
+            if cluster_id[iter_y][iter_x] != 0:
+                continue
+
+            for y in range(height):
+                for x in range(width):
+                    if cluster_id[y][x] == cluster_count:
+                        if global_phase_id[y][x] == global_phase_id[iter_y][iter_x] and category[iter_y][iter_x] == 1:
+                            misrotation_angle = _misrotation_angle(
+                                inverse_euler_rotation_matrix[iter_y][iter_x],
+                                reduced_euler_rotation_matrix[y][x],
+                            )
+
+                            if misrotation_angle <= neighbourhood_radius:
+                                cluster_id[iter_y][iter_x] = cluster_count
+
+                                if cluster_core_complete[0]:
+                                    cluster_core_complete[0] = False
+
+
+@jit
+def _assign_border_point_cluster_id(
+    width: int,
+    height: int,
+    global_phase_id: ndarray,
+    reduced_euler_rotation_matrix: ndarray,
+    inverse_euler_rotation_matrix: ndarray,
+    neighbourhood_radius: float,
+    category: ndarray,
+    cluster_id: ndarray,
+):
+    for iter_y in range(height):
+        for iter_x in range(width):
+            if category[iter_y][iter_x] != 2:
+                continue
+
+            minimum_misrotation_angle = neighbourhood_radius
+            cluster_id_of_minimum = 0
+
+            for y in range(height):
+                for x in range(width):
+                    if global_phase_id[iter_y][iter_x] == global_phase_id[y][x] and category[y][x] == 1:
+                        misrotation_angle = _misrotation_angle(
+                            inverse_euler_rotation_matrix[iter_y][iter_x],
+                            reduced_euler_rotation_matrix[y][x],
+                        )
+
+                        if misrotation_angle <= minimum_misrotation_angle:
+                            minimum_misrotation_angle = misrotation_angle
+                            cluster_id_of_minimum = cluster_id[y][x]
+
+            cluster_id[iter_y][iter_x] = cluster_id_of_minimum
+
+
+@jit
+def _reassign_unindexed_point_category(
+    width: int,
+    height: int,
+    category: ndarray,
+) -> None:
+    for iter_y in range(height):
+        for iter_x in range(width):
+            if category[iter_y][iter_x] == -1:
+                category[iter_y][iter_x] = 0
