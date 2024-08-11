@@ -19,6 +19,7 @@ class Config:
         self.generic_fcc_phase_id = self._int(parser["phases"]["generic_fcc_phase_id"])
         self.resolution_reduction_scaling_tolerance = self._float(parser["resolution_reduction"]["scaling_tolerance"])
         self.gnd_density_corrective_factor = self._float(parser["dislocation_density"]["corrective_factor"])
+        self.orientation_clustering_use_cuda = self._bool(parser["orientation_clustering"]["use_cuda"])
 
     @staticmethod
     def _str(value: str) -> str:

@@ -14,7 +14,7 @@ from src.utilities.geometry import (
 )
 from src.data_structures.phase import Phase, UNINDEXED_PHASE_ID
 from src.algorithms.channelling import load_crit_data, fraction
-from src.algorithms.clustering import ClusterCategory, dbscan
+from src.algorithms.clustering.dbscan import ClusterCategory, dbscan
 from src.data_structures.parameter_groups import ScaleParameters, ChannellingParameters, ClusteringParameters, ScanParameters
 from src.utilities.utilities import tuple_degrees, tuple_radians, float_degrees, float_radians, log_or_zero
 
