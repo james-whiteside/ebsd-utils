@@ -359,6 +359,7 @@ class Scan:
         if show_cluster_aggregates:
             for row in self._cluster_aggregate_rows(
                 show_cluster_id=show_row_coordinates,
+                show_cluster_size=True,
                 show_phase=show_phase,
                 show_euler_angles=show_euler_angles,
                 show_index_quality=show_index_quality,
@@ -403,7 +404,7 @@ class Scan:
                 yield f"{local_id},{phase.name},{phase.global_id}"
 
         if show_map_size:
-            yield f"Map Size:"
+            yield f"Map size:"
             yield f"X,{self.width}"
             yield f"Y,{self.height}"
 
@@ -426,6 +427,7 @@ class Scan:
     def _cluster_aggregate_rows(
         self,
         show_cluster_id: bool = True,
+        show_cluster_size: bool = True,
         show_phase: bool = True,
         show_euler_angles: bool = True,
         show_index_quality: bool = True,
@@ -437,11 +439,14 @@ class Scan:
         show_geometrically_necessary_dislocation_density: bool = False,
         show_channelling_fraction: bool = False,
     ) -> Iterator[str]:
-        yield "Data:"
+        yield "Cluster aggregates:"
         columns: list[str] = list()
 
         if show_cluster_id:
-            columns += ["Point Cluster"]
+            columns += ["Cluster ID"]
+
+        if show_cluster_size:
+            columns += ["Cluster Size"]
 
         if show_phase:
             columns += ["Phase"]
@@ -475,11 +480,14 @@ class Scan:
 
         yield ",".join(columns)
 
-        for id in range(self.cluster_count):
+        for id in self.cluster_aggregate.group_ids:
             columns: list[str] = list()
 
             if show_cluster_id:
                 columns += [str(id)]
+
+            if show_cluster_size:
+                columns += self.cluster_aggregate.count.serialize_value_for(id)
 
             if show_phase:
                 columns += self.cluster_aggregate._phase_id.serialize_value_for(id)
@@ -503,7 +511,7 @@ class Scan:
                 columns += self.cluster_aggregate.inverse_pole_figure_coordinates(Axis.Z).serialize_value_for(id)
 
             if show_kernel_average_misorientation:
-                columns += self.cluster_aggregate.kernel_average_misorientation.serialize_value_for(id)
+                columns += self.cluster_aggregate.kernel_average_misorientation_degrees.serialize_value_for(id)
 
             if show_geometrically_necessary_dislocation_density:
                 columns += self.cluster_aggregate.geometrically_necessary_dislocation_density_logarithmic.serialize_value_for(id)
