@@ -7,7 +7,7 @@ from src.data_structures.field import FieldType, FieldLike
 from src.data_structures.field_manager import FieldManager
 from src.utilities.geometry import euler_angles, Axis, forward_stereographic
 from src.data_structures.phase import Phase
-from src.utilities.utilities import tuple_degrees
+from src.utilities.utilities import tuple_degrees, log_or_zero
 
 
 class AggregateManager:
@@ -16,7 +16,7 @@ class AggregateManager:
         self._group_id_field = group_id_field
 
     @property
-    def phase_id(self) -> Aggregate[int]:
+    def _phase_id(self) -> Aggregate[int]:
         return Aggregate(
             value_field=self._field_manager._phase_id,
             group_id_field=self._field_manager.orientation_cluster_id,
@@ -24,7 +24,7 @@ class AggregateManager:
 
     @property
     def phase(self) -> DiscreteAggregateMapper[Phase]:
-        return DiscreteAggregateMapper(FieldType.OBJECT, self.phase_id, self._field_manager._scan_parameters.phases)
+        return DiscreteAggregateMapper(FieldType.OBJECT, self._phase_id, self._field_manager._scan_parameters.phases)
 
     @property
     def reduced_euler_rotation_matrix(self) -> Aggregate[ndarray]:
@@ -76,6 +76,10 @@ class AggregateManager:
             value_field=self._field_manager.geometrically_necessary_dislocation_density,
             group_id_field=self._field_manager.orientation_cluster_id,
         )
+
+    @property
+    def geometrically_necessary_dislocation_density_logarithmic(self) -> FunctionalAggregateMapper[float, float]:
+        return FunctionalAggregateMapper(FieldType.SCALAR, self.geometrically_necessary_dislocation_density, log_or_zero)
 
     @property
     def channelling_fraction(self) -> Aggregate[float]:

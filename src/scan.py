@@ -287,7 +287,8 @@ class Scan:
         show_map_scale: bool = False,
         show_channelling_params: bool = False,
         show_clustering_params: bool = False,
-        show_scan_coordinates: bool = True,
+        show_cluster_aggregates: bool = False,
+        show_row_coordinates: bool = True,
         show_phase: bool = True,
         show_euler_angles: bool = True,
         show_index_quality: bool = True,
@@ -306,7 +307,8 @@ class Scan:
             show_map_scale=show_map_scale,
             show_channelling_params=show_channelling_params,
             show_clustering_params=show_clustering_params,
-            show_scan_coordinates=show_scan_coordinates,
+            show_cluster_aggregates=show_cluster_aggregates,
+            show_row_coordinates=show_row_coordinates,
             show_phase=show_phase,
             show_euler_angles=show_euler_angles,
             show_index_quality=show_index_quality,
@@ -331,7 +333,8 @@ class Scan:
         show_map_scale: bool = False,
         show_channelling_params: bool = False,
         show_clustering_params: bool = False,
-        show_scan_coordinates: bool = True,
+        show_cluster_aggregates: bool = False,
+        show_row_coordinates: bool = True,
         show_phase: bool = True,
         show_euler_angles: bool = True,
         show_index_quality: bool = True,
@@ -353,24 +356,24 @@ class Scan:
         ):
             yield row
 
-        for row in self._header_rows(
-            show_scan_coordinates=show_scan_coordinates,
-            show_phase=show_phase,
-            show_euler_angles=show_euler_angles,
-            show_index_quality=show_index_quality,
-            show_pattern_quality=show_pattern_quality,
-            show_inverse_x_pole_figure_coordinates=show_inverse_x_pole_figure_coordinates,
-            show_inverse_y_pole_figure_coordinates=show_inverse_y_pole_figure_coordinates,
-            show_inverse_z_pole_figure_coordinates=show_inverse_z_pole_figure_coordinates,
-            show_kernel_average_misorientation=show_kernel_average_misorientation,
-            show_geometrically_necessary_dislocation_density=show_geometrically_necessary_dislocation_density,
-            show_channelling_fraction=show_channelling_fraction,
-            show_orientation_cluster=show_orientation_cluster,
-        ):
-            yield row
+        if show_cluster_aggregates:
+            for row in self._cluster_aggregate_rows(
+                show_cluster_id=show_row_coordinates,
+                show_phase=show_phase,
+                show_euler_angles=show_euler_angles,
+                show_index_quality=show_index_quality,
+                show_pattern_quality=show_pattern_quality,
+                show_inverse_x_pole_figure_coordinates=show_inverse_x_pole_figure_coordinates,
+                show_inverse_y_pole_figure_coordinates=show_inverse_y_pole_figure_coordinates,
+                show_inverse_z_pole_figure_coordinates=show_inverse_z_pole_figure_coordinates,
+                show_kernel_average_misorientation=show_kernel_average_misorientation,
+                show_geometrically_necessary_dislocation_density=show_geometrically_necessary_dislocation_density,
+                show_channelling_fraction=show_channelling_fraction,
+            ):
+                yield row
 
         for row in self._data_rows(
-            show_scan_coordinates=show_scan_coordinates,
+            show_scan_coordinates=show_row_coordinates,
             show_phase=show_phase,
             show_euler_angles=show_euler_angles,
             show_index_quality=show_index_quality,
@@ -420,8 +423,98 @@ class Scan:
             yield f"Point neighbourhood radius (deg),{self.clustering_parameters.neighbourhood_radius_degrees}"
             yield f"Cluster count,{self.cluster_count}"
 
-    @staticmethod
-    def _header_rows(
+    def _cluster_aggregate_rows(
+        self,
+        show_cluster_id: bool = True,
+        show_phase: bool = True,
+        show_euler_angles: bool = True,
+        show_index_quality: bool = True,
+        show_pattern_quality: bool = True,
+        show_inverse_x_pole_figure_coordinates: bool = False,
+        show_inverse_y_pole_figure_coordinates: bool = False,
+        show_inverse_z_pole_figure_coordinates: bool = False,
+        show_kernel_average_misorientation: bool = False,
+        show_geometrically_necessary_dislocation_density: bool = False,
+        show_channelling_fraction: bool = False,
+    ) -> Iterator[str]:
+        yield "Data:"
+        columns: list[str] = list()
+
+        if show_cluster_id:
+            columns += ["Point Cluster"]
+
+        if show_phase:
+            columns += ["Phase"]
+
+        if show_euler_angles:
+            columns += ["Euler1", "Euler2", "Euler3"]
+
+        if show_index_quality:
+            columns += ["Index Quality"]
+
+        if show_pattern_quality:
+            columns += ["Pattern Quality"]
+
+        if show_inverse_x_pole_figure_coordinates:
+            columns += ["X-IPF x-coordinate", "X-IPF y-coordinate"]
+
+        if show_inverse_y_pole_figure_coordinates:
+            columns += ["Y-IPF x-coordinate", "Y-IPF y-coordinate"]
+
+        if show_inverse_z_pole_figure_coordinates:
+            columns += ["Z-IPF x-coordinate", "Z-IPF y-coordinate"]
+
+        if show_kernel_average_misorientation:
+            columns += ["Kernel Average Misorientation"]
+
+        if show_geometrically_necessary_dislocation_density:
+            columns += ["GND Density"]
+
+        if show_channelling_fraction:
+            columns += ["Channelling Fraction"]
+
+        yield ",".join(columns)
+
+        for id in range(self.cluster_count):
+            columns: list[str] = list()
+
+            if show_cluster_id:
+                columns += [str(id)]
+
+            if show_phase:
+                columns += self.cluster_aggregate._phase_id.serialize_value_for(id)
+
+            if show_euler_angles:
+                columns += self.cluster_aggregate.euler_angles_degrees.serialize_value_for(id)
+
+            if show_index_quality:
+                columns += self.cluster_aggregate.index_quality.serialize_value_for(id)
+
+            if show_pattern_quality:
+                columns += self.cluster_aggregate.pattern_quality.serialize_value_for(id)
+
+            if show_inverse_x_pole_figure_coordinates:
+                columns += self.cluster_aggregate.inverse_pole_figure_coordinates(Axis.X).serialize_value_for(id)
+
+            if show_inverse_y_pole_figure_coordinates:
+                columns += self.cluster_aggregate.inverse_pole_figure_coordinates(Axis.Y).serialize_value_for(id)
+
+            if show_inverse_z_pole_figure_coordinates:
+                columns += self.cluster_aggregate.inverse_pole_figure_coordinates(Axis.Z).serialize_value_for(id)
+
+            if show_kernel_average_misorientation:
+                columns += self.cluster_aggregate.kernel_average_misorientation.serialize_value_for(id)
+
+            if show_geometrically_necessary_dislocation_density:
+                columns += self.cluster_aggregate.geometrically_necessary_dislocation_density_logarithmic.serialize_value_for(id)
+
+            if show_channelling_fraction:
+                columns += self.cluster_aggregate.channelling_fraction.serialize_value_for(id)
+
+            yield ",".join(columns)
+
+    def _data_rows(
+        self,
         show_scan_coordinates: bool = True,
         show_phase: bool = True,
         show_euler_angles: bool = True,
@@ -433,7 +526,7 @@ class Scan:
         show_kernel_average_misorientation: bool = False,
         show_geometrically_necessary_dislocation_density: bool = False,
         show_channelling_fraction: bool = False,
-        show_orientation_cluster: bool = False
+        show_orientation_cluster: bool = False,
     ) -> Iterator[str]:
         yield "Data:"
         columns: list[str] = list()
@@ -476,24 +569,9 @@ class Scan:
 
         yield ",".join(columns)
 
-    def _data_rows(
-        self,
-        show_scan_coordinates: bool = True,
-        show_phase: bool = True,
-        show_euler_angles: bool = True,
-        show_index_quality: bool = True,
-        show_pattern_quality: bool = True,
-        show_inverse_x_pole_figure_coordinates: bool = False,
-        show_inverse_y_pole_figure_coordinates: bool = False,
-        show_inverse_z_pole_figure_coordinates: bool = False,
-        show_kernel_average_misorientation: bool = False,
-        show_geometrically_necessary_dislocation_density: bool = False,
-        show_channelling_fraction: bool = False,
-        show_orientation_cluster: bool = False
-    ) -> Iterator[str]:
         for y in range(self.height):
             for x in range(self.width):
-                columns: list[str] = list()
+                columns = list()
 
                 if show_scan_coordinates:
                     columns += [str(x), str(y)]
