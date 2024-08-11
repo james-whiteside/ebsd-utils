@@ -119,7 +119,7 @@ def format_time_interval(interval: int | float) -> str:
 
 	seconds = interval % 60
 	minutes = int(round((interval - seconds) / 60)) % 60
-	hours = int(round((interval - minutes) / 60))
+	hours = int(round((interval - 60 * minutes - seconds) / 3600))
 	return str(hours).zfill(2) + ':' + str(minutes).zfill(2) + ':' + str(seconds).zfill(2)
 
 
