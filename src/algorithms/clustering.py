@@ -69,63 +69,71 @@ def _dbscan_gpu(
     cluster_id = numpy.zeros((height, width))
     inverse_euler_rotation_matrix = numpy.zeros((height, width, 3, 3))
     misrotation_matrix_cache = numpy.zeros((height, width, 3, 3))
+
+    _compute_inverted_matrices(
+        width,
+        height,
+        global_phase_id,
+        reduced_euler_rotation_matrix,
+        inverse_euler_rotation_matrix,
+    )
+
+    global_phase_id_ = cuda.to_device(global_phase_id)
+    reduced_euler_rotation_matrix_ = cuda.to_device(reduced_euler_rotation_matrix)
+    category_ = cuda.to_device(category)
+    cluster_id_ = cuda.to_device(cluster_id)
+    inverse_euler_rotation_matrix_ = cuda.to_device(inverse_euler_rotation_matrix)
+    misrotation_matrix_cache_ = cuda.to_device(misrotation_matrix_cache)
+
     block_size = (16, 16)
     grid_size = (math.ceil(width / block_size[0]), math.ceil(height / block_size[1]))
 
     _assign_unindexed_point_category[grid_size, block_size](
         width,
         height,
-        global_phase_id,
-        category,
-    )
-
-    _compute_inverted_matrices(
-        width,
-        height,
-        reduced_euler_rotation_matrix,
-        inverse_euler_rotation_matrix,
-        category,
+        global_phase_id_,
+        category_,
     )
 
     _assign_core_point_category[grid_size, block_size](
         width,
         height,
-        global_phase_id,
-        reduced_euler_rotation_matrix,
-        inverse_euler_rotation_matrix,
-        misrotation_matrix_cache,
+        global_phase_id_,
+        reduced_euler_rotation_matrix_,
+        inverse_euler_rotation_matrix_,
+        misrotation_matrix_cache_,
         core_point_neighbour_threshold,
         neighbourhood_radius,
-        category,
+        category_,
     )
 
     _assign_border_point_category[grid_size, block_size](
         width,
         height,
-        global_phase_id,
-        reduced_euler_rotation_matrix,
-        inverse_euler_rotation_matrix,
-        misrotation_matrix_cache,
+        global_phase_id_,
+        reduced_euler_rotation_matrix_,
+        inverse_euler_rotation_matrix_,
+        misrotation_matrix_cache_,
         neighbourhood_radius,
-        category,
+        category_,
     )
 
     _assign_noise_point_category[grid_size, block_size](
         width,
         height,
-        category,
+        category_,
     )
 
     cluster_count = _assign_core_point_cluster_id(
         width,
         height,
-        global_phase_id,
-        reduced_euler_rotation_matrix,
-        inverse_euler_rotation_matrix,
-        misrotation_matrix_cache,
+        global_phase_id_,
+        reduced_euler_rotation_matrix_,
+        inverse_euler_rotation_matrix_,
+        misrotation_matrix_cache_,
         neighbourhood_radius,
-        category,
-        cluster_id,
+        category_,
+        cluster_id_,
         grid_size,
         block_size,
     )
@@ -133,20 +141,23 @@ def _dbscan_gpu(
     _assign_border_point_cluster_id[grid_size, block_size](
         width,
         height,
-        global_phase_id,
-        reduced_euler_rotation_matrix,
-        inverse_euler_rotation_matrix,
-        misrotation_matrix_cache,
+        global_phase_id_,
+        reduced_euler_rotation_matrix_,
+        inverse_euler_rotation_matrix_,
+        misrotation_matrix_cache_,
         neighbourhood_radius,
-        category,
-        cluster_id,
+        category_,
+        cluster_id_,
     )
 
     _reassign_unindexed_point_category[grid_size, block_size](
         width,
         height,
-        category,
+        category_,
     )
+
+    category = category_.copy_to_host()
+    cluster_id = cluster_id_.copy_to_host()
 
     return cluster_count, category, cluster_id
 
@@ -173,13 +184,13 @@ def _misrotation_angle(inverse_matrix_1: numpy.ndarray, matrix_2: numpy.ndarray,
 def _compute_inverted_matrices(
     width: int,
     height: int,
+    global_phase_id: numpy.ndarray,
     reduced_euler_rotation_matrix: numpy.ndarray,
     inverse_euler_rotation_matrix: numpy.ndarray,
-    category: numpy.ndarray,
 ) -> None:
     for y in range(height):
         for x in range(width):
-            if category[y][x] != 0:
+            if global_phase_id[y][x] == 0:
                 continue
 
             inverse_euler_rotation_matrix[y][x] = numpy.linalg.inv(reduced_euler_rotation_matrix[y][x])
@@ -318,7 +329,7 @@ def _assign_core_point_cluster_id(
             if category[y][x] == 1 and cluster_id[y][x] == 0:
                 cluster_count += 1
                 cluster_id[y][x] = cluster_count
-                cluster_core_complete = numpy.array([False])
+                cluster_core_complete = cuda.to_device(numpy.array([False]))
 
                 while not cluster_core_complete[0]:
                     cluster_core_complete[0] = True
