@@ -22,8 +22,8 @@ class FieldType(Enum):
         return self in (FieldType.DISCRETE, FieldType.SCALAR)
 
     @property
-    def aggregable(self) -> bool:
-        return self in (FieldType.DISCRETE, FieldType.SCALAR, FieldType.MATRIX)
+    def averageable(self) -> bool:
+        return self in (FieldType.SCALAR, FieldType.MATRIX)
 
     @property
     def mappable(self) -> bool:
