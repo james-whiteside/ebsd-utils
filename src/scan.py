@@ -31,14 +31,14 @@ class Scan:
         axis_set: AxisSet = AxisSet.ZXZ,
         resolution_reduction_factor: int = 0,
     ):
-        self._scan_parameters = ScanParameters()
+        self.parameters = ScanParameters()
         self.scale_parameters = ScaleParameters()
         self.channelling_parameters = ChannellingParameters()
         self.clustering_parameters = ClusteringParameters()
-        self._scan_parameters.set(data_reference, width, height, phases, axis_set, resolution_reduction_factor)
+        self.parameters.set(data_reference, width, height, phases, axis_set, resolution_reduction_factor)
 
         self.field = FieldManager(
-            self._scan_parameters,
+            self.parameters,
             self.scale_parameters,
             self.channelling_parameters,
             self.clustering_parameters,
@@ -66,47 +66,19 @@ class Scan:
         return self._cluster_aggregate
 
     @property
-    def data_reference(self) -> str:
-        return self._scan_parameters.data_reference
-
-    @property
-    def width(self) -> int:
-        return self._scan_parameters.width
-
-    @property
-    def height(self) -> int:
-        return self._scan_parameters.height
-
-    @property
-    def phases(self) -> dict[int, Phase]:
-        return self._scan_parameters.phases
-
-    @property
-    def axis_set(self) -> AxisSet:
-        return self._scan_parameters.axis_set
-
-    @property
-    def resolution_reduction_factor(self) -> int:
-        return self._scan_parameters.resolution_reduction_factor
-
-    @property
-    def analysis_reference(self) -> str:
-        return self._scan_parameters.analysis_reference
-
-    @property
     def cluster_count(self) -> int:
         return self.field._cluster_count
 
     def _reduce_resolution(self) -> Self:
-        if self.width % 2 != 0 or self.height % 2 != 0:
+        if self.parameters.width % 2 != 0 or self.parameters.height % 2 != 0:
             raise ArithmeticError("Can only reduce resolution of scan with even width and height.")
 
-        data_reference = self.data_reference
-        width = self.width // 2
-        height = self.height // 2
-        phases = self.phases
-        axis_set = self.axis_set
-        resolution_reduction_factor = self.resolution_reduction_factor + 1
+        data_reference = self.parameters.data_reference
+        width = self.parameters.width // 2
+        height = self.parameters.height // 2
+        phases = self.parameters.phases
+        axis_set = self.parameters.axis_set
+        resolution_reduction_factor = self.parameters.resolution_reduction_factor + 1
 
         phase_id_values: list[list[int | None]] = list()
         euler_angle_degrees_values: list[list[tuple[float, float, float] | None]] = list()
@@ -400,13 +372,13 @@ class Scan:
         if show_phases:
             yield "Phases:"
 
-            for local_id, phase in self.phases.items():
+            for local_id, phase in self.parameters.phases.items():
                 yield f"{local_id},{phase.name},{phase.global_id}"
 
         if show_map_size:
             yield f"Map size:"
-            yield f"X,{self.width}"
-            yield f"Y,{self.height}"
+            yield f"X,{self.parameters.width}"
+            yield f"Y,{self.parameters.height}"
 
         if show_map_scale:
             yield f"Map scale:"
@@ -577,8 +549,8 @@ class Scan:
 
         yield ",".join(columns)
 
-        for y in range(self.height):
-            for x in range(self.width):
+        for y in range(self.parameters.height):
+            for x in range(self.parameters.width):
                 columns = list()
 
                 if show_scan_coordinates:

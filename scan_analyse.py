@@ -40,7 +40,7 @@ def analyse(path: str = "data") -> None:
     for filepath in filepaths:
         scan = Scan.from_pathfinder_file(filepath)
 
-        print(f"Making analysis for p{scan.data_reference}.")
+        print(f"Making analysis for p{scan.parameters.data_reference}.")
         start_time = datetime.now()
         map_types = [MapType.P, MapType.EA, MapType.PQ, MapType.IQ, MapType.OX, MapType.OY, MapType.OZ, MapType.KAM]
 
@@ -59,11 +59,11 @@ def analyse(path: str = "data") -> None:
         if reduce_resolution:
             scan = scan.reduce_resolution(reduction_factor)
 
-        output_path = f"{get_directory_path("analyses")}/q{scan.analysis_reference}.csv"
-        os.makedirs(f"{get_directory_path("maps")}/{scan.analysis_reference}", exist_ok=True)
+        output_path = f"{get_directory_path("analyses")}/q{scan.parameters.analysis_reference}.csv"
+        os.makedirs(f"{get_directory_path("maps")}/{scan.parameters.analysis_reference}", exist_ok=True)
 
         for map_type in map_types:
-            map_path = f"{get_directory_path("maps")}/{scan.analysis_reference}/{map_type.name}.png"
+            map_path = f"{get_directory_path("maps")}/{scan.parameters.analysis_reference}/{map_type.name}.png"
             scan.map.get(map_type).image.save(map_path)
 
         scan.to_pathfinder_file(
