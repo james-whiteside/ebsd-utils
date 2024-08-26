@@ -248,6 +248,22 @@ class AverageAggregate[VALUE_TYPE](Aggregate):
             self._aggregates[group_id] = aggregate
 
 
+class CustomAggregate[VALUE_TYPE](Aggregate):
+    def __init__(
+        self,
+        aggregate_type: AggregateType,
+        values: dict[int, VALUE_TYPE],
+        field_type: FieldType,
+        group_id_field: FieldLike[int],
+        nullable: bool,
+    ):
+        super().__init__(aggregate_type, field_type, group_id_field, nullable)
+        self._values = values
+
+    def _init_aggregates(self) -> None:
+        self._aggregates = self._values
+
+
 class DiscreteAggregateMapper[VALUE_TYPE](AggregateLike):
     def __init__(self, field_type: FieldType, discrete_aggregate: AggregateLike[int], mapping: dict[int, VALUE_TYPE]):
         super().__init__(discrete_aggregate.aggregate_type, field_type, discrete_aggregate.nullable)
