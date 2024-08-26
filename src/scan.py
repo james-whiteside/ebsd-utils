@@ -265,9 +265,8 @@ class Scan:
         show_euler_angles: bool = True,
         show_index_quality: bool = True,
         show_pattern_quality: bool = True,
-        show_inverse_x_pole_figure_coordinates: bool = False,
-        show_inverse_y_pole_figure_coordinates: bool = False,
-        show_inverse_z_pole_figure_coordinates: bool = False,
+        show_inverse_principal_pole_figure_coordinates: bool = False,
+        show_inverse_beam_pole_figure_coordinates: bool = False,
         show_kernel_average_misorientation: bool = False,
         show_geometrically_necessary_dislocation_density: bool = False,
         show_channelling_fraction: bool = False,
@@ -285,9 +284,8 @@ class Scan:
             show_euler_angles=show_euler_angles,
             show_index_quality=show_index_quality,
             show_pattern_quality=show_pattern_quality,
-            show_inverse_x_pole_figure_coordinates=show_inverse_x_pole_figure_coordinates,
-            show_inverse_y_pole_figure_coordinates=show_inverse_y_pole_figure_coordinates,
-            show_inverse_z_pole_figure_coordinates=show_inverse_z_pole_figure_coordinates,
+            show_inverse_principal_pole_figure_coordinates=show_inverse_principal_pole_figure_coordinates,
+            show_inverse_beam_pole_figure_coordinates=show_inverse_beam_pole_figure_coordinates,
             show_kernel_average_misorientation=show_kernel_average_misorientation,
             show_geometrically_necessary_dislocation_density=show_geometrically_necessary_dislocation_density,
             show_channelling_fraction=show_channelling_fraction,
@@ -311,9 +309,8 @@ class Scan:
         show_euler_angles: bool = True,
         show_index_quality: bool = True,
         show_pattern_quality: bool = True,
-        show_inverse_x_pole_figure_coordinates: bool = False,
-        show_inverse_y_pole_figure_coordinates: bool = False,
-        show_inverse_z_pole_figure_coordinates: bool = False,
+        show_inverse_principal_pole_figure_coordinates: bool = False,
+        show_inverse_beam_pole_figure_coordinates: bool = False,
         show_kernel_average_misorientation: bool = False,
         show_geometrically_necessary_dislocation_density: bool = False,
         show_channelling_fraction: bool = False,
@@ -336,9 +333,8 @@ class Scan:
                 show_euler_angles=show_euler_angles,
                 show_index_quality=show_index_quality,
                 show_pattern_quality=show_pattern_quality,
-                show_inverse_x_pole_figure_coordinates=show_inverse_x_pole_figure_coordinates,
-                show_inverse_y_pole_figure_coordinates=show_inverse_y_pole_figure_coordinates,
-                show_inverse_z_pole_figure_coordinates=show_inverse_z_pole_figure_coordinates,
+                show_inverse_principal_pole_figure_coordinates=show_inverse_principal_pole_figure_coordinates,
+                show_inverse_beam_pole_figure_coordinates=show_inverse_beam_pole_figure_coordinates,
                 show_kernel_average_misorientation=show_kernel_average_misorientation,
                 show_geometrically_necessary_dislocation_density=show_geometrically_necessary_dislocation_density,
                 show_channelling_fraction=show_channelling_fraction,
@@ -351,9 +347,8 @@ class Scan:
             show_euler_angles=show_euler_angles,
             show_index_quality=show_index_quality,
             show_pattern_quality=show_pattern_quality,
-            show_inverse_x_pole_figure_coordinates=show_inverse_x_pole_figure_coordinates,
-            show_inverse_y_pole_figure_coordinates=show_inverse_y_pole_figure_coordinates,
-            show_inverse_z_pole_figure_coordinates=show_inverse_z_pole_figure_coordinates,
+            show_inverse_principal_pole_figure_coordinates=show_inverse_principal_pole_figure_coordinates,
+            show_inverse_beam_pole_figure_coordinates=show_inverse_beam_pole_figure_coordinates,
             show_kernel_average_misorientation=show_kernel_average_misorientation,
             show_geometrically_necessary_dislocation_density=show_geometrically_necessary_dislocation_density,
             show_channelling_fraction=show_channelling_fraction,
@@ -404,9 +399,8 @@ class Scan:
         show_euler_angles: bool = True,
         show_index_quality: bool = True,
         show_pattern_quality: bool = True,
-        show_inverse_x_pole_figure_coordinates: bool = False,
-        show_inverse_y_pole_figure_coordinates: bool = False,
-        show_inverse_z_pole_figure_coordinates: bool = False,
+        show_inverse_principal_pole_figure_coordinates: bool = False,
+        show_inverse_beam_pole_figure_coordinates: bool = False,
         show_kernel_average_misorientation: bool = False,
         show_geometrically_necessary_dislocation_density: bool = False,
         show_channelling_fraction: bool = False,
@@ -432,14 +426,13 @@ class Scan:
         if show_pattern_quality:
             columns += ["Pattern Quality"]
 
-        if show_inverse_x_pole_figure_coordinates:
+        if show_inverse_principal_pole_figure_coordinates:
             columns += ["X-IPF x-coordinate", "X-IPF y-coordinate"]
-
-        if show_inverse_y_pole_figure_coordinates:
             columns += ["Y-IPF x-coordinate", "Y-IPF y-coordinate"]
-
-        if show_inverse_z_pole_figure_coordinates:
             columns += ["Z-IPF x-coordinate", "Z-IPF y-coordinate"]
+
+        if show_inverse_beam_pole_figure_coordinates:
+            columns += ["Beam-IPF x-coordinate", "Beam-IPF y-coordinate"]
 
         if show_kernel_average_misorientation:
             columns += ["Kernel Average Misorientation"]
@@ -473,14 +466,14 @@ class Scan:
             if show_pattern_quality:
                 columns += self.cluster_aggregate.pattern_quality.serialize_value_for(id)
 
-            if show_inverse_x_pole_figure_coordinates:
+            if show_inverse_principal_pole_figure_coordinates:
                 columns += self.cluster_aggregate.inverse_pole_figure_coordinates(Axis.X).serialize_value_for(id)
-
-            if show_inverse_y_pole_figure_coordinates:
                 columns += self.cluster_aggregate.inverse_pole_figure_coordinates(Axis.Y).serialize_value_for(id)
-
-            if show_inverse_z_pole_figure_coordinates:
                 columns += self.cluster_aggregate.inverse_pole_figure_coordinates(Axis.Z).serialize_value_for(id)
+
+            if show_inverse_beam_pole_figure_coordinates:
+                beam_axis = self.channelling_parameters.beam_axis
+                columns += self.cluster_aggregate.inverse_pole_figure_coordinates(beam_axis).serialize_value_for(id)
 
             if show_kernel_average_misorientation:
                 columns += self.cluster_aggregate.kernel_average_misorientation_degrees.serialize_value_for(id)
@@ -500,9 +493,8 @@ class Scan:
         show_euler_angles: bool = True,
         show_index_quality: bool = True,
         show_pattern_quality: bool = True,
-        show_inverse_x_pole_figure_coordinates: bool = False,
-        show_inverse_y_pole_figure_coordinates: bool = False,
-        show_inverse_z_pole_figure_coordinates: bool = False,
+        show_inverse_principal_pole_figure_coordinates: bool = False,
+        show_inverse_beam_pole_figure_coordinates: bool = False,
         show_kernel_average_misorientation: bool = False,
         show_geometrically_necessary_dislocation_density: bool = False,
         show_channelling_fraction: bool = False,
@@ -526,14 +518,13 @@ class Scan:
         if show_pattern_quality:
             columns += ["Pattern Quality"]
 
-        if show_inverse_x_pole_figure_coordinates:
+        if show_inverse_principal_pole_figure_coordinates:
             columns += ["X-IPF x-coordinate", "X-IPF y-coordinate"]
-
-        if show_inverse_y_pole_figure_coordinates:
             columns += ["Y-IPF x-coordinate", "Y-IPF y-coordinate"]
-
-        if show_inverse_z_pole_figure_coordinates:
             columns += ["Z-IPF x-coordinate", "Z-IPF y-coordinate"]
+
+        if show_inverse_beam_pole_figure_coordinates:
+            columns += ["Beam-IPF x-coordinate", "Beam-IPF y-coordinate"]
 
         if show_kernel_average_misorientation:
             columns += ["Kernel Average Misorientation"]
@@ -568,14 +559,14 @@ class Scan:
                 if show_pattern_quality:
                     columns += self.field.pattern_quality.serialize_value_at(x, y)
 
-                if show_inverse_x_pole_figure_coordinates:
+                if show_inverse_principal_pole_figure_coordinates:
                     columns += self.field.inverse_pole_figure_coordinates(Axis.X).serialize_value_at(x, y)
-
-                if show_inverse_y_pole_figure_coordinates:
                     columns += self.field.inverse_pole_figure_coordinates(Axis.Y).serialize_value_at(x, y)
-
-                if show_inverse_z_pole_figure_coordinates:
                     columns += self.field.inverse_pole_figure_coordinates(Axis.Z).serialize_value_at(x, y)
+
+                if show_inverse_beam_pole_figure_coordinates:
+                    beam_axis = self.channelling_parameters.beam_axis
+                    columns += self.field.inverse_pole_figure_coordinates(beam_axis).serialize_value_at(x, y)
 
                 if show_kernel_average_misorientation:
                     columns += self.field.kernel_average_misorientation_degrees.serialize_value_at(x, y)

@@ -46,15 +46,15 @@ def analyse(path: str = "data") -> None:
 
         if show_defect_density:
             scan.scale_parameters.set(pixel_size_micrometres)
-            map_types.append(MapType.GND)
+            map_types += [MapType.GND]
 
         if show_channelling_fraction:
             scan.channelling_parameters.set(beam_atomic_number, beam_energy, beam_tilt_degrees)
-            map_types.append(MapType.CF)
+            map_types += [MapType.OB, MapType.CF]
 
         if show_orientation_cluster:
             scan.clustering_parameters.set(core_point_neighbour_threshold, neighbourhood_radius_degrees)
-            map_types.append(MapType.OC)
+            map_types += [MapType.OC]
 
         if reduce_resolution:
             scan = scan.reduce_resolution(reduction_factor)
@@ -80,9 +80,8 @@ def analyse(path: str = "data") -> None:
             show_euler_angles=True,
             show_index_quality=True,
             show_pattern_quality=True,
-            show_inverse_x_pole_figure_coordinates=False,
-            show_inverse_y_pole_figure_coordinates=False,
-            show_inverse_z_pole_figure_coordinates=True,
+            show_inverse_principal_pole_figure_coordinates=False,
+            show_inverse_beam_pole_figure_coordinates=show_channelling_fraction,
             show_kernel_average_misorientation=True,
             show_geometrically_necessary_dislocation_density=show_defect_density,
             show_channelling_fraction=show_channelling_fraction,
