@@ -200,49 +200,7 @@ def inverse_pole_figure_coordinates(vector: tuple[float, float, float], symmetry
         case _:
             raise NotImplementedError()
 
-def inverse_stereographic(X: float, Y: float) -> tuple[float, float, float]:
-    """
-    Computes the Cartesian projection ``(x, y, z)`` of a point ``(X, Y)`` in stereographic space.
-    Solves Eqn. 3.34.
-    :param X: The stereographic ``X``-coordinate.
-    :param Y: The stereographic ``Y``-coordinate.
-    :return: The Cartesian coordinates ``(x, y, z)``.
-    """
-
-    x = 2 * X / (X ** 2 + Y ** 2 + 1)
-    y = 2 * Y / (X ** 2 + Y ** 2 + 1)
-    z = (X ** 2 + Y ** 2 - 1) / (X ** 2 + Y ** 2 + 1)
-    return x, y, z
-
-
-def forward_gnomonic(x: float, y: float, z: float) -> tuple[float, float]:
-    """
-    Computes the forward gnomonic projection ``(X, Y)`` of a point ``(x, y, z)`` in Cartesian space.
-    Solves Eqn. 3.37.
-    :param x: The Cartesian ``x``-coordinate.
-    :param y: The Cartesian ``y``-coordinate.
-    :param z: The Cartesian ``z``-coordinate.
-    :return: The gnomonic coordinates ``(X, Y)``.
-    """
-
-    X = -x / z
-    Y = -y / z
     return X, Y
-
-
-def inverse_gnomonic(X: float, Y: float) -> tuple[float, float, float]:
-    """
-    Computes the Cartesian projection ``(x, y, z)`` of a point ``(X, Y)`` in gnomonic space.
-    Solves Eqn. 3.37.
-    :param X: The gnomonic ``X``-coordinate.
-    :param Y: The gnomonic ``Y``-coordinate.
-    :return: The Cartesian coordinates ``(x, y, z)``.
-    """
-
-    x = -X / math.sqrt(X ** 2 + Y ** 2 + 1)
-    y = -Y / math.sqrt(X ** 2 + Y ** 2 + 1)
-    z = 1 / math.sqrt(X ** 2 + Y ** 2 + 1)
-    return x, y, z
 
 
 def rotation_angle(R: numpy.ndarray) -> float:
