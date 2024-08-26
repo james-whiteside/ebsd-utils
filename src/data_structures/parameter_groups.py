@@ -116,7 +116,6 @@ class ChannellingParameters:
         self.are_set = False
         self._beam_atomic_number = None
         self._beam_energy = None
-        self._beam_axis = Axis.Y
         self._beam_tilt = None
 
     def set(self, beam_atomic_number: int, beam_energy: float, beam_tilt_degrees: float) -> None:
@@ -155,14 +154,13 @@ class ChannellingParameters:
         return math.degrees(self.beam_tilt)
 
     @property
-    def beam_vector(self) -> ndarray:
-        match self._beam_axis:
-            case Axis.X:
-                raise NotImplementedError()
-            case Axis.Y:
-                return array((0, -math.sin(self.beam_tilt), math.cos(self.beam_tilt)))
-            case Axis.Z:
-                raise NotImplementedError()
+    def beam_axis(self) -> Axis:
+        beam_vector = 0, -math.sin(self.beam_tilt), math.cos(self.beam_tilt)
+        return Axis.beam(beam_vector)
+
+    @property
+    def beam_vector(self) -> tuple[float, float, float]:
+        return self.beam_axis.vector
 
 
 class ClusteringParameters:
