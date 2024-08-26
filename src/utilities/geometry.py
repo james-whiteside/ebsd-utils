@@ -3,18 +3,46 @@
 import copy
 import math
 from enum import Enum
+from typing import Self
 import numpy
 from src.data_structures.phase import CrystalFamily
+from src.utilities.utilities import classproperty
 
 
-class Axis(Enum):
-    """
-    Enumeration of the three Cartesian axes.
-    """
+class Axis:
+    def __init__(self, name: str, vector: tuple[float, float, float]):
+        self.name = name
+        self.vector = vector
 
-    X = (1, 0, 0)
-    Y = (0, 1, 0)
-    Z = (0, 0, 1)
+    def __eq__(self, other):
+        if not isinstance(other, Axis):
+            return False
+
+        return self.name == other.name
+
+    @property
+    def value(self) -> str:
+        return self.name
+
+    @classproperty
+    def X(cls) -> Self:
+        return Axis(name="X", vector=(1.0, 0.0, 0.0))
+
+    @classproperty
+    def Y(cls) -> Self:
+        return Axis(name="Y", vector=(0.0, 1.0, 0.0))
+
+    @classproperty
+    def Z(cls) -> Self:
+        return Axis(name="Z", vector=(0.0, 0.0, 1.0))
+
+    @classproperty
+    def BEAM(cls) -> Self:
+        return Axis(name="BEAM", vector=None)
+
+    @classmethod
+    def beam(cls, vector: tuple[float, float, float]):
+        return Axis(name="BEAM", vector=vector)
 
 
 class AxisSet(Enum):

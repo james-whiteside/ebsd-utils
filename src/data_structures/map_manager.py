@@ -49,7 +49,7 @@ class MapManager:
 
                 match crystal_family:
                     case CrystalFamily.C:
-                        vector = dot(rotation_matrix, array(axis.value)).tolist()
+                        vector = dot(rotation_matrix, array(axis.vector)).tolist()
                         u, v, w = reduce_vector(vector)
                         r, g, b = w - v, (v - u) * math.sqrt(2), u * math.sqrt(3)
                         value = maximise_brightness((r, g, b))

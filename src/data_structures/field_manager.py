@@ -222,7 +222,7 @@ class FieldManager:
 
                 match crystal_family:
                     case CrystalFamily.C:
-                        vector = dot(rotation_matrix, array(axis.value)).tolist()
+                        vector = dot(rotation_matrix, array(axis.vector)).tolist()
                         value = inverse_pole_figure_coordinates(vector, crystal_family)
                     case _:
                         raise NotImplementedError()
