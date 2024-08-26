@@ -86,29 +86,28 @@ def euler_rotation_matrix(axis_set: AxisSet, angles: tuple[float, float, float])
 
 def reduce_matrix(R: numpy.ndarray, symmetry: CrystalFamily) -> numpy.ndarray:
     """
-    Reduces a lattice orientation matrix ``R`` into the fundamental unit triangle of its Bravais lattice by reflection.
+    Reduces a lattice orientation matrix ``R`` into the fundamental region of its Bravais lattice by reflection.
     :param R: The lattice orientation matrix ``R``.
     :param symmetry: The crystal symmetry of the Bravais lattice type.
     :return: The reduced matrix.
     """
     reduced_R = copy.deepcopy(R)
 
-    if symmetry is CrystalFamily.NONE:
-        pass
-    elif symmetry is CrystalFamily.C:
-        if reduced_R[2][2] < 0:
-            reduced_R = numpy.dot(numpy.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, -1.0]]), reduced_R)
+    match symmetry:
+        case CrystalFamily.C:
+            if reduced_R[2][2] < 0:
+                reduced_R = numpy.dot(numpy.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, -1.0]]), reduced_R)
 
-        if reduced_R[1][2] > 0:
-            reduced_R = numpy.dot(numpy.array([[1.0, 0.0, 0.0], [0.0, -1.0, 0.0], [0.0, 0.0, 1.0]]), reduced_R)
+            if reduced_R[1][2] > 0:
+                reduced_R = numpy.dot(numpy.array([[1.0, 0.0, 0.0], [0.0, -1.0, 0.0], [0.0, 0.0, 1.0]]), reduced_R)
 
-        if reduced_R[0][2] < 0:
-            reduced_R = numpy.dot(numpy.array([[-1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]), reduced_R)
+            if reduced_R[0][2] < 0:
+                reduced_R = numpy.dot(numpy.array([[-1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]), reduced_R)
 
-        if reduced_R[1][2] > reduced_R[0][2]:
-            reduced_R = numpy.dot(numpy.array([[0.0, 1.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0, 1.0]]), reduced_R)
-    else:
-        raise NotImplementedError()
+            if reduced_R[1][2] > reduced_R[0][2]:
+                reduced_R = numpy.dot(numpy.array([[0.0, 1.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0, 1.0]]), reduced_R)
+        case _:
+            raise NotImplementedError()
 
     return reduced_R
 
