@@ -113,6 +113,20 @@ def reduce_matrix(R: numpy.ndarray, symmetry: CrystalFamily) -> numpy.ndarray:
     return reduced_R
 
 
+def reduce_vector(vector: tuple[float, float, float]) -> tuple[float, float, float]:
+    """
+    Reflects a lattice vector ``(u, v, w)`` into the positive-axis region.
+    Satisfies the constraint ``0 ≤ u ≤ v ≤ w``.
+    :param vector: The vector ``(u, v, w)``.
+    :param symmetry: The crystal symmetry of the Bravais lattice type.
+    :return: The reflected vector.
+    """
+
+    u, v, w = vector
+    u, v, w = sorted((abs(u), abs(v), abs(w)))
+    return u, v, w
+
+
 def orthogonalise_matrix(R: numpy.ndarray, scaling_tolerance: float = None) -> numpy.ndarray:
     """
     Symmetrically orthogonalises a 3D pseudo-rotation matrix ``R`` by singular value decomposition.
@@ -166,20 +180,25 @@ def euler_angles(rotation_matrix: numpy.ndarray, axis_set: AxisSet) -> tuple[flo
     return angles[0], angles[1], angles[2]
 
 
-def forward_stereographic(x: float, y: float, z: float) -> tuple[float, float]:
+def inverse_pole_figure_coordinates(vector: tuple[float, float, float], symmetry: CrystalFamily) -> tuple[float, float]:
     """
-    Computes the forward stereographic projection ``(X, Y)`` of a point ``(x, y, z)`` in Cartesian space.
-    Solves Eqn. 3.34.
-    :param x: The Cartesian ``x``-coordinate.
-    :param y: The Cartesian ``y``-coordinate.
-    :param z: The Cartesian ``z``-coordinate.
-    :return: The stereographic coordinates ``(X, Y)``.
+    Computes the inverse pole figure coordinates ``(X, Y)`` of a lattice vector ``(u, v, w)`` for the given lattice symmetry.
+    :param vector: The lattice vector ``(u, v, w)``.
+    :param symmetry: The crystal symmetry of the Bravais lattice type.
+    :return: The inverse pole figure coordinates ``(X, Y)``.
     """
 
-    X = -x / (1 - z)
-    Y = -y / (1 - z)
-    return X, Y
-
+    match symmetry:
+        case CrystalFamily.C:
+            u, v, w = reduce_vector(vector)
+            r = math.sqrt(u ** 2 + v ** 2 + w ** 2)
+            theta = math.acos(w / r)
+            phi = math.atan2(v, u)
+            rho = math.tan(theta / 2)
+            X = rho * math.cos(phi)
+            Y = rho * math.sin(phi)
+        case _:
+            raise NotImplementedError()
 
 def inverse_stereographic(X: float, Y: float) -> tuple[float, float, float]:
     """

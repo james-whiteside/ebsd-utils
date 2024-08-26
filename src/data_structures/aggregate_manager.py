@@ -4,16 +4,19 @@ from collections.abc import Iterator
 from functools import partial
 from numpy import ndarray, dot, array
 from src.data_structures.aggregate import (
+    AggregateType,
     CountAggregate,
     CheckAggregate,
     AverageAggregate,
+    CustomAggregate,
     DiscreteAggregateMapper,
     FunctionalAggregateMapper,
+    AggregateNullError,
 )
 from src.data_structures.field import FieldType, FieldLike
 from src.data_structures.field_manager import FieldManager
-from src.utilities.geometry import euler_angles, Axis, forward_stereographic
-from src.data_structures.phase import Phase
+from src.utilities.geometry import euler_angles, Axis, inverse_pole_figure_coordinates
+from src.data_structures.phase import Phase, CrystalFamily
 from src.utilities.utilities import float_degrees, tuple_degrees, log_or_zero
 
 
@@ -60,11 +63,33 @@ class AggregateManager:
     def euler_angles_degrees(self) -> FunctionalAggregateMapper[tuple[float, float, float], tuple[float, float, float]]:
         return FunctionalAggregateMapper(FieldType.VECTOR_3D, self.euler_angles, tuple_degrees)
 
-    def inverse_pole_figure_coordinates(self, axis: Axis):
-        def mapping(rotation_matrix: ndarray) -> tuple[float, float]:
-            return forward_stereographic(*dot(rotation_matrix, array(axis.value)).tolist())
+    def inverse_pole_figure_coordinates(self, axis: Axis) -> CustomAggregate[tuple[float, float]]:
+        values: dict[int, tuple[float, float] | None] = dict()
 
-        return FunctionalAggregateMapper(FieldType.VECTOR_2D, self.reduced_euler_rotation_matrix, mapping)
+        for id in self.group_ids:
+            try:
+                rotation_matrix = self.reduced_euler_rotation_matrix.get_value_for(id)
+                crystal_family = self.phase.get_value_for(id).lattice_type.family
+            except AggregateNullError:
+                values[id] = None
+                continue
+
+            match crystal_family:
+                case CrystalFamily.C:
+                    vector = dot(rotation_matrix, array(axis.value)).tolist()
+                    value = inverse_pole_figure_coordinates(vector, crystal_family)
+                case _:
+                    raise NotImplementedError()
+
+            values[id] = value
+
+        return CustomAggregate(
+            aggregate_type=AggregateType.AVERAGE,
+            values=values,
+            field_type=FieldType.VECTOR_2D,
+            group_id_field=self._group_id_field,
+            nullable=True,
+        )
 
     @property
     def pattern_quality(self) -> AverageAggregate[float]:

@@ -10,9 +10,9 @@ from src.utilities.geometry import (
     rotation_angle,
     misrotation_matrix,
     misrotation_tensor,
-    forward_stereographic,
+    inverse_pole_figure_coordinates,
 )
-from src.data_structures.phase import Phase, UNINDEXED_PHASE_ID
+from src.data_structures.phase import Phase, UNINDEXED_PHASE_ID, CrystalFamily
 from src.algorithms.channelling import load_crit_data, fraction
 from src.algorithms.clustering.dbscan import ClusterCategory, dbscan
 from src.data_structures.parameter_groups import ScaleParameters, ChannellingParameters, ClusteringParameters, ScanParameters
@@ -216,10 +216,17 @@ class FieldManager:
             for x in range(self._scan_parameters.width):
                 try:
                     rotation_matrix = self.reduced_euler_rotation_matrix.get_value_at(x, y)
+                    crystal_family = self.phase.get_value_at(x, y).lattice_type.family
                 except FieldNullError:
                     continue
 
-                value = forward_stereographic(*dot(rotation_matrix, array(axis.value)).tolist())
+                match crystal_family:
+                    case CrystalFamily.C:
+                        vector = dot(rotation_matrix, array(axis.value)).tolist()
+                        value = inverse_pole_figure_coordinates(vector, crystal_family)
+                    case _:
+                        raise NotImplementedError()
+
                 field.set_value_at(x, y, value)
 
         return field
