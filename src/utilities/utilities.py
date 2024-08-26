@@ -10,6 +10,14 @@ from collections.abc import Callable
 from PIL import Image
 
 
+class classproperty(object):
+    def __init__(self, f):
+        self.f = f
+
+    def __get__(self, obj, owner):
+        return self.f(owner)
+
+
 def log_or_zero(value: float) -> float:
     return 0.0 if value == 0.0 else math.log10(value)
 
