@@ -295,6 +295,18 @@ def colour_wheel(i: int, n: int) -> tuple[float, float, float]:
 	return r, g, b
 
 
+def maximise_brightness(rgb: tuple[float, float, float]) -> tuple[float, float, float]:
+	"""
+	Maximises the brightness of a colour with RGB values ``(r, g, b)`` while maintaining hue and saturation.
+	:param rgb: The RGB values of the input colour.
+	:return: The RGB values of the output colour.
+	"""
+
+	r, g, b = rgb
+	brightness = max(r, g, b)
+	r, g, b = r / brightness, g / brightness, b / brightness
+	return r, g, b
+
 def make_image(data: list[list[float | tuple[float, float, float]]], width: int, height: int, limit: float, mode: str) -> Image.Image:
 	"""
 	Creates an Image object based on a 2D data array of pixel values.

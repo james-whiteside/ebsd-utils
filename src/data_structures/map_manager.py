@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 
 import math
+from numpy import array, dot
 from src.data_structures.field import DiscreteFieldMapper, FieldType, Field, FunctionalFieldMapper, FieldNullError
 from src.data_structures.field_manager import FieldManager
-from src.utilities.geometry import Axis, inverse_stereographic
+from src.utilities.geometry import Axis, reduce_vector
 from src.data_structures.map import Map, MapType
 from src.data_structures.phase import UNINDEXED_PHASE_ID, CrystalFamily
+from src.utilities.utilities import maximise_brightness
 
 
 class MapManager:
@@ -40,21 +42,17 @@ class MapManager:
         for y in range(self._field_manager._scan_parameters.height):
             for x in range(self._field_manager._scan_parameters.width):
                 try:
-                    a, b, c = inverse_stereographic(*self._field_manager.inverse_pole_figure_coordinates(axis).get_value_at(x, y))
+                    rotation_matrix = self._field_manager.reduced_euler_rotation_matrix.get_value_at(x, y)
                     crystal_family = self._field_manager.phase.get_value_at(x, y).lattice_type.family
                 except FieldNullError:
                     continue
 
                 match crystal_family:
                     case CrystalFamily.C:
-                        c, b, a = sorted((-abs(a), -abs(b), -abs(c)))
-                        a, b, c = c - b, (b - a) * math.sqrt(2), a * math.sqrt(3)
-
-                        value = (
-                            abs(a) / max(abs(a), abs(b), abs(c)),
-                            abs(b) / max(abs(a), abs(b), abs(c)),
-                            abs(c) / max(abs(a), abs(b), abs(c)),
-                        )
+                        vector = dot(rotation_matrix, array(axis.value)).tolist()
+                        u, v, w = reduce_vector(vector)
+                        r, g, b = w - v, (v - u) * math.sqrt(2), u * math.sqrt(3)
+                        value = maximise_brightness((r, g, b))
                     case _:
                         raise NotImplementedError()
 
