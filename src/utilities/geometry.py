@@ -18,7 +18,10 @@ class Axis:
         if not isinstance(other, Axis):
             return False
 
-        return self.name == other.name
+        return self.vector == other.vector
+
+    def __hash__(self):
+        return hash(self.vector)
 
     @property
     def value(self) -> str:
@@ -35,10 +38,6 @@ class Axis:
     @classproperty
     def Z(cls) -> Self:
         return Axis(name="Z", vector=(0.0, 0.0, 1.0))
-
-    @classproperty
-    def BEAM(cls) -> Self:
-        return Axis(name="BEAM", vector=None)
 
     @classmethod
     def beam(cls, vector: tuple[float, float, float]):
@@ -94,6 +93,8 @@ def single_rotation_matrix(axis: Axis, angle: float) -> numpy.ndarray:
                 (math.sin(angle), math.cos(angle), 0.0),
                 (0.0, 0.0, 1.0)
             ))
+        case _:
+            raise ValueError("Non-Cartesian axes are not valid for rotation matrices.")
 
 
 def euler_rotation_matrix(axis_set: AxisSet, angles: tuple[float, float, float]) -> numpy.ndarray:

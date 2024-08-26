@@ -14,6 +14,7 @@ class MapType(Enum):
     OX = "x-axis orientation"
     OY = "y-axis orientation"
     OZ = "z-axis orientation"
+    OB = "beam-axis orientation"
     KAM = "kernel average misorientation"
     GND = "geometrically necessary dislocation density"
     CF = "channelling fraction"

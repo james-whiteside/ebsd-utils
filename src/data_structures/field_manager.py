@@ -45,12 +45,9 @@ class FieldManager:
         self.index_quality: Field[float] = Field.from_array(self._scan_parameters.width, self._scan_parameters.height, FieldType.SCALAR, index_quality_values)
         self._euler_rotation_matrix: Field[ndarray] = None
         self._reduced_euler_rotation_matrix: Field[ndarray] = None
-        self._inverse_x_pole_figure_coordinates: Field[tuple[float, float]] = None
-        self._inverse_y_pole_figure_coordinates: Field[tuple[float, float]] = None
-        self._inverse_z_pole_figure_coordinates: Field[tuple[float, float]] = None
+        self._inverse_pole_figure_coordinates: dict[Axis, Field[tuple[float, float]]] = dict()
         self._kernel_average_misorientation: Field[float] = None
-        self._misrotation_x_tensor: Field[ndarray] = None
-        self._misrotation_y_tensor: Field[ndarray] = None
+        self._misrotation_tensor: dict[Axis, Field[ndarray]] = dict()
         self._nye_tensor: Field[ndarray] = None
         self._geometrically_necessary_dislocation_density: Field[float] = None
         self._channelling_fraction: Field[float] = None
@@ -92,20 +89,10 @@ class FieldManager:
         return self._reduced_euler_rotation_matrix
 
     def inverse_pole_figure_coordinates(self, axis: Axis) -> Field[tuple[float, float]]:
-        if None in (
-            self._inverse_x_pole_figure_coordinates,
-            self._inverse_y_pole_figure_coordinates,
-            self._inverse_z_pole_figure_coordinates,
-        ):
-            self._init_inverse_pole_figure_coordinates()
+        if axis not in self._inverse_pole_figure_coordinates:
+            self._init_inverse_pole_figure_coordinates(axis)
 
-        match axis:
-            case Axis.X:
-                return self._inverse_x_pole_figure_coordinates
-            case Axis.Y:
-                return self._inverse_y_pole_figure_coordinates
-            case Axis.Z:
-                return self._inverse_z_pole_figure_coordinates
+        return self._inverse_pole_figure_coordinates[axis]
 
     @property
     def kernel_average_misorientation(self) -> Field[float]:
@@ -119,16 +106,10 @@ class FieldManager:
         return FunctionalFieldMapper(FieldType.SCALAR, self.kernel_average_misorientation, float_degrees, float_radians)
 
     def misrotation_tensor(self, axis: Axis) -> Field[ndarray]:
-        if None in (self._misrotation_x_tensor, self._misrotation_y_tensor):
-            self._init_misrotation_tensors()
+        if axis not in self._misrotation_tensor:
+            self._init_misrotation_tensor(axis)
 
-        match axis:
-            case Axis.X:
-                return self._misrotation_x_tensor
-            case Axis.Y:
-                return self._misrotation_y_tensor
-            case Axis.Z:
-                raise ValueError("Misrotation data not available for z-axis intervals.")
+        return self._misrotation_tensor[axis]
 
     @property
     def nye_tensor(self) -> Field[ndarray]:
@@ -209,7 +190,7 @@ class FieldManager:
 
         self._reduced_euler_rotation_matrix = field
 
-    def _gen_inverse_pole_figure_coordinates(self, axis: Axis) -> Field[tuple[float, float]]:
+    def _init_inverse_pole_figure_coordinates(self, axis: Axis) -> None:
         field = Field(self._scan_parameters.width, self._scan_parameters.height, FieldType.VECTOR_2D, default_value=None, nullable=True)
 
         for y in range(self._scan_parameters.height):
@@ -229,12 +210,7 @@ class FieldManager:
 
                 field.set_value_at(x, y, value)
 
-        return field
-
-    def _init_inverse_pole_figure_coordinates(self) -> None:
-        self._inverse_x_pole_figure_coordinates = self._gen_inverse_pole_figure_coordinates(Axis.X)
-        self._inverse_y_pole_figure_coordinates = self._gen_inverse_pole_figure_coordinates(Axis.Y)
-        self._inverse_z_pole_figure_coordinates = self._gen_inverse_pole_figure_coordinates(Axis.Z)
+        self._inverse_pole_figure_coordinates[axis] = field
 
     def _init_kernel_average_misorientation(self) -> None:
         field = Field(self._scan_parameters.width, self._scan_parameters.height, FieldType.SCALAR, default_value=None, nullable=True)
@@ -267,7 +243,7 @@ class FieldManager:
 
         self._kernel_average_misorientation = field
 
-    def _gen_misrotation_tensor(self, axis: Axis) -> Field[ndarray]:
+    def _init_misrotation_tensor(self, axis: Axis) -> None:
         field = Field(self._scan_parameters.width, self._scan_parameters.height, FieldType.MATRIX, default_value=None, nullable=True)
 
         for y in range(self._scan_parameters.height):
@@ -279,6 +255,8 @@ class FieldManager:
                         kernel = [(0, -1), (0, +1)]
                     case Axis.Z:
                         raise ValueError("Misrotation data not available for z-axis intervals.")
+                    case _:
+                        raise ValueError("Non-Cartesian axes are not valid for misrotation data.")
 
                 total = zeros((3, 3))
                 count = 0
@@ -303,11 +281,7 @@ class FieldManager:
                     value = total / count
                     field.set_value_at(x, y, value)
 
-        return field
-
-    def _init_misrotation_tensors(self) -> None:
-        self._misrotation_x_tensor = self._gen_misrotation_tensor(Axis.X)
-        self._misrotation_y_tensor = self._gen_misrotation_tensor(Axis.Y)
+        self._misrotation_tensor[axis] = field
 
     def _init_nye_tensor(self) -> None:
         field = Field(self._scan_parameters.width, self._scan_parameters.height, FieldType.MATRIX, default_value=None, nullable=True)
