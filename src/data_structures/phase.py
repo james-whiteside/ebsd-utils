@@ -84,10 +84,7 @@ class Phase:
         if not isinstance(other, Phase):
             return False
 
-        if self.global_id == other.global_id:
-            return True
-        else:
-            return False
+        return self.global_id == other.global_id
 
     @property
     def close_pack_distance(self) -> float:
