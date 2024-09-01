@@ -113,34 +113,6 @@ def euler_rotation_matrix(axis_set: AxisSet, angles: tuple[float, float, float])
     return R
 
 
-def reduce_matrix(R: numpy.ndarray, symmetry: CrystalFamily) -> numpy.ndarray:
-    """
-    Reduces a lattice orientation matrix ``R`` into the fundamental region of its Bravais lattice by reflection.
-    :param R: The lattice orientation matrix ``R``.
-    :param symmetry: The crystal symmetry of the Bravais lattice type.
-    :return: The reduced matrix.
-    """
-    reduced_R = copy.deepcopy(R)
-
-    match symmetry:
-        case CrystalFamily.C:
-            if reduced_R[2][2] < 0:
-                reduced_R = numpy.dot(numpy.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, -1.0]]), reduced_R)
-
-            if reduced_R[1][2] > 0:
-                reduced_R = numpy.dot(numpy.array([[1.0, 0.0, 0.0], [0.0, -1.0, 0.0], [0.0, 0.0, 1.0]]), reduced_R)
-
-            if reduced_R[0][2] < 0:
-                reduced_R = numpy.dot(numpy.array([[-1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]), reduced_R)
-
-            if reduced_R[1][2] > reduced_R[0][2]:
-                reduced_R = numpy.dot(numpy.array([[0.0, 1.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0, 1.0]]), reduced_R)
-        case _:
-            raise NotImplementedError()
-
-    return reduced_R
-
-
 def reduce_vector(vector: tuple[float, float, float]) -> tuple[float, float, float]:
     """
     Reflects a lattice vector ``(u, v, w)`` into the positive-axis region.
@@ -206,29 +178,6 @@ def euler_angles(rotation_matrix: numpy.ndarray, axis_set: AxisSet) -> tuple[flo
             angles[i] += 2 * math.pi
 
     return angles[0], angles[1], angles[2]
-
-
-def inverse_pole_figure_coordinates(vector: tuple[float, float, float], symmetry: CrystalFamily) -> tuple[float, float]:
-    """
-    Computes the inverse pole figure coordinates ``(X, Y)`` of a lattice vector ``(u, v, w)`` for the given lattice symmetry.
-    :param vector: The lattice vector ``(u, v, w)``.
-    :param symmetry: The crystal symmetry of the Bravais lattice type.
-    :return: The inverse pole figure coordinates ``(X, Y)``.
-    """
-
-    match symmetry:
-        case CrystalFamily.C:
-            u, v, w = reduce_vector(vector)
-            r = math.sqrt(u ** 2 + v ** 2 + w ** 2)
-            theta = math.acos(w / r)
-            phi = math.atan2(v, u)
-            rho = math.tan(theta / 2)
-            X = rho * math.cos(phi)
-            Y = rho * math.sin(phi)
-        case _:
-            raise NotImplementedError()
-
-    return X, Y
 
 
 def rotation_angle(R: numpy.ndarray) -> float:

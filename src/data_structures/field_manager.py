@@ -3,16 +3,8 @@
 from numpy import ndarray, array, zeros, dot
 from src.utilities.config import Config
 from src.data_structures.field import FieldType, Field, DiscreteFieldMapper, FunctionalFieldMapper, FieldNullError
-from src.utilities.geometry import (
-    Axis,
-    euler_rotation_matrix,
-    reduce_matrix,
-    rotation_angle,
-    misrotation_matrix,
-    misrotation_tensor,
-    inverse_pole_figure_coordinates,
-)
-from src.data_structures.phase import Phase, CrystalFamily
+from src.utilities.geometry import Axis, euler_rotation_matrix, rotation_angle, misrotation_matrix, misrotation_tensor
+from src.data_structures.phase import Phase
 from src.algorithms.channelling import load_crit_data, fraction
 from src.algorithms.clustering.dbscan import ClusterCategory, dbscan
 from src.data_structures.parameter_groups import ScaleParams, ChannellingParams, ClusteringParams, ScanParams
@@ -180,12 +172,12 @@ class FieldManager:
         for y in range(self._scan_params.height):
             for x in range(self._scan_params.width):
                 try:
-                    euler_rotation_matrix = self.orientation_matrix.get_value_at(x, y)
+                    orientation_matrix = self.orientation_matrix.get_value_at(x, y)
                     crystal_family = self.phase.get_value_at(x, y).lattice_type.family
                 except FieldNullError:
                     continue
 
-                value = reduce_matrix(euler_rotation_matrix, crystal_family)
+                value = crystal_family.reduce_matrix(orientation_matrix)
                 field.set_value_at(x, y, value)
 
         self._reduced_matrix = field
@@ -196,18 +188,13 @@ class FieldManager:
         for y in range(self._scan_params.height):
             for x in range(self._scan_params.width):
                 try:
-                    rotation_matrix = self.reduced_matrix.get_value_at(x, y)
+                    reduced_matrix = self.reduced_matrix.get_value_at(x, y)
                     crystal_family = self.phase.get_value_at(x, y).lattice_type.family
                 except FieldNullError:
                     continue
 
-                match crystal_family:
-                    case CrystalFamily.C:
-                        vector = dot(rotation_matrix, array(axis.vector)).tolist()
-                        value = inverse_pole_figure_coordinates(vector, crystal_family)
-                    case _:
-                        raise NotImplementedError()
-
+                vector = dot(reduced_matrix, array(axis.vector)).tolist()
+                value = crystal_family.ipf_coordinates(vector)
                 field.set_value_at(x, y, value)
 
         self._ipf_coordinates[axis] = field

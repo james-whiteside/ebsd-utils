@@ -22,7 +22,7 @@ class MapManager:
             for x in range(self._field_manager._scan_params.width):
                 try:
                     euler_angles = self._field_manager.euler_angles_rad.get_value_at(x, y)
-                    max_euler_angles = self._field_manager.phase.get_value_at(x, y).max_euler_angles
+                    max_euler_angles = self._field_manager.phase.get_value_at(x, y).lattice_type.family.max_euler_angles
                 except FieldNullError:
                     continue
 

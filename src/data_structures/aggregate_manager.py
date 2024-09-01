@@ -15,8 +15,8 @@ from src.data_structures.aggregate import (
 )
 from src.data_structures.field import FieldType, FieldLike
 from src.data_structures.field_manager import FieldManager
-from src.utilities.geometry import euler_angles, Axis, inverse_pole_figure_coordinates
-from src.data_structures.phase import Phase, CrystalFamily
+from src.utilities.geometry import euler_angles, Axis
+from src.data_structures.phase import Phase
 from src.utilities.utilities import float_degrees, tuple_degrees, log_or_zero
 
 
@@ -74,13 +74,8 @@ class AggregateManager:
                 values[id] = None
                 continue
 
-            match crystal_family:
-                case CrystalFamily.C:
-                    vector = dot(rotation_matrix, array(axis.vector)).tolist()
-                    value = inverse_pole_figure_coordinates(vector, crystal_family)
-                case _:
-                    raise NotImplementedError()
-
+            vector = dot(rotation_matrix, array(axis.vector)).tolist()
+            value = crystal_family.ipf_coordinates(vector)
             values[id] = value
 
         return CustomAggregate(

@@ -1,16 +1,18 @@
 # -*- coding: utf-8 -*-
 
 import math
+from copy import deepcopy
 from enum import Enum
 from typing import Self
+from numpy import ndarray, dot, array
 from src.utilities.config import Config
+from src.utilities.geometry import reduce_vector
 
 
 class CrystalFamily(Enum):
     """
     Enumeration of the crystal lattice types, as listed in Tab. A2.1.
     """
-
     C = "c"
     T = "t"
     O = "o"
@@ -18,6 +20,60 @@ class CrystalFamily(Enum):
     M = "m"
     A = "a"
     NONE = "None"
+
+    @property
+    def max_euler_angles(self) -> tuple[float, float, float]:
+        match self:
+            case CrystalFamily.C:
+                return 2 * math.pi, math.acos(math.sqrt(3) / 3), 0.5 * math.pi
+            case _:
+                raise NotImplementedError()
+
+    def reduce_matrix(self, R: ndarray) -> ndarray:
+        """
+        Reduces a lattice orientation matrix ``R`` into the fundamental region of its Bravais lattice by reflection.
+        :param R: The lattice orientation matrix ``R``.
+        :return: The reduced matrix.
+        """
+        reduced_R = deepcopy(R)
+
+        match self:
+            case CrystalFamily.C:
+                if reduced_R[2][2] < 0:
+                    reduced_R = dot(array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, -1.0]]), reduced_R)
+
+                if reduced_R[1][2] > 0:
+                    reduced_R = dot(array([[1.0, 0.0, 0.0], [0.0, -1.0, 0.0], [0.0, 0.0, 1.0]]), reduced_R)
+
+                if reduced_R[0][2] < 0:
+                    reduced_R = dot(array([[-1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]), reduced_R)
+
+                if reduced_R[1][2] > reduced_R[0][2]:
+                    reduced_R = dot(array([[0.0, 1.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0, 1.0]]), reduced_R)
+            case _:
+                raise NotImplementedError()
+
+        return reduced_R
+
+    def ipf_coordinates(self, vector: tuple[float, float, float]) -> tuple[float, float]:
+        """
+        Computes the inverse pole figure coordinates ``(X, Y)`` of a lattice vector ``(u, v, w)`` for the given lattice symmetry.
+        :param vector: The lattice vector ``(u, v, w)``.
+        :return: The inverse pole figure coordinates ``(X, Y)``.
+        """
+        match self:
+            case CrystalFamily.C:
+                u, v, w = reduce_vector(vector)
+                r = math.sqrt(u ** 2 + v ** 2 + w ** 2)
+                theta = math.acos(w / r)
+                phi = math.atan2(v, u)
+                rho = math.tan(theta / 2)
+                X = rho * math.cos(phi)
+                Y = rho * math.sin(phi)
+            case _:
+                raise NotImplementedError()
+
+        return X, Y
 
 
 class BravaisLattice(Enum):
@@ -95,14 +151,6 @@ class Phase:
                 return math.sqrt(3) * self.lattice_constants[0] / 2
             case BravaisLattice.CF:
                 return math.sqrt(2) * self.lattice_constants[0] / 2
-            case _:
-                raise NotImplementedError()
-
-    @property
-    def max_euler_angles(self) -> tuple[float, float, float]:
-        match self.lattice_type.family:
-            case CrystalFamily.C:
-                return 2 * math.pi, math.acos(math.sqrt(3) / 3), 0.5 * math.pi
             case _:
                 raise NotImplementedError()
 
