@@ -19,7 +19,6 @@ class CrystalFamily(Enum):
     H = "h"
     M = "m"
     A = "a"
-    NONE = "None"
 
     @property
     def max_euler_angles(self) -> tuple[float, float, float]:
@@ -95,14 +94,10 @@ class BravaisLattice(Enum):
     MP = "mP"
     MS = "mS"
     AP = "aP"
-    NONE = "None"
 
     @property
     def family(self) -> CrystalFamily:
-        if self is BravaisLattice.NONE:
-            return CrystalFamily.NONE
-        else:
-            return CrystalFamily(self.value[0])
+        return CrystalFamily(self.value[0])
 
 
 class Phase:
