@@ -19,27 +19,27 @@ def analyse() -> None:
     for filepath in filepaths:
         scan = Scan.from_pathfinder_file(filepath)
 
-        print(f"Making analysis for p{scan.parameters.data_reference}.")
+        print(f"Making analysis for p{scan.params.data_ref}.")
         start_time = datetime.now()
         map_types = [MapType.P, MapType.EA, MapType.PQ, MapType.IQ, MapType.OX, MapType.OY, MapType.OZ, MapType.KAM]
 
         if show_defect_density:
-            scan.scale_parameters.set(config.pixel_size)
+            scan.scale_params.set(config.pixel_size)
             map_types += [MapType.GND]
 
         if show_channelling_fraction:
-            scan.channelling_parameters.set(config.beam_atomic_number, config.beam_energy, config.beam_tilt)
+            scan.channelling_params.set(config.beam_atomic_number, config.beam_energy, config.beam_tilt)
             map_types += [MapType.OB, MapType.CF]
 
         if show_orientation_cluster:
-            scan.clustering_parameters.set(config.neighbour_threshold, config.neighbourhood_radius)
+            scan.clustering_params.set(config.neighbour_threshold, config.neighbourhood_radius)
             map_types += [MapType.OC]
 
         if reduce_resolution:
             scan = scan.reduce_resolution(config.reduction_factor)
 
-        output_path = f"{get_directory_path(config.analysis_dir)}/q{scan.parameters.analysis_reference}.csv"
-        os.makedirs(f"{get_directory_path(config.map_dir)}/{scan.parameters.analysis_reference}", exist_ok=True)
+        output_path = f"{get_directory_path(config.analysis_dir)}/q{scan.params.analysis_ref}.csv"
+        os.makedirs(f"{get_directory_path(config.map_dir)}/{scan.params.analysis_ref}", exist_ok=True)
 
         scan.to_pathfinder_file(
             path=output_path,
@@ -54,16 +54,16 @@ def analyse() -> None:
             show_euler_angles=True,
             show_index_quality=True,
             show_pattern_quality=True,
-            show_inverse_principal_pole_figure_coordinates=False,
-            show_inverse_beam_pole_figure_coordinates=show_channelling_fraction,
-            show_kernel_average_misorientation=True,
-            show_geometrically_necessary_dislocation_density=show_defect_density,
+            show_principal_ipf_coordinates=False,
+            show_beam_ipf_coordinates=show_channelling_fraction,
+            show_average_misorientation=True,
+            show_gnd_density=show_defect_density,
             show_channelling_fraction=show_channelling_fraction,
             show_orientation_cluster=show_orientation_cluster,
         )
 
         for map_type in map_types:
-            map_path = f"{get_directory_path(config.map_dir)}/{scan.parameters.analysis_reference}/{map_type.name}.png"
+            map_path = f"{get_directory_path(config.map_dir)}/{scan.params.analysis_ref}/{map_type.name}.png"
             # print(map_type.name)
             scan.map.get(map_type).image.save(map_path)
 

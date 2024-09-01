@@ -9,7 +9,7 @@ from src.data_structures.field_manager import FieldManager
 from src.utilities.config import Config
 from src.utilities.geometry import Axis, AxisSet, orthogonalise_matrix, euler_angles
 from src.data_structures.map_manager import MapManager
-from src.data_structures.parameter_groups import ScanParameters, ScaleParameters, ChannellingParameters, ClusteringParameters
+from src.data_structures.parameter_groups import ScanParams, ScaleParams, ChannellingParams, ClusteringParams
 from src.data_structures.phase import Phase
 from src.utilities.utilities import tuple_degrees
 
@@ -25,25 +25,25 @@ class Scan:
         height: int,
         phases: dict[int, Phase],
         phase_id_values: list[list[int]],
-        euler_angle_degrees_values: list[list[tuple[float, float, float] | None]],
+        euler_angle_values: list[list[tuple[float, float, float] | None]],
         pattern_quality_values: list[list[float]],
         index_quality_values: list[list[float]],
         axis_set: AxisSet = AxisSet.ZXZ,
-        resolution_reduction_factor: int = 0,
+        reduction_factor: int = 0,
     ):
-        self.parameters = ScanParameters()
-        self.scale_parameters = ScaleParameters()
-        self.channelling_parameters = ChannellingParameters()
-        self.clustering_parameters = ClusteringParameters()
-        self.parameters.set(data_reference, width, height, phases, axis_set, resolution_reduction_factor)
+        self.params = ScanParams()
+        self.scale_params = ScaleParams()
+        self.channelling_params = ChannellingParams()
+        self.clustering_params = ClusteringParams()
+        self.params.set(data_reference, width, height, phases, axis_set, reduction_factor)
 
         self.field = FieldManager(
-            self.parameters,
-            self.scale_parameters,
-            self.channelling_parameters,
-            self.clustering_parameters,
+            self.params,
+            self.scale_params,
+            self.channelling_params,
+            self.clustering_params,
             phase_id_values,
-            euler_angle_degrees_values,
+            euler_angle_values,
             pattern_quality_values,
             index_quality_values,
         )
@@ -70,24 +70,24 @@ class Scan:
         return self.field._cluster_count
 
     def _reduce_resolution(self) -> Self:
-        if self.parameters.width % 2 != 0 or self.parameters.height % 2 != 0:
+        if self.params.width % 2 != 0 or self.params.height % 2 != 0:
             raise ArithmeticError("Can only reduce resolution of scan with even width and height.")
 
-        data_reference = self.parameters.data_reference
-        width = self.parameters.width // 2
-        height = self.parameters.height // 2
-        phases = self.parameters.phases
-        axis_set = self.parameters.axis_set
-        resolution_reduction_factor = self.parameters.resolution_reduction_factor + 1
+        data_ref = self.params.data_ref
+        width = self.params.width // 2
+        height = self.params.height // 2
+        phases = self.params.phases
+        axis_set = self.params.axis_set
+        reduction_factor = self.params.reduction_factor + 1
 
         phase_id_values: list[list[int | None]] = list()
-        euler_angle_degrees_values: list[list[tuple[float, float, float] | None]] = list()
+        euler_angle_values: list[list[tuple[float, float, float] | None]] = list()
         index_quality_values: list[list[float]] = list()
         pattern_quality_values: list[list[float]] = list()
 
         for y in range(height):
             phase_id_values.append(list())
-            euler_angle_degrees_values.append(list())
+            euler_angle_values.append(list())
             index_quality_values.append(list())
             pattern_quality_values.append(list())
 
@@ -106,75 +106,75 @@ class Scan:
 
                 if len(kernel_phases) != 1:
                     phase_id = None
-                    euler_angle_degrees_aggregate = None
+                    euler_angle_aggregate = None
                     index_quality_aggregate = 0.0
                     pattern_quality_aggregate = 0.0
                 else:
                     phase_id = kernel_phases.pop()
                     count = 0
-                    euler_rotation_matrix_total = zeros((3, 3))
+                    orientation_matrix_total = zeros((3, 3))
                     index_quality_total = 0.0
                     pattern_quality_total = 0.0
 
                     for dx, dy in kernel:
                         try:
                             self.field._phase_id.get_value_at(2 * x + dx, 2 * y + dy)
-                            euler_rotation_matrix = self.field.euler_rotation_matrix.get_value_at(2 * x + dx, 2 * y + dy)
+                            orientation_matrix = self.field.orientation_matrix.get_value_at(2 * x + dx, 2 * y + dy)
                             index_quality = self.field.index_quality.get_value_at(2 * x + dx, 2 * y + dy)
                             pattern_quality = self.field.pattern_quality.get_value_at(2 * x + dx, 2 * y + dy)
                         except FieldNullError:
                             continue
 
-                        euler_rotation_matrix_total += euler_rotation_matrix
+                        orientation_matrix_total += orientation_matrix
                         index_quality_total += index_quality
                         pattern_quality_total += pattern_quality
                         count += 1
 
                     try:
-                        euler_rotation_matrix_aggregate = orthogonalise_matrix(euler_rotation_matrix_total / count, SCALING_TOLERANCE)
-                        euler_angle_degrees_aggregate = tuple_degrees(euler_angles(euler_rotation_matrix_aggregate, axis_set))
+                        orientation_matrix_aggregate = orthogonalise_matrix(orientation_matrix_total / count, SCALING_TOLERANCE)
+                        euler_angle_aggregate = tuple_degrees(euler_angles(orientation_matrix_aggregate, axis_set))
                         index_quality_aggregate = index_quality_total / count
                         pattern_quality_aggregate = pattern_quality_total / len(kernel)
                     except ArithmeticError:
                         phase_id = None
-                        euler_angle_degrees_aggregate = None
+                        euler_angle_aggregate = None
                         index_quality_aggregate = 0.0
                         pattern_quality_aggregate = 0.0
 
                 phase_id_values[y].append(phase_id)
-                euler_angle_degrees_values[y].append(euler_angle_degrees_aggregate)
+                euler_angle_values[y].append(euler_angle_aggregate)
                 index_quality_values[y].append(index_quality_aggregate)
                 pattern_quality_values[y].append(pattern_quality_aggregate)
 
         scan = Scan(
-            data_reference,
+            data_ref,
             width,
             height,
             phases,
             phase_id_values,
-            euler_angle_degrees_values,
+            euler_angle_values,
             pattern_quality_values,
             index_quality_values,
             axis_set,
-            resolution_reduction_factor,
+            reduction_factor,
         )
 
-        if self.scale_parameters.are_set:
-            scan.scale_parameters.set(
-                self.scale_parameters.pixel_size_micrometres * 2,
+        if self.scale_params.are_set:
+            scan.scale_params.set(
+                self.scale_params.pixel_size_microns * 2,
             )
 
-        if self.channelling_parameters.are_set:
-            scan.channelling_parameters.set(
-                self.channelling_parameters.beam_atomic_number,
-                self.channelling_parameters.beam_energy,
-                self.channelling_parameters.beam_tilt_degrees,
+        if self.channelling_params.are_set:
+            scan.channelling_params.set(
+                self.channelling_params.beam_atomic_number,
+                self.channelling_params.beam_energy,
+                self.channelling_params.beam_tilt_deg,
             )
 
-        if self.clustering_parameters.are_set:
-            scan.clustering_parameters.set(
-                self.clustering_parameters.core_point_neighbour_threshold,
-                self.clustering_parameters.neighbourhood_radius_degrees,
+        if self.clustering_params.are_set:
+            scan.clustering_params.set(
+                self.clustering_params.core_point_threshold,
+                self.clustering_params.neighbourhood_radius_deg,
             )
 
         return scan
@@ -192,7 +192,7 @@ class Scan:
 
         with open(data_path, "r", encoding="utf-8") as file:
             materials = dict()
-            file_materials = Phase.load_from_materials_file()
+            file_materials = Phase.from_materials_file()
             file.readline()
 
             while True:
@@ -214,7 +214,7 @@ class Scan:
             width = int(file.readline().rstrip("\n").split(",")[1])
             height = int(file.readline().rstrip("\n").split(",")[1])
             phase_id_values: list[list[int | None]] = list()
-            euler_angle_degrees_values: list[list[tuple[float, float, float] | None]] = list()
+            euler_angle_values: list[list[tuple[float, float, float] | None]] = list()
             index_quality_values: list[list[float]] = list()
             pattern_quality_values: list[list[float]] = list()
             file.readline()
@@ -222,7 +222,7 @@ class Scan:
 
             for y in range(height):
                 phase_id_values.append(list())
-                euler_angle_degrees_values.append(list())
+                euler_angle_values.append(list())
                 index_quality_values.append(list())
                 pattern_quality_values.append(list())
 
@@ -232,10 +232,10 @@ class Scan:
 
                     if materials[local_phase_id].global_id == Phase.UNINDEXED_ID:
                         phase_id_values[y].append(None)
-                        euler_angle_degrees_values[y].append(None)
+                        euler_angle_values[y].append(None)
                     else:
                         phase_id_values[y].append(local_phase_id)
-                        euler_angle_degrees_values[y].append((float(line[3]), float(line[4]), float(line[5])))
+                        euler_angle_values[y].append((float(line[3]), float(line[4]), float(line[5])))
 
                     index_quality_values[y].append(float(line[6]))
                     pattern_quality_values[y].append(float(line[7]))
@@ -246,7 +246,7 @@ class Scan:
             height=height,
             phases=materials,
             phase_id_values=phase_id_values,
-            euler_angle_degrees_values=euler_angle_degrees_values,
+            euler_angle_values=euler_angle_values,
             pattern_quality_values=pattern_quality_values,
             index_quality_values=index_quality_values,
         )
@@ -265,10 +265,10 @@ class Scan:
         show_euler_angles: bool = True,
         show_index_quality: bool = True,
         show_pattern_quality: bool = True,
-        show_inverse_principal_pole_figure_coordinates: bool = False,
-        show_inverse_beam_pole_figure_coordinates: bool = False,
-        show_kernel_average_misorientation: bool = False,
-        show_geometrically_necessary_dislocation_density: bool = False,
+        show_principal_ipf_coordinates: bool = False,
+        show_beam_ipf_coordinates: bool = False,
+        show_average_misorientation: bool = False,
+        show_gnd_density: bool = False,
         show_channelling_fraction: bool = False,
         show_orientation_cluster: bool = False,
     ):
@@ -284,10 +284,10 @@ class Scan:
             show_euler_angles=show_euler_angles,
             show_index_quality=show_index_quality,
             show_pattern_quality=show_pattern_quality,
-            show_inverse_principal_pole_figure_coordinates=show_inverse_principal_pole_figure_coordinates,
-            show_inverse_beam_pole_figure_coordinates=show_inverse_beam_pole_figure_coordinates,
-            show_kernel_average_misorientation=show_kernel_average_misorientation,
-            show_geometrically_necessary_dislocation_density=show_geometrically_necessary_dislocation_density,
+            show_principal_ipf_coordinates=show_principal_ipf_coordinates,
+            show_beam_ipf_coordinates=show_beam_ipf_coordinates,
+            show_average_misorientation=show_average_misorientation,
+            show_gnd_density=show_gnd_density,
             show_channelling_fraction=show_channelling_fraction,
             show_orientation_cluster=show_orientation_cluster,
         )
@@ -309,10 +309,10 @@ class Scan:
         show_euler_angles: bool = True,
         show_index_quality: bool = True,
         show_pattern_quality: bool = True,
-        show_inverse_principal_pole_figure_coordinates: bool = False,
-        show_inverse_beam_pole_figure_coordinates: bool = False,
-        show_kernel_average_misorientation: bool = False,
-        show_geometrically_necessary_dislocation_density: bool = False,
+        show_principal_ipf_coordinates: bool = False,
+        show_beam_ipf_coordinates: bool = False,
+        show_average_misorientation: bool = False,
+        show_gnd_density: bool = False,
         show_channelling_fraction: bool = False,
         show_orientation_cluster: bool = False,
     ) -> Iterator[str]:
@@ -333,10 +333,10 @@ class Scan:
                 show_euler_angles=show_euler_angles,
                 show_index_quality=show_index_quality,
                 show_pattern_quality=show_pattern_quality,
-                show_inverse_principal_pole_figure_coordinates=show_inverse_principal_pole_figure_coordinates,
-                show_inverse_beam_pole_figure_coordinates=show_inverse_beam_pole_figure_coordinates,
-                show_kernel_average_misorientation=show_kernel_average_misorientation,
-                show_geometrically_necessary_dislocation_density=show_geometrically_necessary_dislocation_density,
+                show_principal_ipf_coordinates=show_principal_ipf_coordinates,
+                show_beam_ipf_coordinates=show_beam_ipf_coordinates,
+                show_average_misorientation=show_average_misorientation,
+                show_gnd_density=show_gnd_density,
                 show_channelling_fraction=show_channelling_fraction,
             ):
                 yield row
@@ -347,10 +347,10 @@ class Scan:
             show_euler_angles=show_euler_angles,
             show_index_quality=show_index_quality,
             show_pattern_quality=show_pattern_quality,
-            show_inverse_principal_pole_figure_coordinates=show_inverse_principal_pole_figure_coordinates,
-            show_inverse_beam_pole_figure_coordinates=show_inverse_beam_pole_figure_coordinates,
-            show_kernel_average_misorientation=show_kernel_average_misorientation,
-            show_geometrically_necessary_dislocation_density=show_geometrically_necessary_dislocation_density,
+            show_principal_ipf_coordinates=show_principal_ipf_coordinates,
+            show_beam_ipf_coordinates=show_beam_ipf_coordinates,
+            show_average_misorientation=show_average_misorientation,
+            show_gnd_density=show_gnd_density,
             show_channelling_fraction=show_channelling_fraction,
             show_orientation_cluster=show_orientation_cluster,
         ):
@@ -367,28 +367,28 @@ class Scan:
         if show_phases:
             yield "Phases:"
 
-            for local_id, phase in self.parameters.phases.items():
+            for local_id, phase in self.params.phases.items():
                 yield f"{local_id},{phase.name},{phase.global_id}"
 
         if show_map_size:
             yield f"Map size:"
-            yield f"X,{self.parameters.width}"
-            yield f"Y,{self.parameters.height}"
+            yield f"X,{self.params.width}"
+            yield f"Y,{self.params.height}"
 
         if show_map_scale:
             yield f"Map scale:"
-            yield f"Pixel size (μm),{self.scale_parameters.pixel_size_micrometres}"
+            yield f"Pixel size (μm),{self.scale_params.pixel_size_microns}"
 
         if show_channelling_params:
             yield f"Channelling:"
-            yield f"Atomic number,{self.channelling_parameters.beam_atomic_number}"
-            yield f"Energy (eV),{self.channelling_parameters.beam_energy}"
-            yield f"Tilt (deg),{self.channelling_parameters.beam_tilt_degrees}"
+            yield f"Atomic number,{self.channelling_params.beam_atomic_number}"
+            yield f"Energy (eV),{self.channelling_params.beam_energy}"
+            yield f"Tilt (deg),{self.channelling_params.beam_tilt_deg}"
 
         if show_clustering_params:
             yield f"Clustering:"
-            yield f"Core point threshold,{self.clustering_parameters.core_point_neighbour_threshold}"
-            yield f"Point neighbourhood radius (deg),{self.clustering_parameters.neighbourhood_radius_degrees}"
+            yield f"Core point threshold,{self.clustering_params.core_point_threshold}"
+            yield f"Point neighbourhood radius (deg),{self.clustering_params.neighbourhood_radius_deg}"
             yield f"Cluster count,{self.cluster_count}"
 
     def _cluster_aggregate_rows(
@@ -399,10 +399,10 @@ class Scan:
         show_euler_angles: bool = True,
         show_index_quality: bool = True,
         show_pattern_quality: bool = True,
-        show_inverse_principal_pole_figure_coordinates: bool = False,
-        show_inverse_beam_pole_figure_coordinates: bool = False,
-        show_kernel_average_misorientation: bool = False,
-        show_geometrically_necessary_dislocation_density: bool = False,
+        show_principal_ipf_coordinates: bool = False,
+        show_beam_ipf_coordinates: bool = False,
+        show_average_misorientation: bool = False,
+        show_gnd_density: bool = False,
         show_channelling_fraction: bool = False,
     ) -> Iterator[str]:
         yield "Cluster aggregates:"
@@ -426,18 +426,18 @@ class Scan:
         if show_pattern_quality:
             columns += ["Pattern Quality"]
 
-        if show_inverse_principal_pole_figure_coordinates:
+        if show_principal_ipf_coordinates:
             columns += ["X-IPF x-coordinate", "X-IPF y-coordinate"]
             columns += ["Y-IPF x-coordinate", "Y-IPF y-coordinate"]
             columns += ["Z-IPF x-coordinate", "Z-IPF y-coordinate"]
 
-        if show_inverse_beam_pole_figure_coordinates:
+        if show_beam_ipf_coordinates:
             columns += ["Beam-IPF x-coordinate", "Beam-IPF y-coordinate"]
 
-        if show_kernel_average_misorientation:
+        if show_average_misorientation:
             columns += ["Kernel Average Misorientation"]
 
-        if show_geometrically_necessary_dislocation_density:
+        if show_gnd_density:
             columns += ["GND Density"]
 
         if show_channelling_fraction:
@@ -458,7 +458,7 @@ class Scan:
                 columns += self.cluster_aggregate._phase_id.serialize_value_for(id)
 
             if show_euler_angles:
-                columns += self.cluster_aggregate.euler_angles_degrees.serialize_value_for(id)
+                columns += self.cluster_aggregate.euler_angles_deg.serialize_value_for(id)
 
             if show_index_quality:
                 columns += self.cluster_aggregate.index_quality.serialize_value_for(id)
@@ -466,20 +466,20 @@ class Scan:
             if show_pattern_quality:
                 columns += self.cluster_aggregate.pattern_quality.serialize_value_for(id)
 
-            if show_inverse_principal_pole_figure_coordinates:
-                columns += self.cluster_aggregate.inverse_pole_figure_coordinates(Axis.X).serialize_value_for(id)
-                columns += self.cluster_aggregate.inverse_pole_figure_coordinates(Axis.Y).serialize_value_for(id)
-                columns += self.cluster_aggregate.inverse_pole_figure_coordinates(Axis.Z).serialize_value_for(id)
+            if show_principal_ipf_coordinates:
+                columns += self.cluster_aggregate.ipf_coordinates(Axis.X).serialize_value_for(id)
+                columns += self.cluster_aggregate.ipf_coordinates(Axis.Y).serialize_value_for(id)
+                columns += self.cluster_aggregate.ipf_coordinates(Axis.Z).serialize_value_for(id)
 
-            if show_inverse_beam_pole_figure_coordinates:
-                beam_axis = self.channelling_parameters.beam_axis
-                columns += self.cluster_aggregate.inverse_pole_figure_coordinates(beam_axis).serialize_value_for(id)
+            if show_beam_ipf_coordinates:
+                beam_axis = self.channelling_params.beam_axis
+                columns += self.cluster_aggregate.ipf_coordinates(beam_axis).serialize_value_for(id)
 
-            if show_kernel_average_misorientation:
-                columns += self.cluster_aggregate.kernel_average_misorientation_degrees.serialize_value_for(id)
+            if show_average_misorientation:
+                columns += self.cluster_aggregate.average_misorientation_deg.serialize_value_for(id)
 
-            if show_geometrically_necessary_dislocation_density:
-                columns += self.cluster_aggregate.geometrically_necessary_dislocation_density_logarithmic.serialize_value_for(id)
+            if show_gnd_density:
+                columns += self.cluster_aggregate.gnd_density_log.serialize_value_for(id)
 
             if show_channelling_fraction:
                 columns += self.cluster_aggregate.channelling_fraction.serialize_value_for(id)
@@ -493,10 +493,10 @@ class Scan:
         show_euler_angles: bool = True,
         show_index_quality: bool = True,
         show_pattern_quality: bool = True,
-        show_inverse_principal_pole_figure_coordinates: bool = False,
-        show_inverse_beam_pole_figure_coordinates: bool = False,
-        show_kernel_average_misorientation: bool = False,
-        show_geometrically_necessary_dislocation_density: bool = False,
+        show_principal_ipf_coordinates: bool = False,
+        show_beam_ipf_coordinates: bool = False,
+        show_average_misorientation: bool = False,
+        show_gnd_density: bool = False,
         show_channelling_fraction: bool = False,
         show_orientation_cluster: bool = False,
     ) -> Iterator[str]:
@@ -518,18 +518,18 @@ class Scan:
         if show_pattern_quality:
             columns += ["Pattern Quality"]
 
-        if show_inverse_principal_pole_figure_coordinates:
+        if show_principal_ipf_coordinates:
             columns += ["X-IPF x-coordinate", "X-IPF y-coordinate"]
             columns += ["Y-IPF x-coordinate", "Y-IPF y-coordinate"]
             columns += ["Z-IPF x-coordinate", "Z-IPF y-coordinate"]
 
-        if show_inverse_beam_pole_figure_coordinates:
+        if show_beam_ipf_coordinates:
             columns += ["Beam-IPF x-coordinate", "Beam-IPF y-coordinate"]
 
-        if show_kernel_average_misorientation:
+        if show_average_misorientation:
             columns += ["Kernel Average Misorientation"]
 
-        if show_geometrically_necessary_dislocation_density:
+        if show_gnd_density:
             columns += ["GND Density"]
 
         if show_channelling_fraction:
@@ -540,8 +540,8 @@ class Scan:
 
         yield ",".join(columns)
 
-        for y in range(self.parameters.height):
-            for x in range(self.parameters.width):
+        for y in range(self.params.height):
+            for x in range(self.params.width):
                 columns = list()
 
                 if show_scan_coordinates:
@@ -551,7 +551,7 @@ class Scan:
                     columns += self.field._phase_id.serialize_value_at(x, y, null_serialization=str(Phase.UNINDEXED_ID))
 
                 if show_euler_angles:
-                    columns += self.field.euler_angles_degrees.serialize_value_at(x, y)
+                    columns += self.field.euler_angles_deg.serialize_value_at(x, y)
 
                 if show_index_quality:
                     columns += self.field.index_quality.serialize_value_at(x, y)
@@ -559,27 +559,27 @@ class Scan:
                 if show_pattern_quality:
                     columns += self.field.pattern_quality.serialize_value_at(x, y)
 
-                if show_inverse_principal_pole_figure_coordinates:
-                    columns += self.field.inverse_pole_figure_coordinates(Axis.X).serialize_value_at(x, y)
-                    columns += self.field.inverse_pole_figure_coordinates(Axis.Y).serialize_value_at(x, y)
-                    columns += self.field.inverse_pole_figure_coordinates(Axis.Z).serialize_value_at(x, y)
+                if show_principal_ipf_coordinates:
+                    columns += self.field.ipf_coordinates(Axis.X).serialize_value_at(x, y)
+                    columns += self.field.ipf_coordinates(Axis.Y).serialize_value_at(x, y)
+                    columns += self.field.ipf_coordinates(Axis.Z).serialize_value_at(x, y)
 
-                if show_inverse_beam_pole_figure_coordinates:
-                    beam_axis = self.channelling_parameters.beam_axis
-                    columns += self.field.inverse_pole_figure_coordinates(beam_axis).serialize_value_at(x, y)
+                if show_beam_ipf_coordinates:
+                    beam_axis = self.channelling_params.beam_axis
+                    columns += self.field.ipf_coordinates(beam_axis).serialize_value_at(x, y)
 
-                if show_kernel_average_misorientation:
-                    columns += self.field.kernel_average_misorientation_degrees.serialize_value_at(x, y)
+                if show_average_misorientation:
+                    columns += self.field.average_misorientation_deg.serialize_value_at(x, y)
 
-                if show_geometrically_necessary_dislocation_density:
-                    columns += self.field.geometrically_necessary_dislocation_density_logarithmic.serialize_value_at(x, y)
+                if show_gnd_density:
+                    columns += self.field.gnd_density_log.serialize_value_at(x, y)
 
                 if show_channelling_fraction:
                     columns += self.field.channelling_fraction.serialize_value_at(x, y)
 
                 if show_orientation_cluster:
                     try:
-                        columns += [self.field.orientation_clustering_category.get_value_at(x, y).code]
+                        columns += [self.field.clustering_category.get_value_at(x, y).code]
                     except FieldNullError:
                         columns += [""]
 

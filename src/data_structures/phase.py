@@ -67,7 +67,7 @@ class Phase:
         lattice_type: BravaisLattice,
         lattice_constants: tuple[float, float, float],
         lattice_angles: tuple[float, float, float],
-        has_diamond_structure: bool,
+        diamond_structure: bool,
     ):
         self.global_id = global_id
         self.name = name
@@ -78,7 +78,7 @@ class Phase:
         self.lattice_type = lattice_type
         self.lattice_constants = lattice_constants
         self.lattice_angles = lattice_angles
-        self.has_diamond_structure = has_diamond_structure
+        self.diamond_structure = diamond_structure
 
     def __eq__(self, other):
         if not isinstance(other, Phase):
@@ -107,7 +107,7 @@ class Phase:
                 raise NotImplementedError()
 
     @classmethod
-    def load_from_materials_file(cls) -> dict[int, Self]:
+    def from_materials_file(cls) -> dict[int, Self]:
         path = cls._config.materials_file
         phases = dict()
 
@@ -127,9 +127,8 @@ class Phase:
                     vibration_amplitude=float(args[5]),
                     lattice_type=BravaisLattice(args[6]),
                     lattice_constants=(float(args[7]), float(args[8]), float(args[9])),
-                    lattice_angles=(
-                    math.radians(float(args[10])), math.radians(float(args[11])), math.radians(float(args[12]))),
-                    has_diamond_structure=args == "Y",
+                    lattice_angles=(math.radians(float(args[10])), math.radians(float(args[11])), math.radians(float(args[12]))),
+                    diamond_structure=args == "Y",
                 )
 
                 phases[global_id] = phase

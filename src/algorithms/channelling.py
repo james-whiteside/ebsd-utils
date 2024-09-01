@@ -228,11 +228,11 @@ def fun2(r, Z1, Z2, opposing, rch, d2, e):
 
 def gen_crit_data(beam_z, target_id, beam_energy, max_range, max_index):
 	e = beam_energy
-	materials = Phase.load_from_materials_file()
+	materials = Phase.from_materials_file()
 	Z1 = beam_z
 	Z2 = materials[target_id].atomic_number
 	lType = materials[target_id].lattice_type.value
-	diamond = materials[target_id].has_diamond_structure
+	diamond = materials[target_id].diamond_structure
 	
 	if lType == 'cP':
 		lattice = 'sc'

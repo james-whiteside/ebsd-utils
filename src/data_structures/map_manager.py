@@ -16,12 +16,12 @@ class MapManager:
 
     @property
     def _euler_angle_colours(self) -> Field[tuple[float, float, float]]:
-        field = Field(self._field_manager._scan_parameters.width, self._field_manager._scan_parameters.height, FieldType.VECTOR_3D, default_value=(0.0, 0.0, 0.0))
+        field = Field(self._field_manager._scan_params.width, self._field_manager._scan_params.height, FieldType.VECTOR_3D, default_value=(0.0, 0.0, 0.0))
 
-        for y in range(self._field_manager._scan_parameters.height):
-            for x in range(self._field_manager._scan_parameters.width):
+        for y in range(self._field_manager._scan_params.height):
+            for x in range(self._field_manager._scan_params.width):
                 try:
-                    euler_angles = self._field_manager.euler_angles.get_value_at(x, y)
+                    euler_angles = self._field_manager.euler_angles_rad.get_value_at(x, y)
                     max_euler_angles = self._field_manager.phase.get_value_at(x, y).max_euler_angles
                 except FieldNullError:
                     continue
@@ -36,13 +36,13 @@ class MapManager:
 
         return field
 
-    def _inverse_pole_figure_colours(self, axis: Axis) -> Field[tuple[float, float, float]]:
-        field = Field(self._field_manager._scan_parameters.width, self._field_manager._scan_parameters.height, FieldType.VECTOR_3D, default_value=(0.0, 0.0, 0.0))
+    def _ipf_colours(self, axis: Axis) -> Field[tuple[float, float, float]]:
+        field = Field(self._field_manager._scan_params.width, self._field_manager._scan_params.height, FieldType.VECTOR_3D, default_value=(0.0, 0.0, 0.0))
 
-        for y in range(self._field_manager._scan_parameters.height):
-            for x in range(self._field_manager._scan_parameters.width):
+        for y in range(self._field_manager._scan_params.height):
+            for x in range(self._field_manager._scan_params.width):
                 try:
-                    rotation_matrix = self._field_manager.reduced_euler_rotation_matrix.get_value_at(x, y)
+                    rotation_matrix = self._field_manager.reduced_matrix.get_value_at(x, y)
                     crystal_family = self._field_manager.phase.get_value_at(x, y).lattice_type.family
                 except FieldNullError:
                     continue
@@ -77,11 +77,11 @@ class MapManager:
             case MapType.OZ:
                 return self.orientation(Axis.Z)
             case MapType.OB:
-                return self.orientation(self._field_manager._channelling_parameters.beam_axis)
+                return self.orientation(self._field_manager._channelling_params.beam_axis)
             case MapType.KAM:
-                return self.kernel_average_misorientation
+                return self.average_misorientation
             case MapType.GND:
-                return self.geometrically_necessary_dislocation_density
+                return self.gnd_density
             case MapType.CF:
                 return self.channelling_fraction
             case MapType.OC:
@@ -89,7 +89,7 @@ class MapManager:
 
     @property
     def phase(self) -> Map:
-        sorted_phases = sorted(self._field_manager._scan_parameters.phases.items(), key=lambda item: item[1].global_id)
+        sorted_phases = sorted(self._field_manager._scan_params.phases.items(), key=lambda item: item[1].global_id)
         sorted_local_ids = [local_id for local_id, phase in sorted_phases if phase.global_id != Phase.UNINDEXED_ID]
         mapping = {local_id: index for index, local_id in enumerate(sorted_local_ids)}
         value_field = DiscreteFieldMapper(FieldType.DISCRETE, self._field_manager._phase_id, mapping)
@@ -136,29 +136,29 @@ class MapManager:
                 map_type = MapType.OY
             case Axis.Z:
                 map_type = MapType.OZ
-            case self._field_manager._channelling_parameters.beam_axis:
+            case self._field_manager._channelling_params.beam_axis:
                 map_type = MapType.OB
 
         return Map(
             map_type=map_type,
-            value_field=self._inverse_pole_figure_colours(axis),
+            value_field=self._ipf_colours(axis),
             max_value=(1.0, 1.0, 1.0),
             min_value=(0.0, 0.0, 0.0),
         )
 
     @property
-    def kernel_average_misorientation(self) -> Map:
+    def average_misorientation(self) -> Map:
         return Map(
             map_type=MapType.KAM,
-            value_field=self._field_manager.kernel_average_misorientation,
+            value_field=self._field_manager.average_misorientation_rad,
             min_value=0.0,
         )
 
     @property
-    def geometrically_necessary_dislocation_density(self) -> Map:
+    def gnd_density(self) -> Map:
         return Map(
             map_type=MapType.GND,
-            value_field=self._field_manager.geometrically_necessary_dislocation_density_logarithmic,
+            value_field=self._field_manager.gnd_density_log,
         )
 
     @property

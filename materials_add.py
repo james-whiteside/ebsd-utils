@@ -42,7 +42,7 @@ def decode_lattice_type(value):
 def add(database):
 	print()
 	IDs = utilities.parse_ids(input('Enter material IDs to add separated by commas/hyphens: '))
-	materials = Phase.load_from_materials_file()
+	materials = Phase.from_materials_file()
 
 	for ID in IDs:
 		print()
@@ -91,7 +91,7 @@ def add(database):
 						lattice_type=lType,
 						lattice_constants=(a, b, c),
 						lattice_angles=(math.radians(alpha), math.radians(beta), math.radians(gamma)),
-						has_diamond_structure=diamond
+						diamond_structure=diamond
 					)
 
 					materials[ID] = material

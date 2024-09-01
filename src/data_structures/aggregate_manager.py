@@ -44,31 +44,31 @@ class AggregateManager:
 
     @property
     def phase(self) -> DiscreteAggregateMapper[Phase]:
-        return DiscreteAggregateMapper(FieldType.OBJECT, self._phase_id, self._field_manager._scan_parameters.phases)
+        return DiscreteAggregateMapper(FieldType.OBJECT, self._phase_id, self._field_manager._scan_params.phases)
 
     @property
-    def reduced_euler_rotation_matrix(self) -> AverageAggregate[ndarray]:
+    def reduced_matrix(self) -> AverageAggregate[ndarray]:
         return AverageAggregate(
-            value_field=self._field_manager.reduced_euler_rotation_matrix,
+            value_field=self._field_manager.reduced_matrix,
             group_id_field=self._group_id_field,
         )
 
     @property
-    def euler_angles(self) -> FunctionalAggregateMapper[ndarray, tuple[float, float, float]]:
-        axis_set = self._field_manager._scan_parameters.axis_set
+    def euler_angles_rad(self) -> FunctionalAggregateMapper[ndarray, tuple[float, float, float]]:
+        axis_set = self._field_manager._scan_params.axis_set
         mapping = partial(euler_angles, axis_set=axis_set)
-        return FunctionalAggregateMapper(FieldType.VECTOR_3D, self.reduced_euler_rotation_matrix, mapping)
+        return FunctionalAggregateMapper(FieldType.VECTOR_3D, self.reduced_matrix, mapping)
 
     @property
-    def euler_angles_degrees(self) -> FunctionalAggregateMapper[tuple[float, float, float], tuple[float, float, float]]:
-        return FunctionalAggregateMapper(FieldType.VECTOR_3D, self.euler_angles, tuple_degrees)
+    def euler_angles_deg(self) -> FunctionalAggregateMapper[tuple[float, float, float], tuple[float, float, float]]:
+        return FunctionalAggregateMapper(FieldType.VECTOR_3D, self.euler_angles_rad, tuple_degrees)
 
-    def inverse_pole_figure_coordinates(self, axis: Axis) -> CustomAggregate[tuple[float, float]]:
+    def ipf_coordinates(self, axis: Axis) -> CustomAggregate[tuple[float, float]]:
         values: dict[int, tuple[float, float] | None] = dict()
 
         for id in self.group_ids:
             try:
-                rotation_matrix = self.reduced_euler_rotation_matrix.get_value_for(id)
+                rotation_matrix = self.reduced_matrix.get_value_for(id)
                 crystal_family = self.phase.get_value_for(id).lattice_type.family
             except AggregateNullError:
                 values[id] = None
@@ -106,26 +106,26 @@ class AggregateManager:
         )
 
     @property
-    def kernel_average_misorientation(self) -> AverageAggregate[float]:
+    def average_misorientation_rad(self) -> AverageAggregate[float]:
         return AverageAggregate(
-            value_field=self._field_manager.kernel_average_misorientation,
+            value_field=self._field_manager.average_misorientation_rad,
             group_id_field=self._group_id_field,
         )
 
     @property
-    def kernel_average_misorientation_degrees(self) -> FunctionalAggregateMapper[float, float]:
-        return FunctionalAggregateMapper(FieldType.SCALAR, self.kernel_average_misorientation, float_degrees)
+    def average_misorientation_deg(self) -> FunctionalAggregateMapper[float, float]:
+        return FunctionalAggregateMapper(FieldType.SCALAR, self.average_misorientation_rad, float_degrees)
 
     @property
-    def geometrically_necessary_dislocation_density(self) -> AverageAggregate[float]:
+    def gnd_density_lin(self) -> AverageAggregate[float]:
         return AverageAggregate(
-            value_field=self._field_manager.geometrically_necessary_dislocation_density,
+            value_field=self._field_manager.gnd_density_lin,
             group_id_field=self._group_id_field,
         )
 
     @property
-    def geometrically_necessary_dislocation_density_logarithmic(self) -> FunctionalAggregateMapper[float, float]:
-        return FunctionalAggregateMapper(FieldType.SCALAR, self.geometrically_necessary_dislocation_density, log_or_zero)
+    def gnd_density_log(self) -> FunctionalAggregateMapper[float, float]:
+        return FunctionalAggregateMapper(FieldType.SCALAR, self.gnd_density_lin, log_or_zero)
 
     @property
     def channelling_fraction(self) -> AverageAggregate[float]:
