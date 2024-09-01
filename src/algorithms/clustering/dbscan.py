@@ -35,7 +35,7 @@ def dbscan(
     core_point_neighbour_threshold: int,
     neighbourhood_radius: float,
 ) -> tuple[int, ndarray, ndarray]:
-    if Config().orientation_clustering_use_cuda:
+    if Config().use_cuda:
         if cuda.is_available():
             return _dbscan_gpu(
                 width,

@@ -10,11 +10,11 @@ from src.utilities.config import Config
 from src.utilities.geometry import Axis, AxisSet, orthogonalise_matrix, euler_angles
 from src.data_structures.map_manager import MapManager
 from src.data_structures.parameter_groups import ScanParameters, ScaleParameters, ChannellingParameters, ClusteringParameters
-from src.data_structures.phase import Phase, UNINDEXED_PHASE_ID
+from src.data_structures.phase import Phase
 from src.utilities.utilities import tuple_degrees
 
 
-SCALING_TOLERANCE = Config().resolution_reduction_scaling_tolerance
+SCALING_TOLERANCE = Config().scaling_tolerance
 
 
 class Scan:
@@ -230,7 +230,7 @@ class Scan:
                     line = file.readline().rstrip("\n").split(",")
                     local_phase_id = int(line[2])
 
-                    if materials[local_phase_id].global_id == UNINDEXED_PHASE_ID:
+                    if materials[local_phase_id].global_id == Phase.UNINDEXED_ID:
                         phase_id_values[y].append(None)
                         euler_angle_degrees_values[y].append(None)
                     else:
@@ -548,7 +548,7 @@ class Scan:
                     columns += [str(x), str(y)]
 
                 if show_phase:
-                    columns += self.field._phase_id.serialize_value_at(x, y, null_serialization=str(UNINDEXED_PHASE_ID))
+                    columns += self.field._phase_id.serialize_value_at(x, y, null_serialization=str(Phase.UNINDEXED_ID))
 
                 if show_euler_angles:
                     columns += self.field.euler_angles_degrees.serialize_value_at(x, y)

@@ -6,7 +6,7 @@ from src.data_structures.field import DiscreteFieldMapper, FieldType, Field, Fun
 from src.data_structures.field_manager import FieldManager
 from src.utilities.geometry import Axis, reduce_vector
 from src.data_structures.map import Map, MapType
-from src.data_structures.phase import UNINDEXED_PHASE_ID, CrystalFamily
+from src.data_structures.phase import CrystalFamily, Phase
 from src.utilities.utilities import maximise_brightness
 
 
@@ -90,7 +90,7 @@ class MapManager:
     @property
     def phase(self) -> Map:
         sorted_phases = sorted(self._field_manager._scan_parameters.phases.items(), key=lambda item: item[1].global_id)
-        sorted_local_ids = [local_id for local_id, phase in sorted_phases if phase.global_id != UNINDEXED_PHASE_ID]
+        sorted_local_ids = [local_id for local_id, phase in sorted_phases if phase.global_id != Phase.UNINDEXED_ID]
         mapping = {local_id: index for index, local_id in enumerate(sorted_local_ids)}
         value_field = DiscreteFieldMapper(FieldType.DISCRETE, self._field_manager._phase_id, mapping)
 

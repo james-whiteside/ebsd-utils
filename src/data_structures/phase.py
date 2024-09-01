@@ -5,12 +5,6 @@ from enum import Enum
 from typing import Self
 from src.utilities.config import Config
 
-UNINDEXED_PHASE_ID = Config().unindexed_phase_id
-GENERIC_BCC_PHASE_ID = Config().generic_bcc_phase_id
-GENERIC_FCC_PHASE_ID = Config().generic_fcc_phase_id
-GENERIC_PHASE_IDS = (UNINDEXED_PHASE_ID, GENERIC_BCC_PHASE_ID, GENERIC_FCC_PHASE_ID)
-MATERIALS_FILE = Config().materials_file
-
 
 class CrystalFamily(Enum):
     """
@@ -56,6 +50,12 @@ class BravaisLattice(Enum):
 
 
 class Phase:
+    _config = Config()
+    UNINDEXED_ID = 0
+    GENERIC_BCC_ID = 4294967294
+    GENERIC_FCC_ID = 4294967295
+    GENERIC_PHASES = [UNINDEXED_ID, GENERIC_BCC_ID, GENERIC_FCC_ID]
+
     def __init__(
         self,
         global_id: int,
@@ -107,7 +107,8 @@ class Phase:
                 raise NotImplementedError()
 
     @classmethod
-    def load_from_materials_file(cls, path: str = MATERIALS_FILE) -> dict[int, Self]:
+    def load_from_materials_file(cls) -> dict[int, Self]:
+        path = cls._config.materials_file
         phases = dict()
 
         with open(path, "r") as file:

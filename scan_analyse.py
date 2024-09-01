@@ -3,39 +3,18 @@
 import os
 from datetime import datetime
 from src.data_structures.map import MapType
+from src.utilities.config import Config
 from src.utilities.utilities import get_file_paths, get_directory_path, format_time_interval
 from src.scan import Scan
 
 
-def analyse(path: str = "data") -> None:
-    filepaths = get_file_paths(directory_path=get_directory_path(path), recursive=True, extension="csv")
-
-    if input('Reduce map resolution? (Y/N): ').lower() == 'y':
-        reduce_resolution = True
-        reduction_factor = int(input("  Enter resolution reduction factor (power of 2): "))
-    else:
-        reduce_resolution = False
-
-    if input("Perform defect density analysis? (Y/N): ").lower() == "y":
-        show_defect_density = True
-        pixel_size_micrometres = float(input("  Enter pixel size (μm): "))
-    else:
-        show_defect_density = False
-
-    if input("Perform channelling fraction analysis? (Y/N): ").lower() == "y":
-        show_channelling_fraction = True
-        beam_atomic_number = int(input("  Enter beam species atomic number: "))
-        beam_energy = float(input("  Enter beam energy (eV): "))
-        beam_tilt_degrees = float(input("  Enter beam tilt (deg): "))
-    else:
-        show_channelling_fraction = False
-
-    if input("Perform orientation cluster analysis? (Y/N): ").lower() == "y":
-        show_orientation_cluster = True
-        core_point_neighbour_threshold = int(input("  Enter core point neighbour threshold: "))
-        neighbourhood_radius_degrees = float(input("  Enter point neighbourhood radius (deg): "))
-    else:
-        show_orientation_cluster = False
+def analyse() -> None:
+    config = Config()
+    filepaths = get_file_paths(directory_path=get_directory_path(config.data_dir), recursive=True, extension="csv")
+    reduce_resolution = input('Reduce map resolution? (Y/N): ').lower() == 'y'
+    show_defect_density = input("Perform defect density analysis? (Y/N): ").lower() == "y"
+    show_channelling_fraction = input("Perform channelling fraction analysis? (Y/N): ").lower() == "y"
+    show_orientation_cluster = input("Perform orientation cluster analysis? (Y/N): ").lower() == "y"
 
     for filepath in filepaths:
         scan = Scan.from_pathfinder_file(filepath)
@@ -45,26 +24,22 @@ def analyse(path: str = "data") -> None:
         map_types = [MapType.P, MapType.EA, MapType.PQ, MapType.IQ, MapType.OX, MapType.OY, MapType.OZ, MapType.KAM]
 
         if show_defect_density:
-            scan.scale_parameters.set(pixel_size_micrometres)
+            scan.scale_parameters.set(config.pixel_size)
             map_types += [MapType.GND]
 
         if show_channelling_fraction:
-            scan.channelling_parameters.set(beam_atomic_number, beam_energy, beam_tilt_degrees)
+            scan.channelling_parameters.set(config.beam_atomic_number, config.beam_energy, config.beam_tilt)
             map_types += [MapType.OB, MapType.CF]
 
         if show_orientation_cluster:
-            scan.clustering_parameters.set(core_point_neighbour_threshold, neighbourhood_radius_degrees)
+            scan.clustering_parameters.set(config.neighbour_threshold, config.neighbourhood_radius)
             map_types += [MapType.OC]
 
         if reduce_resolution:
-            scan = scan.reduce_resolution(reduction_factor)
+            scan = scan.reduce_resolution(config.reduction_factor)
 
-        output_path = f"{get_directory_path("analyses")}/q{scan.parameters.analysis_reference}.csv"
-        os.makedirs(f"{get_directory_path("maps")}/{scan.parameters.analysis_reference}", exist_ok=True)
-
-        for map_type in map_types:
-            map_path = f"{get_directory_path("maps")}/{scan.parameters.analysis_reference}/{map_type.name}.png"
-            scan.map.get(map_type).image.save(map_path)
+        output_path = f"{get_directory_path(config.analysis_dir)}/q{scan.parameters.analysis_reference}.csv"
+        os.makedirs(f"{get_directory_path(config.map_dir)}/{scan.parameters.analysis_reference}", exist_ok=True)
 
         scan.to_pathfinder_file(
             path=output_path,
@@ -86,6 +61,11 @@ def analyse(path: str = "data") -> None:
             show_channelling_fraction=show_channelling_fraction,
             show_orientation_cluster=show_orientation_cluster,
         )
+
+        for map_type in map_types:
+            map_path = f"{get_directory_path(config.map_dir)}/{scan.parameters.analysis_reference}/{map_type.name}.png"
+            # print(map_type.name)
+            scan.map.get(map_type).image.save(map_path)
 
         time_taken = (datetime.now() - start_time).total_seconds()
         print(f"Analysis completed in: {format_time_interval(time_taken)}")

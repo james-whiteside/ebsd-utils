@@ -12,14 +12,14 @@ from src.utilities.geometry import (
     misrotation_tensor,
     inverse_pole_figure_coordinates,
 )
-from src.data_structures.phase import Phase, UNINDEXED_PHASE_ID, CrystalFamily
+from src.data_structures.phase import Phase, CrystalFamily
 from src.algorithms.channelling import load_crit_data, fraction
 from src.algorithms.clustering.dbscan import ClusterCategory, dbscan
 from src.data_structures.parameter_groups import ScaleParameters, ChannellingParameters, ClusteringParameters, ScanParameters
 from src.utilities.utilities import tuple_degrees, tuple_radians, float_degrees, float_radians, log_or_zero
 
 
-GND_DENSITY_CORRECTIVE_FACTOR = Config().gnd_density_corrective_factor
+GND_DENSITY_CORRECTIVE_FACTOR = Config().gnd_corrective_factor
 
 
 class FieldManager:
@@ -342,7 +342,7 @@ class FieldManager:
 
         channel_data = {
             local_id: load_crit_data(self._channelling_parameters.beam_atomic_number, phase.global_id, self._channelling_parameters.beam_energy)
-            for local_id, phase in self._scan_parameters.phases.items() if phase.global_id != UNINDEXED_PHASE_ID
+            for local_id, phase in self._scan_parameters.phases.items() if phase.global_id != Phase.UNINDEXED_ID
         }
 
         for y in range(self._scan_parameters.height):
