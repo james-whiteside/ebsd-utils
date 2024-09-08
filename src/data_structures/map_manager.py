@@ -77,7 +77,7 @@ class MapManager:
             case MapType.OZ:
                 return self.orientation(Axis.Z)
             case MapType.OB:
-                return self.orientation(self._field_manager._channelling_params.beam_axis)
+                return self.orientation(self._field_manager._config.beam_axis)
             case MapType.KAM:
                 return self.average_misorientation
             case MapType.GND:
@@ -136,7 +136,7 @@ class MapManager:
                 map_type = MapType.OY
             case Axis.Z:
                 map_type = MapType.OZ
-            case self._field_manager._channelling_params.beam_axis:
+            case self._field_manager._config.beam_axis:
                 map_type = MapType.OB
 
         return Map(

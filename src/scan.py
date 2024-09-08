@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from collections.abc import Iterator
+from copy import deepcopy
 from typing import Self
 from numpy import zeros
 from src.data_structures.aggregate_manager import AggregateManager
@@ -9,12 +10,9 @@ from src.data_structures.field_manager import FieldManager
 from src.utilities.config import Config
 from src.utilities.geometry import Axis, AxisSet, orthogonalise_matrix, euler_angles
 from src.data_structures.map_manager import MapManager
-from src.data_structures.parameter_groups import ScanParams, ScaleParams, ChannellingParams, ClusteringParams
+from src.data_structures.parameter_groups import ScanParams
 from src.data_structures.phase import Phase
 from src.utilities.utilities import tuple_degrees
-
-
-SCALING_TOLERANCE = Config().scaling_tolerance
 
 
 class Scan:
@@ -28,24 +26,21 @@ class Scan:
         euler_angle_values: list[list[tuple[float, float, float] | None]],
         pattern_quality_values: list[list[float]],
         index_quality_values: list[list[float]],
+        config: Config,
         axis_set: AxisSet = AxisSet.ZXZ,
         reduction_factor: int = 0,
     ):
         self.params = ScanParams()
-        self.scale_params = ScaleParams()
-        self.channelling_params = ChannellingParams()
-        self.clustering_params = ClusteringParams()
         self.params.set(data_reference, width, height, phases, axis_set, reduction_factor)
+        self.config = deepcopy(config)
 
         self.field = FieldManager(
             self.params,
-            self.scale_params,
-            self.channelling_params,
-            self.clustering_params,
             phase_id_values,
             euler_angle_values,
             pattern_quality_values,
             index_quality_values,
+            self.config,
         )
 
         self._map = None
@@ -77,6 +72,7 @@ class Scan:
         width = self.params.width // 2
         height = self.params.height // 2
         phases = self.params.phases
+        config = self.config
         axis_set = self.params.axis_set
         reduction_factor = self.params.reduction_factor + 1
 
@@ -131,7 +127,7 @@ class Scan:
                         count += 1
 
                     try:
-                        orientation_matrix_aggregate = orthogonalise_matrix(orientation_matrix_total / count, SCALING_TOLERANCE)
+                        orientation_matrix_aggregate = orthogonalise_matrix(orientation_matrix_total / count, self.config.scaling_tolerance)
                         euler_angle_aggregate = tuple_degrees(euler_angles(orientation_matrix_aggregate, axis_set))
                         index_quality_aggregate = index_quality_total / count
                         pattern_quality_aggregate = pattern_quality_total / len(kernel)
@@ -155,28 +151,12 @@ class Scan:
             euler_angle_values,
             pattern_quality_values,
             index_quality_values,
+            config,
             axis_set,
             reduction_factor,
         )
 
-        if self.scale_params.are_set:
-            scan.scale_params.set(
-                self.scale_params.pixel_size_microns * 2,
-            )
-
-        if self.channelling_params.are_set:
-            scan.channelling_params.set(
-                self.channelling_params.beam_atomic_number,
-                self.channelling_params.beam_energy,
-                self.channelling_params.beam_tilt_deg,
-            )
-
-        if self.clustering_params.are_set:
-            scan.clustering_params.set(
-                self.clustering_params.core_point_threshold,
-                self.clustering_params.neighbourhood_radius_deg,
-            )
-
+        scan.config.pixel_size *= 2
         return scan
 
     def reduce_resolution(self, reduction_factor: int) -> Self:
@@ -186,13 +166,13 @@ class Scan:
             return self._reduce_resolution().reduce_resolution(reduction_factor - 1)
 
     @classmethod
-    def from_pathfinder_file(cls, data_path: str, data_reference: str = None) -> Self:
+    def from_pathfinder_file(cls, data_path: str, config: Config, data_reference: str = None) -> Self:
         if data_reference is None:
             data_reference = data_path.split("/")[-1].split(".")[0].lstrip("p")
 
         with open(data_path, "r", encoding="utf-8") as file:
             materials = dict()
-            file_materials = Phase.from_materials_file()
+            file_materials = Phase.from_materials_file(config.materials_file)
             file.readline()
 
             while True:
@@ -249,6 +229,7 @@ class Scan:
             euler_angle_values=euler_angle_values,
             pattern_quality_values=pattern_quality_values,
             index_quality_values=index_quality_values,
+            config=config,
         )
 
     def to_pathfinder_file(
@@ -377,18 +358,18 @@ class Scan:
 
         if show_map_scale:
             yield f"Map scale:"
-            yield f"Pixel size (μm),{self.scale_params.pixel_size_microns}"
+            yield f"Pixel size (μm),{self.config.pixel_size_microns}"
 
         if show_channelling_params:
             yield f"Channelling:"
-            yield f"Atomic number,{self.channelling_params.beam_atomic_number}"
-            yield f"Energy (eV),{self.channelling_params.beam_energy}"
-            yield f"Tilt (deg),{self.channelling_params.beam_tilt_deg}"
+            yield f"Atomic number,{self.config.beam_atomic_number}"
+            yield f"Energy (eV),{self.config.beam_energy}"
+            yield f"Tilt (deg),{self.config.beam_tilt_deg}"
 
         if show_clustering_params:
             yield f"Clustering:"
-            yield f"Core point threshold,{self.clustering_params.core_point_threshold}"
-            yield f"Point neighbourhood radius (deg),{self.clustering_params.neighbourhood_radius_deg}"
+            yield f"Core point threshold,{self.config.core_point_threshold}"
+            yield f"Point neighbourhood radius (deg),{self.config.neighbourhood_radius_deg}"
             yield f"Cluster count,{self.cluster_count}"
 
     def _cluster_aggregate_rows(
@@ -472,7 +453,7 @@ class Scan:
                 columns += self.cluster_aggregate.ipf_coordinates(Axis.Z).serialize_value_for(id)
 
             if show_beam_ipf_coordinates:
-                beam_axis = self.channelling_params.beam_axis
+                beam_axis = self.config.beam_axis
                 columns += self.cluster_aggregate.ipf_coordinates(beam_axis).serialize_value_for(id)
 
             if show_average_misorientation:
@@ -565,7 +546,7 @@ class Scan:
                     columns += self.field.ipf_coordinates(Axis.Z).serialize_value_at(x, y)
 
                 if show_beam_ipf_coordinates:
-                    beam_axis = self.channelling_params.beam_axis
+                    beam_axis = self.config.beam_axis
                     columns += self.field.ipf_coordinates(beam_axis).serialize_value_at(x, y)
 
                 if show_average_misorientation:

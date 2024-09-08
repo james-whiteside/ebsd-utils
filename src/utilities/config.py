@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
 
-import os
+from os import getcwd
 from configparser import ConfigParser
+from math import degrees, sin, cos
+from src.utilities.geometry import Axis
 
 
 class Config:
     def __init__(self, path: str = "config.ini"):
-        config_path = f"{os.getcwd()}/{path}"
+        config_path = f"{getcwd()}/{path}"
         parser = ConfigParser()
         parser.read(config_path)
         self.data_dir = self._str(parser["project"]["ebsd_data_dir"])
@@ -14,16 +16,41 @@ class Config:
         self.channelling_cache_dir = self._str(parser["project"]["channelling_cache_dir"])
         self.analysis_dir = self._str(parser["project"]["analysis_output_dir"])
         self.map_dir = self._str(parser["project"]["map_output_dir"])
+        self.reduce_resolution = self._bool(parser["analysis"]["reduce_resolution"])
+        self.compute_dislocation = self._bool(parser["analysis"]["compute_dislocation_densities"])
+        self.compute_channelling = self._bool(parser["analysis"]["compute_channelling_fractions"])
+        self.compute_clustering = self._bool(parser["analysis"]["compute_orientation_clusters"])
+        self.use_cuda = self._bool(parser["analysis"]["use_cuda"])
         self.reduction_factor = self._int(parser["resolution_reduction"]["reduction_factor"])
         self.scaling_tolerance = self._float(parser["resolution_reduction"]["scaling_tolerance"])
         self.pixel_size = self._float(parser["dislocation_density"]["pixel_size"])
         self.gnd_corrective_factor = self._float(parser["dislocation_density"]["corrective_factor"])
         self.beam_atomic_number = self._int(parser["channelling_fraction"]["beam_atomic_number"])
         self.beam_energy = self._float(parser["channelling_fraction"]["beam_energy"])
-        self.beam_tilt = self._float(parser["channelling_fraction"]["beam_tilt"])
-        self.neighbour_threshold = self._int(parser["orientation_clustering"]["neighbour_threshold"])
-        self.neighbourhood_radius = self._float(parser["orientation_clustering"]["neighbourhood_radius"])
-        self.use_cuda = self._bool(parser["orientation_clustering"]["use_cuda"])
+        self.beam_tilt_rad = self._float(parser["channelling_fraction"]["beam_tilt"])
+        self.core_point_threshold = self._int(parser["orientation_clustering"]["neighbour_threshold"])
+        self.neighbourhood_radius_rad = self._float(parser["orientation_clustering"]["neighbourhood_radius"])
+
+    @property
+    def pixel_size_microns(self) -> float:
+        return self.pixel_size * 10 ** 6
+
+    @property
+    def beam_tilt_deg(self) -> float:
+        return degrees(self.beam_tilt_rad)
+
+    @property
+    def beam_axis(self) -> Axis:
+        beam_vector = 0, -sin(self.beam_tilt_rad), cos(self.beam_tilt_rad)
+        return Axis.beam(beam_vector)
+
+    @property
+    def beam_vector(self) -> tuple[float, float, float]:
+        return self.beam_axis.vector
+
+    @property
+    def neighbourhood_radius_deg(self) -> float:
+        return degrees(self.neighbourhood_radius_rad)
 
     @staticmethod
     def _str(value: str) -> str:

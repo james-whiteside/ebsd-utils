@@ -7,29 +7,22 @@ from src.utilities.geometry import Axis, euler_rotation_matrix, rotation_angle, 
 from src.data_structures.phase import Phase
 from src.algorithms.channelling import load_crit_data, fraction
 from src.algorithms.clustering.dbscan import ClusterCategory, dbscan
-from src.data_structures.parameter_groups import ScaleParams, ChannellingParams, ClusteringParams, ScanParams
+from src.data_structures.parameter_groups import ScanParams
 from src.utilities.utilities import tuple_degrees, tuple_radians, float_degrees, float_radians, log_or_zero
-
-
-GND_DENSITY_CORRECTIVE_FACTOR = Config().gnd_corrective_factor
 
 
 class FieldManager:
     def __init__(
         self,
         scan_params: ScanParams,
-        scale_params: ScaleParams,
-        channelling_params: ChannellingParams,
-        clustering_params: ClusteringParams,
         phase_id_values: list[list[int | None]],
         euler_angle_values: list[list[tuple[float, float, float] | None]],
         pattern_quality_values: list[list[float]],
         index_quality_values: list[list[float]],
+        config: Config,
     ):
         self._scan_params = scan_params
-        self._scale_params = scale_params
-        self._channelling_params = channelling_params
-        self._clustering_params = clustering_params
+        self._config = config
         self._phase_id: Field[int] = Field.from_array(self._scan_params.width, self._scan_params.height, FieldType.DISCRETE, phase_id_values, nullable=True)
         self.euler_angles_rad: Field[tuple[float, float, float]] = None
         self.euler_angles_deg: Field[tuple[float, float, float]] = Field.from_array(self._scan_params.width, self._scan_params.height, FieldType.VECTOR_3D, euler_angle_values, nullable=True)
@@ -257,7 +250,7 @@ class FieldManager:
                     try:
                         if self.phase.get_value_at(x, y) == self.phase.get_value_at(x + dx, y + dy):
                             rotation_matrix_2 = self.reduced_matrix.get_value_at(x + dx, y + dy)
-                            total += misrotation_tensor(misrotation_matrix(rotation_matrix_1, rotation_matrix_2), self._scale_params.pixel_size)
+                            total += misrotation_tensor(misrotation_matrix(rotation_matrix_1, rotation_matrix_2), self._config.pixel_size)
                             count += 1
                     except (IndexError, FieldNullError):
                         continue
@@ -318,7 +311,7 @@ class FieldManager:
                 except FieldNullError:
                     continue
 
-                value = (GND_DENSITY_CORRECTIVE_FACTOR / close_pack_distance) * nye_tensor_norm
+                value = (self._config.gnd_corrective_factor / close_pack_distance) * nye_tensor_norm
                 # value = 0.25 * (GND_DENSITY_CORRECTIVE_FACTOR / close_pack_distance) * nye_tensor_norm ** 2
                 field.set_value_at(x, y, value)
 
@@ -328,7 +321,7 @@ class FieldManager:
         field = Field(self._scan_params.width, self._scan_params.height, FieldType.SCALAR, default_value=None, nullable=True)
 
         channel_data = {
-            local_id: load_crit_data(self._channelling_params.beam_atomic_number, phase.global_id, self._channelling_params.beam_energy)
+            local_id: load_crit_data(self._config.beam_atomic_number, phase.global_id, self._config.beam_energy, self._config.materials_file, self._config.channelling_cache_dir)
             for local_id, phase in self._scan_params.phases.items() if phase.global_id != Phase.UNINDEXED_ID
         }
 
@@ -340,7 +333,7 @@ class FieldManager:
                 except FieldNullError:
                     continue
 
-                effective_beam_vector = dot(rotation_matrix, self._channelling_params.beam_vector).tolist()
+                effective_beam_vector = dot(rotation_matrix, self._config.beam_vector).tolist()
                 value = fraction(effective_beam_vector, phase_data)
                 field.set_value_at(x, y, value)
 
@@ -363,8 +356,9 @@ class FieldManager:
             self._scan_params.height,
             phase,
             reduced_euler_rotation_matrix,
-            self._clustering_params.core_point_threshold,
-            self._clustering_params.neighbourhood_radius_rad
+            self._config.core_point_threshold,
+            self._config.neighbourhood_radius_rad,
+            self._config.use_cuda,
         )
 
         category_id_values = category_id_array.astype(int).tolist()

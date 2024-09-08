@@ -6,7 +6,6 @@ from numpy import ndarray
 from numba import cuda
 from src.algorithms.clustering.dbscan_cpu import _dbscan_cpu
 from src.algorithms.clustering.dbscan_gpu import _dbscan_gpu
-from src.utilities.config import Config
 
 
 class ClusterCategory(Enum):
@@ -34,8 +33,9 @@ def dbscan(
     reduced_euler_rotation_matrix: ndarray,
     core_point_neighbour_threshold: int,
     neighbourhood_radius: float,
+    use_cuda: bool,
 ) -> tuple[int, ndarray, ndarray]:
-    if Config().use_cuda:
+    if use_cuda:
         if cuda.is_available():
             return _dbscan_gpu(
                 width,

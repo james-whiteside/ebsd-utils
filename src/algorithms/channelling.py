@@ -9,11 +9,8 @@ import os
 from itertools import permutations
 import numpy
 from scipy import special, constants, optimize
-from src.utilities.config import Config
 from src.data_structures.phase import Phase
 from src.utilities.utilities import ProgressBar
-
-CHANNELLING_DIR = Config().channelling_cache_dir + "/"
 
 
 def get_base(lattice):
@@ -226,9 +223,9 @@ def fun2(r, Z1, Z2, opposing, rch, d2, e):
 	return ee - e
 
 
-def gen_crit_data(beam_z, target_id, beam_energy, max_range, max_index):
+def gen_crit_data(beam_z, target_id, beam_energy, max_range, max_index, materials_file: str, channelling_cache_dir: str):
 	e = beam_energy
-	materials = Phase.from_materials_file()
+	materials = Phase.from_materials_file(materials_file)
 	Z1 = beam_z
 	Z2 = materials[target_id].atomic_number
 	lType = materials[target_id].lattice_type.value
@@ -249,15 +246,15 @@ def gen_crit_data(beam_z, target_id, beam_energy, max_range, max_index):
 	xrms = 10 * materials[target_id].vibration_amplitude
 	base = get_base(lattice)
 	fileref = '[' + str(target_id) + '][' + str(beam_z) + '][' + str(beam_energy) + ']'
-	os.makedirs(CHANNELLING_DIR, exist_ok=True)
-	file_emin_a = open(CHANNELLING_DIR + fileref + 'emin-a.txt', 'w')
-	file_emin_p = open(CHANNELLING_DIR + fileref + 'emin-p.txt', 'w')
-	file_psicrit_a = open(CHANNELLING_DIR + fileref + 'psicrit-a.txt', 'w')
-	file_psicrit_p = open(CHANNELLING_DIR + fileref + 'psicrit-p.txt', 'w')
-	file_eperpcrit_a = open(CHANNELLING_DIR + fileref + 'eperpcrit-a.txt', 'w')
-	file_eperpcrit_p = open(CHANNELLING_DIR + fileref + 'eperpcrit-p.txt', 'w')
-	file_uper_a = open(CHANNELLING_DIR + fileref + 'uper-a.txt', 'w')
-	file_uper_p = open(CHANNELLING_DIR + fileref + 'uper-p.txt', 'w')
+	os.makedirs(channelling_cache_dir, exist_ok=True)
+	file_emin_a = open(channelling_cache_dir + "/" + fileref + 'emin-a.txt', 'w')
+	file_emin_p = open(channelling_cache_dir + "/" + fileref + 'emin-p.txt', 'w')
+	file_psicrit_a = open(channelling_cache_dir + "/" + fileref + 'psicrit-a.txt', 'w')
+	file_psicrit_p = open(channelling_cache_dir + "/" + fileref + 'psicrit-p.txt', 'w')
+	file_eperpcrit_a = open(channelling_cache_dir + "/" + fileref + 'eperpcrit-a.txt', 'w')
+	file_eperpcrit_p = open(channelling_cache_dir + "/" + fileref + 'eperpcrit-p.txt', 'w')
+	file_uper_a = open(channelling_cache_dir + "/" + fileref + 'uper-a.txt', 'w')
+	file_uper_p = open(channelling_cache_dir + "/" + fileref + 'uper-p.txt', 'w')
 	file_emin_a.write('# h  k  l  E_min\n')
 	file_emin_p.write('# h  k  l  E_min\n')
 	file_psicrit_a.write('# h  k  l  psi_crit\n')
@@ -441,14 +438,14 @@ def gen_crit_data(beam_z, target_id, beam_energy, max_range, max_index):
 	file_uper_p.close()
 
 
-def load_crit_data(beam_z: int, target_id: int, beam_energy: float) -> dict:
+def load_crit_data(beam_z: int, target_id: int, beam_energy: float, materials_file: str, channelling_cache_dir: str) -> dict:
 	fileref = '[' + str(target_id) + '][' + str(beam_z) + '][' + str(beam_energy) + ']'
 	
 	try:
-		file_eperpcrit_a = open(CHANNELLING_DIR + fileref + 'eperpcrit-a.txt', 'r')
-		file_eperpcrit_p = open(CHANNELLING_DIR + fileref + 'eperpcrit-p.txt', 'r')
-		file_uper_a = open(CHANNELLING_DIR + fileref + 'uper-a.txt', 'r')
-		file_uper_p = open(CHANNELLING_DIR + fileref + 'uper-p.txt', 'r')
+		file_eperpcrit_a = open(channelling_cache_dir + "/" + fileref + 'eperpcrit-a.txt', 'r')
+		file_eperpcrit_p = open(channelling_cache_dir + "/" + fileref + 'eperpcrit-p.txt', 'r')
+		file_uper_a = open(channelling_cache_dir + "/" + fileref + 'uper-a.txt', 'r')
+		file_uper_p = open(channelling_cache_dir + "/" + fileref + 'uper-p.txt', 'r')
 		file_eperpcrit_a.close()
 		file_eperpcrit_p.close()
 		file_uper_a.close()
@@ -457,17 +454,17 @@ def load_crit_data(beam_z: int, target_id: int, beam_energy: float) -> dict:
 		max_range = 10  # Maximum range from origin where rows are to be considered (Å)
 		max_index = 10  # Maximum Miller index to be considered
 		print('Generating channelling fraction data for phase ID ' + str(target_id) + '.')
-		gen_crit_data(beam_z, target_id, beam_energy, max_range, max_index)
+		gen_crit_data(beam_z, target_id, beam_energy, max_range, max_index, materials_file, channelling_cache_dir)
 	
 	try:
-		has, kas, las, eperpcrit_a = numpy.loadtxt(CHANNELLING_DIR + fileref + 'eperpcrit-a.txt', unpack=True)
-		line_tuples = numpy.loadtxt(CHANNELLING_DIR + fileref + 'uper-a.txt')
+		has, kas, las, eperpcrit_a = numpy.loadtxt(channelling_cache_dir + "/" + fileref + 'eperpcrit-a.txt', unpack=True)
+		line_tuples = numpy.loadtxt(channelling_cache_dir + "/" + fileref + 'uper-a.txt')
 		has_u = line_tuples[:,0]
 		kas_u = line_tuples[:,1]
 		las_u = line_tuples[:,2]
 		
 		if not (all(has_u == has) and all(kas_u == kas) and all(las_u == las)):
-			exit('Inconsistent files ' + CHANNELLING_DIR + fileref + 'eperpcrit-a.txt\' and ' + CHANNELLING_DIR + fileref + 'uper-a.txt\'')
+			exit('Inconsistent files ' + channelling_cache_dir + "/" + fileref + 'eperpcrit-a.txt\' and ' + channelling_cache_dir + "/" + fileref + 'uper-a.txt\'')
 		
 		u_percentiles_a = line_tuples[:,3:]
 		axial = True
@@ -476,14 +473,14 @@ def load_crit_data(beam_z: int, target_id: int, beam_energy: float) -> dict:
 		axial = False
 	
 	try:
-		hps, kps, lps, eperpcrit_p = numpy.loadtxt(CHANNELLING_DIR + fileref + 'eperpcrit-p.txt', unpack=True)
-		line_tuples = numpy.loadtxt(CHANNELLING_DIR + fileref + 'uper-p.txt')
+		hps, kps, lps, eperpcrit_p = numpy.loadtxt(channelling_cache_dir + "/" + fileref + 'eperpcrit-p.txt', unpack=True)
+		line_tuples = numpy.loadtxt(channelling_cache_dir + "/" + fileref + 'uper-p.txt')
 		hps_u = line_tuples[:,0]
 		kps_u = line_tuples[:,1]
 		lps_u = line_tuples[:,2]
 		
 		if not (all(hps_u == hps) and all(kps_u == kps) and all(lps_u == lps)):
-			exit('Inconsistent files ' + CHANNELLING_DIR + fileref + 'eperpcrit-p.txt\' and ' + CHANNELLING_DIR + fileref + 'uper-p.txt\'')
+			exit('Inconsistent files ' + channelling_cache_dir + "/" + fileref + 'eperpcrit-p.txt\' and ' + channelling_cache_dir + "/" + fileref + 'uper-p.txt\'')
 		
 		u_percentiles_p = line_tuples[:,3:]
 		planar = True
