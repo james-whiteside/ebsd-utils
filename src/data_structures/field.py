@@ -74,6 +74,10 @@ class FieldNullError(ValueError):
     pass
 
 
+class FieldsInconsistentError(AssertionError):
+    pass
+
+
 class FieldLike[VALUE_TYPE](ABC):
     def __init__(self, width: int, height: int, field_type: FieldType, nullable: bool = False):
         self.width = width
@@ -148,6 +152,24 @@ class FieldLike[VALUE_TYPE](ABC):
                     return [str(element) for element in self.get_value_at(x, y)]
                 except FieldNullError:
                     return [null_serialization for _ in range(self.field_type.size)]
+
+    @classmethod
+    def get_params(cls, fields: list[Self]) -> tuple[int, int, bool]:
+        if len(fields) == 0:
+            raise ValueError("List must contain at least one field.")
+
+        width = fields[0].width
+        height = fields[0].height
+
+        for field in fields:
+            if field.width != width:
+                raise FieldsInconsistentError(f"Widths {field.width} and {width} of supplied fields do not match.")
+
+            if field.height != height:
+                raise FieldsInconsistentError(f"Heights {field.height} and {height} of supplied fields do not match.")
+
+        nullable = any(field.nullable for field in fields)
+        return width, height, nullable
 
 
 class Field[VALUE_TYPE](FieldLike):
