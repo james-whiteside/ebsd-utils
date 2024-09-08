@@ -1,13 +1,11 @@
 # -*- coding: utf-8 -*-
 
-import math
-from numpy import array, dot
-from src.data_structures.field import DiscreteFieldMapper, FieldType, Field, FunctionalFieldMapper, FieldNullError
+from src.algorithms.field_transforms import euler_angle_colours, ipf_colours
+from src.data_structures.field import DiscreteFieldMapper, FieldType, Field, FunctionalFieldMapper
 from src.data_structures.field_manager import FieldManager
-from src.utilities.geometry import Axis, reduce_vector
+from src.utilities.geometry import Axis
 from src.data_structures.map import Map, MapType
-from src.data_structures.phase import CrystalFamily, Phase
-from src.utilities.utilities import maximise_brightness
+from src.data_structures.phase import Phase
 
 
 class MapManager:
@@ -16,49 +14,10 @@ class MapManager:
 
     @property
     def _euler_angle_colours(self) -> Field[tuple[float, float, float]]:
-        field = Field(self._field_manager._scan_params.width, self._field_manager._scan_params.height, FieldType.VECTOR_3D, default_value=(0.0, 0.0, 0.0))
-
-        for y in range(self._field_manager._scan_params.height):
-            for x in range(self._field_manager._scan_params.width):
-                try:
-                    euler_angles = self._field_manager.euler_angles_rad.get_value_at(x, y)
-                    max_euler_angles = self._field_manager.phase.get_value_at(x, y).lattice_type.family.max_euler_angles
-                except FieldNullError:
-                    continue
-
-                value = (
-                    euler_angles[0] / max_euler_angles[0],
-                    euler_angles[1] / max_euler_angles[1],
-                    euler_angles[2] / max_euler_angles[2],
-                )
-
-                field.set_value_at(x, y, value)
-
-        return field
+        return euler_angle_colours(self._field_manager.euler_angles_rad, self._field_manager.phase)
 
     def _ipf_colours(self, axis: Axis) -> Field[tuple[float, float, float]]:
-        field = Field(self._field_manager._scan_params.width, self._field_manager._scan_params.height, FieldType.VECTOR_3D, default_value=(0.0, 0.0, 0.0))
-
-        for y in range(self._field_manager._scan_params.height):
-            for x in range(self._field_manager._scan_params.width):
-                try:
-                    rotation_matrix = self._field_manager.reduced_matrix.get_value_at(x, y)
-                    crystal_family = self._field_manager.phase.get_value_at(x, y).lattice_type.family
-                except FieldNullError:
-                    continue
-
-                match crystal_family:
-                    case CrystalFamily.C:
-                        vector = dot(rotation_matrix, array(axis.vector)).tolist()
-                        u, v, w = reduce_vector(vector)
-                        r, g, b = w - v, (v - u) * math.sqrt(2), u * math.sqrt(3)
-                        value = maximise_brightness((r, g, b))
-                    case _:
-                        raise NotImplementedError()
-
-                field.set_value_at(x, y, value)
-
-        return field
+        return ipf_colours(axis, self._field_manager.reduced_matrix, self._field_manager.phase)
 
     def get(self, map_type: MapType) -> Map:
         match map_type:
