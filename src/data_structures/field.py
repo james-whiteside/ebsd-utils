@@ -79,7 +79,18 @@ class FieldLike[VALUE_TYPE](ABC):
         self.width = width
         self.height = height
         self.field_type = field_type
-        self.nullable = nullable
+        self._nullable = nullable
+
+    @property
+    def nullable(self) -> bool:
+        return self._nullable
+
+    @nullable.setter
+    def nullable(self, value: bool) -> None:
+        if not value and self.has_null_value:
+            raise FieldNullError(f"Field has at least one null value.")
+        else:
+            self._nullable = value
 
     @abstractmethod
     def get_value_at(self, x: int, y: int) -> VALUE_TYPE:
@@ -97,6 +108,17 @@ class FieldLike[VALUE_TYPE](ABC):
                     yield self.get_value_at(x, y)
                 except FieldNullError:
                     continue
+
+    @property
+    def has_null_value(self) -> bool:
+        for y in range(self.height):
+            for x in range(self.width):
+                try:
+                    self.get_value_at(x, y)
+                except FieldNullError:
+                    return True
+
+        return False
 
     @property
     def max_value(self):
