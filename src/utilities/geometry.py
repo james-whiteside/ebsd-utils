@@ -1,11 +1,9 @@
 # -*- coding: utf-8 -*-
 
-import copy
 import math
 from enum import Enum
 from typing import Self
 import numpy
-from src.data_structures.phase import CrystalFamily
 from src.utilities.utilities import classproperty
 
 
