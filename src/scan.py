@@ -8,7 +8,7 @@ from src.data_structures.aggregate_manager import AggregateManager
 from src.data_structures.field import FieldNullError
 from src.data_structures.field_manager import FieldManager
 from src.utilities.config import Config
-from src.utilities.geometry import Axis, AxisSet, orthogonalise_matrix, euler_angles
+from src.utilities.geometry import AxisSet, orthogonalise_matrix, euler_angles
 from src.data_structures.map_manager import MapManager
 from src.data_structures.parameter_groups import ScanParams
 from src.data_structures.phase import Phase
@@ -232,291 +232,115 @@ class Scan:
             config=config,
         )
 
-    def to_pathfinder_file(
-        self,
-        path: str,
-        show_phases: bool = True,
-        show_map_size: bool = True,
-        show_map_scale: bool = False,
-        show_channelling_params: bool = False,
-        show_clustering_params: bool = False,
-        show_cluster_aggregates: bool = False,
-        show_row_coordinates: bool = True,
-        show_phase: bool = True,
-        show_euler_angles: bool = True,
-        show_index_quality: bool = True,
-        show_pattern_quality: bool = True,
-        show_principal_ipf_coordinates: bool = False,
-        show_beam_ipf_coordinates: bool = False,
-        show_average_misorientation: bool = False,
-        show_gnd_density: bool = False,
-        show_channelling_fraction: bool = False,
-        show_orientation_cluster: bool = False,
-    ):
-        rows = self._rows(
-            show_phases=show_phases,
-            show_map_size=show_map_size,
-            show_map_scale=show_map_scale,
-            show_channelling_params=show_channelling_params,
-            show_clustering_params=show_clustering_params,
-            show_cluster_aggregates=show_cluster_aggregates,
-            show_row_coordinates=show_row_coordinates,
-            show_phase=show_phase,
-            show_euler_angles=show_euler_angles,
-            show_index_quality=show_index_quality,
-            show_pattern_quality=show_pattern_quality,
-            show_principal_ipf_coordinates=show_principal_ipf_coordinates,
-            show_beam_ipf_coordinates=show_beam_ipf_coordinates,
-            show_average_misorientation=show_average_misorientation,
-            show_gnd_density=show_gnd_density,
-            show_channelling_fraction=show_channelling_fraction,
-            show_orientation_cluster=show_orientation_cluster,
-        )
-
+    def to_pathfinder_file(self, path: str):
         with open(path, "w", encoding="utf-8") as file:
-            for row in rows:
+            for row in self._rows():
                 file.write(f"{row}\n")
 
-    def _rows(
-        self,
-        show_phases: bool = True,
-        show_map_size: bool = True,
-        show_map_scale: bool = False,
-        show_channelling_params: bool = False,
-        show_clustering_params: bool = False,
-        show_cluster_aggregates: bool = False,
-        show_row_coordinates: bool = True,
-        show_phase: bool = True,
-        show_euler_angles: bool = True,
-        show_index_quality: bool = True,
-        show_pattern_quality: bool = True,
-        show_principal_ipf_coordinates: bool = False,
-        show_beam_ipf_coordinates: bool = False,
-        show_average_misorientation: bool = False,
-        show_gnd_density: bool = False,
-        show_channelling_fraction: bool = False,
-        show_orientation_cluster: bool = False,
-    ) -> Iterator[str]:
-        for row in self._metadata_rows(
-            show_phases=show_phases,
-            show_map_size=show_map_size,
-            show_map_scale=show_map_scale,
-            show_channelling_params=show_channelling_params,
-            show_clustering_params=show_clustering_params,
-        ):
+    def _rows(self) -> Iterator[str]:
+        for row in self._metadata_rows():
             yield row
 
-        if show_cluster_aggregates:
-            for row in self._cluster_aggregate_rows(
-                show_cluster_id=show_row_coordinates,
-                show_cluster_size=True,
-                show_phase=show_phase,
-                show_euler_angles=show_euler_angles,
-                show_index_quality=show_index_quality,
-                show_pattern_quality=show_pattern_quality,
-                show_principal_ipf_coordinates=show_principal_ipf_coordinates,
-                show_beam_ipf_coordinates=show_beam_ipf_coordinates,
-                show_average_misorientation=show_average_misorientation,
-                show_gnd_density=show_gnd_density,
-                show_channelling_fraction=show_channelling_fraction,
-            ):
+        if self.config.compute_clustering:
+            for row in self._cluster_aggregate_rows():
                 yield row
 
-        for row in self._data_rows(
-            show_scan_coordinates=show_row_coordinates,
-            show_phase=show_phase,
-            show_euler_angles=show_euler_angles,
-            show_index_quality=show_index_quality,
-            show_pattern_quality=show_pattern_quality,
-            show_principal_ipf_coordinates=show_principal_ipf_coordinates,
-            show_beam_ipf_coordinates=show_beam_ipf_coordinates,
-            show_average_misorientation=show_average_misorientation,
-            show_gnd_density=show_gnd_density,
-            show_channelling_fraction=show_channelling_fraction,
-            show_orientation_cluster=show_orientation_cluster,
-        ):
+        for row in self._data_rows():
             yield row
 
-    def _metadata_rows(
-        self,
-        show_phases: bool = True,
-        show_map_size: bool = True,
-        show_map_scale: bool = False,
-        show_channelling_params: bool = False,
-        show_clustering_params: bool = False,
-    ) -> str:
-        if show_phases:
-            yield "Phases:"
+    def _metadata_rows(self) -> str:
+        yield "Phases:"
 
-            for local_id, phase in self.params.phases.items():
-                yield f"{local_id},{phase.name},{phase.global_id}"
+        for local_id, phase in self.params.phases.items():
+            yield f"{local_id},{phase.name},{phase.global_id}"
 
-        if show_map_size:
-            yield f"Map size:"
-            yield f"X,{self.params.width}"
-            yield f"Y,{self.params.height}"
+        yield f"Map size:"
+        yield f"X,{self.params.width}"
+        yield f"Y,{self.params.height}"
 
-        if show_map_scale:
+        if self.config.compute_dislocation:
             yield f"Map scale:"
             yield f"Pixel size (μm),{self.config.pixel_size_microns}"
 
-        if show_channelling_params:
+        if self.config.compute_channelling:
             yield f"Channelling:"
             yield f"Atomic number,{self.config.beam_atomic_number}"
             yield f"Energy (eV),{self.config.beam_energy}"
             yield f"Tilt (deg),{self.config.beam_tilt_deg}"
 
-        if show_clustering_params:
+        if self.config.compute_clustering:
             yield f"Clustering:"
             yield f"Core point threshold,{self.config.core_point_threshold}"
             yield f"Point neighbourhood radius (deg),{self.config.neighbourhood_radius_deg}"
             yield f"Cluster count,{self.cluster_count}"
 
-    def _cluster_aggregate_rows(
-        self,
-        show_cluster_id: bool = True,
-        show_cluster_size: bool = True,
-        show_phase: bool = True,
-        show_euler_angles: bool = True,
-        show_index_quality: bool = True,
-        show_pattern_quality: bool = True,
-        show_principal_ipf_coordinates: bool = False,
-        show_beam_ipf_coordinates: bool = False,
-        show_average_misorientation: bool = False,
-        show_gnd_density: bool = False,
-        show_channelling_fraction: bool = False,
-    ) -> Iterator[str]:
+    def _cluster_aggregate_rows(self) -> Iterator[str]:
         yield "Cluster aggregates:"
         columns: list[str] = list()
+        columns += ["Cluster ID"]
+        columns += ["Cluster Size"]
+        columns += ["Phase"]
+        columns += ["Euler1", "Euler2", "Euler3"]
+        columns += ["Index Quality"]
+        columns += ["Pattern Quality"]
 
-        if show_cluster_id:
-            columns += ["Cluster ID"]
-
-        if show_cluster_size:
-            columns += ["Cluster Size"]
-
-        if show_phase:
-            columns += ["Phase"]
-
-        if show_euler_angles:
-            columns += ["Euler1", "Euler2", "Euler3"]
-
-        if show_index_quality:
-            columns += ["Index Quality"]
-
-        if show_pattern_quality:
-            columns += ["Pattern Quality"]
-
-        if show_principal_ipf_coordinates:
-            columns += ["X-IPF x-coordinate", "X-IPF y-coordinate"]
-            columns += ["Y-IPF x-coordinate", "Y-IPF y-coordinate"]
-            columns += ["Z-IPF x-coordinate", "Z-IPF y-coordinate"]
-
-        if show_beam_ipf_coordinates:
+        if self.config.compute_channelling:
             columns += ["Beam-IPF x-coordinate", "Beam-IPF y-coordinate"]
 
-        if show_average_misorientation:
-            columns += ["Kernel Average Misorientation"]
+        columns += ["Kernel Average Misorientation"]
 
-        if show_gnd_density:
+        if self.config.compute_dislocation:
             columns += ["GND Density"]
 
-        if show_channelling_fraction:
+        if self.config.compute_channelling:
             columns += ["Channelling Fraction"]
 
         yield ",".join(columns)
 
         for id in self.cluster_aggregate.group_ids:
             columns: list[str] = list()
+            columns += [str(id)]
+            columns += self.cluster_aggregate.count.serialize_value_for(id)
+            columns += self.cluster_aggregate._phase_id.serialize_value_for(id)
+            columns += self.cluster_aggregate.euler_angles_deg.serialize_value_for(id)
+            columns += self.cluster_aggregate.index_quality.serialize_value_for(id)
+            columns += self.cluster_aggregate.pattern_quality.serialize_value_for(id)
 
-            if show_cluster_id:
-                columns += [str(id)]
-
-            if show_cluster_size:
-                columns += self.cluster_aggregate.count.serialize_value_for(id)
-
-            if show_phase:
-                columns += self.cluster_aggregate._phase_id.serialize_value_for(id)
-
-            if show_euler_angles:
-                columns += self.cluster_aggregate.euler_angles_deg.serialize_value_for(id)
-
-            if show_index_quality:
-                columns += self.cluster_aggregate.index_quality.serialize_value_for(id)
-
-            if show_pattern_quality:
-                columns += self.cluster_aggregate.pattern_quality.serialize_value_for(id)
-
-            if show_principal_ipf_coordinates:
-                columns += self.cluster_aggregate.ipf_coordinates(Axis.X).serialize_value_for(id)
-                columns += self.cluster_aggregate.ipf_coordinates(Axis.Y).serialize_value_for(id)
-                columns += self.cluster_aggregate.ipf_coordinates(Axis.Z).serialize_value_for(id)
-
-            if show_beam_ipf_coordinates:
+            if self.config.compute_channelling:
                 beam_axis = self.config.beam_axis
                 columns += self.cluster_aggregate.ipf_coordinates(beam_axis).serialize_value_for(id)
 
-            if show_average_misorientation:
-                columns += self.cluster_aggregate.average_misorientation_deg.serialize_value_for(id)
+            columns += self.cluster_aggregate.average_misorientation_deg.serialize_value_for(id)
 
-            if show_gnd_density:
+            if self.config.compute_dislocation:
                 columns += self.cluster_aggregate.gnd_density_log.serialize_value_for(id)
 
-            if show_channelling_fraction:
+            if self.config.compute_channelling:
                 columns += self.cluster_aggregate.channelling_fraction.serialize_value_for(id)
 
             yield ",".join(columns)
 
-    def _data_rows(
-        self,
-        show_scan_coordinates: bool = True,
-        show_phase: bool = True,
-        show_euler_angles: bool = True,
-        show_index_quality: bool = True,
-        show_pattern_quality: bool = True,
-        show_principal_ipf_coordinates: bool = False,
-        show_beam_ipf_coordinates: bool = False,
-        show_average_misorientation: bool = False,
-        show_gnd_density: bool = False,
-        show_channelling_fraction: bool = False,
-        show_orientation_cluster: bool = False,
-    ) -> Iterator[str]:
+    def _data_rows(self) -> Iterator[str]:
         yield "Data:"
         columns: list[str] = list()
+        columns += ["X", "Y"]
+        columns += ["Phase"]
+        columns += ["Euler1", "Euler2", "Euler3"]
+        columns += ["Index Quality"]
+        columns += ["Pattern Quality"]
 
-        if show_scan_coordinates:
-            columns += ["X", "Y"]
-
-        if show_phase:
-            columns += ["Phase"]
-
-        if show_euler_angles:
-            columns += ["Euler1", "Euler2", "Euler3"]
-
-        if show_index_quality:
-            columns += ["Index Quality"]
-
-        if show_pattern_quality:
-            columns += ["Pattern Quality"]
-
-        if show_principal_ipf_coordinates:
-            columns += ["X-IPF x-coordinate", "X-IPF y-coordinate"]
-            columns += ["Y-IPF x-coordinate", "Y-IPF y-coordinate"]
-            columns += ["Z-IPF x-coordinate", "Z-IPF y-coordinate"]
-
-        if show_beam_ipf_coordinates:
+        if self.config.compute_channelling:
             columns += ["Beam-IPF x-coordinate", "Beam-IPF y-coordinate"]
 
-        if show_average_misorientation:
-            columns += ["Kernel Average Misorientation"]
+        columns += ["Kernel Average Misorientation"]
 
-        if show_gnd_density:
+        if self.config.compute_dislocation:
             columns += ["GND Density"]
 
-        if show_channelling_fraction:
+        if self.config.compute_channelling:
             columns += ["Channelling Fraction"]
 
-        if show_orientation_cluster:
+        if self.config.compute_clustering:
             columns += ["Point Category", "Point Cluster"]
 
         yield ",".join(columns)
@@ -524,41 +348,25 @@ class Scan:
         for y in range(self.params.height):
             for x in range(self.params.width):
                 columns = list()
+                columns += [str(x), str(y)]
+                columns += self.field._phase_id.serialize_value_at(x, y, null_serialization=str(Phase.UNINDEXED_ID))
+                columns += self.field.euler_angles_deg.serialize_value_at(x, y)
+                columns += self.field.index_quality.serialize_value_at(x, y)
+                columns += self.field.pattern_quality.serialize_value_at(x, y)
 
-                if show_scan_coordinates:
-                    columns += [str(x), str(y)]
-
-                if show_phase:
-                    columns += self.field._phase_id.serialize_value_at(x, y, null_serialization=str(Phase.UNINDEXED_ID))
-
-                if show_euler_angles:
-                    columns += self.field.euler_angles_deg.serialize_value_at(x, y)
-
-                if show_index_quality:
-                    columns += self.field.index_quality.serialize_value_at(x, y)
-
-                if show_pattern_quality:
-                    columns += self.field.pattern_quality.serialize_value_at(x, y)
-
-                if show_principal_ipf_coordinates:
-                    columns += self.field.ipf_coordinates(Axis.X).serialize_value_at(x, y)
-                    columns += self.field.ipf_coordinates(Axis.Y).serialize_value_at(x, y)
-                    columns += self.field.ipf_coordinates(Axis.Z).serialize_value_at(x, y)
-
-                if show_beam_ipf_coordinates:
+                if self.config.compute_channelling:
                     beam_axis = self.config.beam_axis
                     columns += self.field.ipf_coordinates(beam_axis).serialize_value_at(x, y)
 
-                if show_average_misorientation:
-                    columns += self.field.average_misorientation_deg.serialize_value_at(x, y)
+                columns += self.field.average_misorientation_deg.serialize_value_at(x, y)
 
-                if show_gnd_density:
+                if self.config.compute_dislocation:
                     columns += self.field.gnd_density_log.serialize_value_at(x, y)
 
-                if show_channelling_fraction:
+                if self.config.compute_channelling:
                     columns += self.field.channelling_fraction.serialize_value_at(x, y)
 
-                if show_orientation_cluster:
+                if self.config.compute_clustering:
                     try:
                         columns += [self.field.clustering_category.get_value_at(x, y).code]
                     except FieldNullError:

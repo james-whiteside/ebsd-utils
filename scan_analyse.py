@@ -34,26 +34,7 @@ def analyse() -> None:
         output_path = f"{get_directory_path(config.analysis_dir)}/q{scan.params.analysis_ref}.csv"
         os.makedirs(f"{get_directory_path(config.map_dir)}/{scan.params.analysis_ref}", exist_ok=True)
 
-        scan.to_pathfinder_file(
-            path=output_path,
-            show_phases=True,
-            show_map_size=True,
-            show_map_scale=config.compute_dislocation,
-            show_channelling_params=config.compute_channelling,
-            show_clustering_params=config.compute_clustering,
-            show_cluster_aggregates=config.compute_clustering,
-            show_row_coordinates=True,
-            show_phase=True,
-            show_euler_angles=True,
-            show_index_quality=True,
-            show_pattern_quality=True,
-            show_principal_ipf_coordinates=False,
-            show_beam_ipf_coordinates=config.compute_channelling,
-            show_average_misorientation=True,
-            show_gnd_density=config.compute_dislocation,
-            show_channelling_fraction=config.compute_channelling,
-            show_orientation_cluster=config.compute_clustering,
-        )
+        scan.to_pathfinder_file(output_path)
 
         for map_type in map_types:
             map_path = f"{get_directory_path(config.map_dir)}/{scan.params.analysis_ref}/{map_type.name}.png"
