@@ -30,8 +30,7 @@ class Scan:
         axis_set: AxisSet = AxisSet.ZXZ,
         reduction_factor: int = 0,
     ):
-        self.params = ScanParams()
-        self.params.set(data_reference, width, height, phases, axis_set, reduction_factor)
+        self.params = ScanParams(data_reference, width, height, phases, axis_set, reduction_factor)
         self.config = deepcopy(config)
 
         self.field = FieldManager(
