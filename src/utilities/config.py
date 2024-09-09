@@ -17,6 +17,7 @@ class Config:
         self.analysis_dir = self._str(parser["project"]["analysis_output_dir"])
         self.map_dir = self._str(parser["project"]["map_output_dir"])
         self.axis_set = self._axis_set(parser["data"]["euler_axis_set"])
+        self.pixel_size_microns = self._float(parser["data"]["pixel_size"])
         self.reduce_resolution = self._bool(parser["analysis"]["reduce_resolution"])
         self.compute_dislocation = self._bool(parser["analysis"]["compute_dislocation_densities"])
         self.compute_channelling = self._bool(parser["analysis"]["compute_channelling_fractions"])
@@ -24,7 +25,6 @@ class Config:
         self.use_cuda = self._bool(parser["analysis"]["use_cuda"])
         self.reduction_factor = self._int(parser["resolution_reduction"]["reduction_factor"])
         self.scaling_tolerance = self._float(parser["resolution_reduction"]["scaling_tolerance"])
-        self.pixel_size = self._float(parser["dislocation_density"]["pixel_size"])
         self.gnd_corrective_factor = self._float(parser["dislocation_density"]["corrective_factor"])
         self.beam_atomic_number = self._int(parser["channelling_fraction"]["beam_atomic_number"])
         self.beam_energy = self._float(parser["channelling_fraction"]["beam_energy"])
@@ -33,8 +33,8 @@ class Config:
         self.neighbourhood_radius_rad = self._float(parser["orientation_clustering"]["neighbourhood_radius"])
 
     @property
-    def pixel_size_microns(self) -> float:
-        return self.pixel_size * 10 ** 6
+    def pixel_size(self) -> float:
+        return self.pixel_size_microns * 10.0 ** -6.0
 
     @property
     def beam_tilt_deg(self) -> float:
@@ -42,7 +42,7 @@ class Config:
 
     @property
     def beam_axis(self) -> Axis:
-        beam_vector = 0, -sin(self.beam_tilt_rad), cos(self.beam_tilt_rad)
+        beam_vector = 0.0, -sin(self.beam_tilt_rad), cos(self.beam_tilt_rad)
         return Axis.beam(beam_vector)
 
     @property

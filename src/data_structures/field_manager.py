@@ -102,7 +102,7 @@ class FieldManager:
 
     def misrotation_tensor(self, axis: Axis) -> Field[ndarray]:
         if axis not in self._misrotation_tensor:
-            self._misrotation_tensor[axis] = misrotation_tensor(axis, self._config.pixel_size, self.reduced_matrix, self.phase)
+            self._misrotation_tensor[axis] = misrotation_tensor(axis, self._scan_params.pixel_size, self.reduced_matrix, self.phase)
 
         return self._misrotation_tensor[axis]
 

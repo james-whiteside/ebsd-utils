@@ -12,6 +12,7 @@ class ScanParams:
         width: int,
         height: int,
         phases: dict[int, Phase],
+        pixel_size: float,
         reduction_factor: int,
     ):
         self.are_set = True
@@ -19,6 +20,7 @@ class ScanParams:
         self.width = width
         self.height = height
         self.phases = phases
+        self.pixel_size = pixel_size
         self.reduction_factor = reduction_factor
 
     @property
@@ -28,14 +30,9 @@ class ScanParams:
         else:
             return f"{self.data_ref}-{self.reduction_factor}"
 
-
-class ScaleParams:
-    def __init__(self, pixel_size_microns: float):
-        self.pixel_size = pixel_size_microns * 10 ** -6
-
     @property
     def pixel_size_microns(self) -> float:
-        return self.pixel_size * 10 ** 6
+        return self.pixel_size * 10.0 ** 6.0
 
 
 class ChannellingParams:
@@ -50,7 +47,7 @@ class ChannellingParams:
 
     @property
     def beam_axis(self) -> Axis:
-        beam_vector = 0, -sin(self.beam_tilt_rad), cos(self.beam_tilt_rad)
+        beam_vector = 0.0, -sin(self.beam_tilt_rad), cos(self.beam_tilt_rad)
         return Axis.beam(beam_vector)
 
     @property

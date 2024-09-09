@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 from collections.abc import Iterator
-from copy import deepcopy
 from typing import Self
 from numpy import zeros
 from src.data_structures.aggregate_manager import AggregateManager
@@ -18,7 +17,7 @@ from src.utilities.utilities import tuple_degrees
 class Scan:
     def __init__(
         self,
-        data_reference: str,
+        data_ref: str,
         width: int,
         height: int,
         phases: dict[int, Phase],
@@ -28,9 +27,13 @@ class Scan:
         index_quality_values: list[list[float]],
         config: Config,
         reduction_factor: int = 0,
+        pixel_size: float = None,
     ):
-        self.params = ScanParams(data_reference, width, height, phases, reduction_factor)
-        self.config = deepcopy(config)
+        if pixel_size is None:
+            pixel_size = config.pixel_size
+
+        self.params = ScanParams(data_ref, width, height, phases, pixel_size, reduction_factor)
+        self.config = config
 
         self.field = FieldManager(
             self.params,
@@ -70,8 +73,9 @@ class Scan:
         width = self.params.width // 2
         height = self.params.height // 2
         phases = self.params.phases
-        config = self.config
         reduction_factor = self.params.reduction_factor + 1
+        pixel_size = self.params.pixel_size * 2
+        config = self.config
 
         phase_id_values: list[list[int | None]] = list()
         euler_angle_values: list[list[tuple[float, float, float] | None]] = list()
@@ -140,19 +144,19 @@ class Scan:
                 pattern_quality_values[y].append(pattern_quality_aggregate)
 
         scan = Scan(
-            data_ref,
-            width,
-            height,
-            phases,
-            phase_id_values,
-            euler_angle_values,
-            pattern_quality_values,
-            index_quality_values,
-            config,
-            reduction_factor,
+            data_ref=data_ref,
+            width=width,
+            height=height,
+            phases=phases,
+            phase_id_values=phase_id_values,
+            euler_angle_values=euler_angle_values,
+            pattern_quality_values=pattern_quality_values,
+            index_quality_values=index_quality_values,
+            config=config,
+            reduction_factor=reduction_factor,
+            pixel_size=pixel_size,
         )
 
-        scan.config.pixel_size *= 2
         return scan
 
     def reduce_resolution(self, reduction_factor: int) -> Self:
@@ -162,9 +166,9 @@ class Scan:
             return self._reduce_resolution().reduce_resolution(reduction_factor - 1)
 
     @classmethod
-    def from_pathfinder_file(cls, data_path: str, config: Config, data_reference: str = None) -> Self:
-        if data_reference is None:
-            data_reference = data_path.split("/")[-1].split(".")[0].lstrip("p")
+    def from_pathfinder_file(cls, data_path: str, config: Config, data_ref: str = None) -> Self:
+        if data_ref is None:
+            data_ref = data_path.split("/")[-1].split(".")[0].lstrip("p")
 
         with open(data_path, "r", encoding="utf-8") as file:
             materials = dict()
@@ -217,7 +221,7 @@ class Scan:
                     pattern_quality_values[y].append(float(line[7]))
 
         return Scan(
-            data_reference=data_reference,
+            data_ref=data_ref,
             width=width,
             height=height,
             phases=materials,
@@ -253,10 +257,8 @@ class Scan:
         yield f"Map size:"
         yield f"X,{self.params.width}"
         yield f"Y,{self.params.height}"
-
-        if self.config.compute_dislocation:
-            yield f"Map scale:"
-            yield f"Pixel size (μm),{self.config.pixel_size_microns}"
+        yield f"Map scale:"
+        yield f"Pixel size (μm),{self.params.pixel_size_microns}"
 
         if self.config.compute_channelling:
             yield f"Channelling:"
