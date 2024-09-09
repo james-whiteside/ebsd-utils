@@ -3,7 +3,7 @@
 from os import getcwd
 from configparser import ConfigParser
 from math import degrees, sin, cos
-from src.utilities.geometry import Axis
+from src.utilities.geometry import Axis, AxisSet
 
 
 class Config:
@@ -16,6 +16,7 @@ class Config:
         self.channelling_cache_dir = self._str(parser["project"]["channelling_cache_dir"])
         self.analysis_dir = self._str(parser["project"]["analysis_output_dir"])
         self.map_dir = self._str(parser["project"]["map_output_dir"])
+        self.axis_set = self._axis_set(parser["data"]["euler_axis_set"])
         self.reduce_resolution = self._bool(parser["analysis"]["reduce_resolution"])
         self.compute_dislocation = self._bool(parser["analysis"]["compute_dislocation_densities"])
         self.compute_channelling = self._bool(parser["analysis"]["compute_channelling_fractions"])
@@ -78,3 +79,7 @@ class Config:
     @staticmethod
     def _int_list(value: str) -> list[int]:
         return [Config._int(item) for item in Config._str_list(value)]
+
+    @staticmethod
+    def _axis_set(value: str) -> AxisSet:
+        return AxisSet[Config._str(value).upper()]

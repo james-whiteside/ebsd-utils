@@ -72,7 +72,7 @@ class FieldManager:
     @property
     def orientation_matrix(self) -> Field[ndarray]:
         if self._orientation_matrix is None:
-            self._orientation_matrix = orientation_matrix(self._scan_params.axis_set, self.euler_angles_rad)
+            self._orientation_matrix = orientation_matrix(self._config.axis_set, self.euler_angles_rad)
 
         return self._orientation_matrix
 

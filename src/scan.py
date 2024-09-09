@@ -8,7 +8,7 @@ from src.data_structures.aggregate_manager import AggregateManager
 from src.data_structures.field import FieldNullError
 from src.data_structures.field_manager import FieldManager
 from src.utilities.config import Config
-from src.utilities.geometry import AxisSet, orthogonalise_matrix, euler_angles
+from src.utilities.geometry import orthogonalise_matrix, euler_angles
 from src.data_structures.map_manager import MapManager
 from src.data_structures.parameter_groups import ScanParams
 from src.data_structures.phase import Phase
@@ -27,10 +27,9 @@ class Scan:
         pattern_quality_values: list[list[float]],
         index_quality_values: list[list[float]],
         config: Config,
-        axis_set: AxisSet = AxisSet.ZXZ,
         reduction_factor: int = 0,
     ):
-        self.params = ScanParams(data_reference, width, height, phases, axis_set, reduction_factor)
+        self.params = ScanParams(data_reference, width, height, phases, reduction_factor)
         self.config = deepcopy(config)
 
         self.field = FieldManager(
@@ -72,7 +71,6 @@ class Scan:
         height = self.params.height // 2
         phases = self.params.phases
         config = self.config
-        axis_set = self.params.axis_set
         reduction_factor = self.params.reduction_factor + 1
 
         phase_id_values: list[list[int | None]] = list()
@@ -127,7 +125,7 @@ class Scan:
 
                     try:
                         orientation_matrix_aggregate = orthogonalise_matrix(orientation_matrix_total / count, self.config.scaling_tolerance)
-                        euler_angle_aggregate = tuple_degrees(euler_angles(orientation_matrix_aggregate, axis_set))
+                        euler_angle_aggregate = tuple_degrees(euler_angles(orientation_matrix_aggregate, self.config.axis_set))
                         index_quality_aggregate = index_quality_total / count
                         pattern_quality_aggregate = pattern_quality_total / len(kernel)
                     except ArithmeticError:
@@ -151,7 +149,6 @@ class Scan:
             pattern_quality_values,
             index_quality_values,
             config,
-            axis_set,
             reduction_factor,
         )
 

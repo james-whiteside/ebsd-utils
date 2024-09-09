@@ -55,7 +55,7 @@ class AggregateManager:
 
     @property
     def euler_angles_rad(self) -> FunctionalAggregateMapper[ndarray, tuple[float, float, float]]:
-        axis_set = self._field_manager._scan_params.axis_set
+        axis_set = self._field_manager._config.axis_set
         mapping = partial(euler_angles, axis_set=axis_set)
         return FunctionalAggregateMapper(FieldType.VECTOR_3D, self.reduced_matrix, mapping)
 

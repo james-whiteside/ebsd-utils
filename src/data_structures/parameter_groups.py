@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from math import radians, degrees, sin, cos
-from src.utilities.geometry import Axis, AxisSet
+from src.utilities.geometry import Axis
 from src.data_structures.phase import Phase
 
 
@@ -12,7 +12,6 @@ class ScanParams:
         width: int,
         height: int,
         phases: dict[int, Phase],
-        axis_set: AxisSet,
         reduction_factor: int,
     ):
         self.are_set = True
@@ -20,7 +19,6 @@ class ScanParams:
         self.width = width
         self.height = height
         self.phases = phases
-        self.axis_set = axis_set
         self.reduction_factor = reduction_factor
 
     @property
