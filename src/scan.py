@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
 
 from collections.abc import Iterator
+from os import makedirs
 from typing import Self
 from numpy import zeros
 from src.data_structures.aggregate_manager import AggregateManager
 from src.data_structures.field import FieldNullError
 from src.data_structures.field_manager import FieldManager
+from src.data_structures.map import Map
 from src.utilities.config import Config
-from src.utilities.geometry import orthogonalise_matrix, euler_angles
+from src.utilities.geometry import orthogonalise_matrix, euler_angles, Axis
 from src.data_structures.map_manager import MapManager
 from src.data_structures.parameter_groups import ScanParams
 from src.data_structures.phase import Phase
@@ -237,6 +239,13 @@ class Scan:
             for row in self._rows():
                 file.write(f"{row}\n")
 
+    def to_maps(self, dir: str):
+        makedirs(dir, exist_ok=True)
+
+        for map in self._maps():
+            path = f"{dir}/{map.map_type.name}.png"
+            map.image.save(path)
+
     def _rows(self) -> Iterator[str]:
         for row in self._metadata_rows():
             yield row
@@ -373,3 +382,23 @@ class Scan:
                     columns += self.field.orientation_cluster_id.serialize_value_at(x, y)
 
                 yield ",".join(columns)
+
+    def _maps(self) -> Iterator[Map]:
+        yield self.map.phase
+        yield self.map.euler_angle
+        yield self.map.pattern_quality
+        yield self.map.index_quality
+        yield self.map.orientation(Axis.X)
+        yield self.map.orientation(Axis.Y)
+        yield self.map.orientation(Axis.Z)
+        yield self.map.average_misorientation
+
+        if self.config.compute_dislocation:
+            yield self.map.gnd_density
+
+        if self.config.compute_channelling:
+            yield self.map.orientation(self.config.beam_axis)
+            yield self.map.channelling_fraction
+
+        if self.config.compute_clustering:
+            yield self.map.orientation_cluster
