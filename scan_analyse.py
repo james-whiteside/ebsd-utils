@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import os
 from datetime import datetime
-from src.data_structures.map import MapType
 from src.utilities.config import Config
 from src.utilities.utilities import get_file_paths, get_directory_path, format_time_interval
 from src.scan import Scan
@@ -10,37 +8,22 @@ from src.scan import Scan
 
 def analyse() -> None:
     config = Config()
-    filepaths = get_file_paths(directory_path=get_directory_path(config.data_dir), recursive=True, extension="csv")
+    data_paths = get_file_paths(directory_path=get_directory_path(config.data_dir), recursive=True, extension="csv")
 
-    for filepath in filepaths:
-        scan = Scan.from_pathfinder_file(filepath, config)
+    for data_path in data_paths:
+        data_ref = data_path.split("/")[-1].split(".")[0].lstrip("p")
+        scan = Scan.from_csv(data_path, config, data_ref)
 
         print(f"Making analysis for p{scan.params.data_ref}.")
         start_time = datetime.now()
-        map_types = [MapType.P, MapType.EA, MapType.PQ, MapType.IQ, MapType.OX, MapType.OY, MapType.OZ, MapType.KAM]
-
-        if config.compute_dislocation:
-            map_types += [MapType.GND]
-
-        if config.compute_channelling:
-            map_types += [MapType.OB, MapType.CF]
-
-        if config.compute_clustering:
-            map_types += [MapType.OC]
 
         if config.reduce_resolution:
             scan = scan.reduce_resolution(config.reduction_factor)
 
         output_path = f"{get_directory_path(config.analysis_dir)}/q{scan.params.analysis_ref}.csv"
-        os.makedirs(f"{get_directory_path(config.map_dir)}/{scan.params.analysis_ref}", exist_ok=True)
-
-        scan.to_pathfinder_file(output_path)
-
-        for map_type in map_types:
-            map_path = f"{get_directory_path(config.map_dir)}/{scan.params.analysis_ref}/{map_type.name}.png"
-            # print(map_type.name)
-            scan.map.get(map_type).image.save(map_path)
-
+        map_dir = f"{get_directory_path(config.map_dir)}/{scan.params.analysis_ref}"
+        scan.to_csv(output_path)
+        scan.to_maps(map_dir)
         time_taken = (datetime.now() - start_time).total_seconds()
         print(f"Analysis completed in: {format_time_interval(time_taken)}")
 

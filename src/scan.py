@@ -168,9 +168,9 @@ class Scan:
             return self._reduce_resolution().reduce_resolution(reduction_factor - 1)
 
     @classmethod
-    def from_pathfinder_file(cls, data_path: str, config: Config, data_ref: str = None) -> Self:
+    def from_csv(cls, data_path: str, config: Config, data_ref: str = None) -> Self:
         if data_ref is None:
-            data_ref = data_path.split("/")[-1].split(".")[0].lstrip("p")
+            data_ref = data_path.split("/")[-1].split(".")[0]
 
         with open(data_path, "r", encoding="utf-8") as file:
             materials = dict()
@@ -234,7 +234,7 @@ class Scan:
             config=config,
         )
 
-    def to_pathfinder_file(self, path: str):
+    def to_csv(self, path: str):
         with open(path, "w", encoding="utf-8") as file:
             for row in self._rows():
                 file.write(f"{row}\n")
@@ -314,8 +314,7 @@ class Scan:
             columns += self.cluster_aggregate.pattern_quality.serialize_value_for(id)
 
             if self.config.compute_channelling:
-                beam_axis = self.config.beam_axis
-                columns += self.cluster_aggregate.ipf_coordinates(beam_axis).serialize_value_for(id)
+                columns += self.cluster_aggregate.ipf_coordinates(self.config.beam_axis).serialize_value_for(id)
 
             columns += self.cluster_aggregate.average_misorientation_deg.serialize_value_for(id)
 
@@ -362,8 +361,7 @@ class Scan:
                 columns += self.field.pattern_quality.serialize_value_at(x, y)
 
                 if self.config.compute_channelling:
-                    beam_axis = self.config.beam_axis
-                    columns += self.field.ipf_coordinates(beam_axis).serialize_value_at(x, y)
+                    columns += self.field.ipf_coordinates(self.config.beam_axis).serialize_value_at(x, y)
 
                 columns += self.field.average_misorientation_deg.serialize_value_at(x, y)
 
