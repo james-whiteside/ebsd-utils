@@ -16,7 +16,7 @@ class Axis:
         if not isinstance(other, Axis):
             return False
 
-        return self.vector == other.vector
+        return self.name == other.name and self.vector == other.vector
 
     def __hash__(self):
         return hash(self.vector)
