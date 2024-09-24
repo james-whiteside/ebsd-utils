@@ -298,8 +298,10 @@ class MapField(Field):
         width: int,
         height: int,
         default_value: tuple[float, float, float],
+        upscale_factor: int = 1,
     ):
         super().__init__(width, height, FieldType.VECTOR_3D, default_value, nullable=False)
+        self.upscale_factor = upscale_factor
 
     def _assert_value_permitted(self, value: tuple[float, float, float]):
         super()._assert_value_permitted(value)
@@ -308,7 +310,8 @@ class MapField(Field):
             raise ValueError(f"Map field may only take tuples of values between 0.0 and 1.0. Provided tuple: {value}")
 
     def to_image(self) -> Image:
-        image = new_image("RGB", (self.width, self.height))
+        size = self.upscale_factor * self.width, self.upscale_factor * self.height
+        image = new_image("RGB", size)
 
         for y in range(self.height):
             for x in range(self.width):
@@ -318,6 +321,10 @@ class MapField(Field):
                     int(round(255 * self.get_value_at(x, y)[2])),
                 )
 
-                image.putpixel((x, y), pixel)
+                for j in range(self.upscale_factor):
+                    for i in range(self.upscale_factor):
+
+                        coordinates = self.upscale_factor * x + i, self.upscale_factor * y + j
+                        image.putpixel(coordinates, pixel)
 
         return image

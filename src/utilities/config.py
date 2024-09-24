@@ -23,6 +23,7 @@ class Config:
         self.compute_channelling = self._bool(parser["analysis"]["compute_channelling_fractions"])
         self.compute_clustering = self._bool(parser["analysis"]["compute_orientation_clusters"])
         self.use_cuda = self._bool(parser["analysis"]["use_cuda"])
+        self.upscale_factor = self._int(parser["maps"]["upscale_factor"])
         self.reduction_factor = self._int(parser["resolution_reduction"]["reduction_factor"])
         self.scaling_tolerance = self._float(parser["resolution_reduction"]["scaling_tolerance"])
         self.gnd_corrective_factor = self._float(parser["dislocation_density"]["corrective_factor"])

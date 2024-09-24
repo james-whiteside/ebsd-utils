@@ -29,8 +29,10 @@ class Map[VALUE_TYPE]:
         coordinates_field: FieldLike[tuple] = None,
         max_value: VALUE_TYPE = None,
         min_value: VALUE_TYPE = None,
+        upscale_factor: int = 1,
     ):
         self.map_type = map_type
+        self.upscale_factor = upscale_factor
 
         if not value_field.field_type.mappable:
             raise ValueError(f"Value field is not a mappable field type: {value_field.field_type.name}")
@@ -69,7 +71,8 @@ class Map[VALUE_TYPE]:
     def field(self) -> MapField:
         match self._values.field_type:
             case FieldType.DISCRETE:
-                field = MapField(self._width, self._height, default_value=(0.0, 0.0, 0.0))
+                default_value = (0.0, 0.0, 0.0)
+                field = MapField(self._width, self._height, default_value, self.upscale_factor)
 
                 for y in range(self._height):
                     for x in range(self._width):
@@ -81,7 +84,8 @@ class Map[VALUE_TYPE]:
                         field.set_value_at(x, y, value)
 
             case FieldType.SCALAR:
-                field = MapField(self._width, self._height, default_value=(1.0, 0.0, 0.0))
+                default_value = (1.0, 0.0, 0.0)
+                field = MapField(self._width, self._height, default_value, self.upscale_factor)
 
                 for y in range(self._height):
                     for x in range(self._width):
@@ -94,7 +98,8 @@ class Map[VALUE_TYPE]:
                         field.set_value_at(x, y, value)
 
             case FieldType.VECTOR_3D:
-                field = MapField(self._width, self._height, default_value=(0.0, 0.0, 0.0))
+                default_value = (0.0, 0.0, 0.0)
+                field = MapField(self._width, self._height, default_value, self.upscale_factor)
 
                 for y in range(self._height):
                     for x in range(self._width):

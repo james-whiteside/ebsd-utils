@@ -58,6 +58,7 @@ class MapManager:
             value_field=value_field,
             max_value=len(mapping),
             min_value=0,
+            upscale_factor=self._field_manager._config.upscale_factor,
         )
 
     @property
@@ -67,6 +68,7 @@ class MapManager:
             value_field=self._euler_angle_colours,
             max_value=(1.0, 1.0, 1.0),
             min_value=(0.0, 0.0, 0.0),
+            upscale_factor=self._field_manager._config.upscale_factor,
         )
 
     @property
@@ -76,6 +78,7 @@ class MapManager:
             value_field=self._field_manager.pattern_quality,
             max_value=100.0,
             min_value=0.0,
+            upscale_factor=self._field_manager._config.upscale_factor,
         )
 
     @property
@@ -85,6 +88,7 @@ class MapManager:
             value_field=self._field_manager.index_quality,
             max_value=100.0,
             min_value=0.0,
+            upscale_factor=self._field_manager._config.upscale_factor,
         )
 
     def orientation(self, axis: Axis) -> Map:
@@ -103,6 +107,7 @@ class MapManager:
             value_field=self._ipf_colours(axis),
             max_value=(1.0, 1.0, 1.0),
             min_value=(0.0, 0.0, 0.0),
+            upscale_factor=self._field_manager._config.upscale_factor,
         )
 
     @property
@@ -111,6 +116,7 @@ class MapManager:
             map_type=MapType.KAM,
             value_field=self._field_manager.average_misorientation_rad,
             min_value=0.0,
+            upscale_factor=self._field_manager._config.upscale_factor,
         )
 
     @property
@@ -118,6 +124,7 @@ class MapManager:
         return Map(
             map_type=MapType.GND,
             value_field=self._field_manager.gnd_density_log,
+            upscale_factor=self._field_manager._config.upscale_factor,
         )
 
     @property
@@ -127,6 +134,7 @@ class MapManager:
             value_field=self._field_manager.channelling_fraction,
             max_value=100.0,
             min_value=0.0,
+            upscale_factor=self._field_manager._config.upscale_factor,
         )
 
     @property
@@ -138,4 +146,5 @@ class MapManager:
             value_field=value_field,
             max_value=self._field_manager._cluster_count,
             min_value=0,
+            upscale_factor=self._field_manager._config.upscale_factor,
         )
