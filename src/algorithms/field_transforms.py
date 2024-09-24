@@ -176,9 +176,10 @@ def misrotation_tensor(
 
 
 def nye_tensor(
-    misrotation_tensor_field: dict[Axis, FieldLike[ndarray]],
+    misrotation_x_tensor_field: FieldLike[ndarray],
+    misrotation_y_tensor_field: FieldLike[ndarray],
 ) -> Field[ndarray]:
-    input_fields = [misrotation_tensor_field[Axis.X], misrotation_tensor_field[Axis.Y]]
+    input_fields = [misrotation_x_tensor_field, misrotation_y_tensor_field]
     width, height, nullable = FieldLike.get_params(input_fields)
     output_field = Field(width, height, FieldType.MATRIX, default_value=None, nullable=True)
 
@@ -189,9 +190,9 @@ def nye_tensor(
 
             try:
                 value += array((
-                    (0.0, misrotation_tensor_field[Axis.X].get_value_at(x, y)[2][0], -misrotation_tensor_field[Axis.X].get_value_at(x, y)[1][0]),
+                    (0.0, misrotation_x_tensor_field.get_value_at(x, y)[2][0], -misrotation_x_tensor_field.get_value_at(x, y)[1][0]),
                     (0.0, 0.0, 0.0),
-                    (0.0, 0.0, -misrotation_tensor_field[Axis.X].get_value_at(x, y)[1][2])
+                    (0.0, 0.0, -misrotation_x_tensor_field.get_value_at(x, y)[1][2])
                 ))
 
                 count += 1
@@ -201,8 +202,8 @@ def nye_tensor(
             try:
                 value += array((
                     (0.0, 0.0, 0.0),
-                    (-misrotation_tensor_field[Axis.Y].get_value_at(x, y)[2][1], 0.0, misrotation_tensor_field[Axis.Y].get_value_at(x, y)[0][1]),
-                    (0.0, 0.0, misrotation_tensor_field[Axis.Y].get_value_at(x, y)[0][2])
+                    (-misrotation_y_tensor_field.get_value_at(x, y)[2][1], 0.0, misrotation_y_tensor_field.get_value_at(x, y)[0][1]),
+                    (0.0, 0.0, misrotation_y_tensor_field.get_value_at(x, y)[0][2])
                 ))
 
                 count += 1

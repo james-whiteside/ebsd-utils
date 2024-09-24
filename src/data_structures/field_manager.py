@@ -109,7 +109,7 @@ class FieldManager:
     @property
     def nye_tensor(self) -> Field[ndarray]:
         if self._nye_tensor is None:
-            self._nye_tensor = nye_tensor(self._misrotation_tensor)
+            self._nye_tensor = nye_tensor(self.misrotation_tensor(Axis.X), self.misrotation_tensor(Axis.Y))
 
         return self._nye_tensor
 
