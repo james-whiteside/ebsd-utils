@@ -186,6 +186,10 @@ class Scan:
                 local_id = int(line[0])
                 global_id = int(line[2])
 
+                if global_id == Phase.UNINDEXED_ID:
+                    local_unindexed_id = local_id
+                    continue
+
                 try:
                     material = file_materials[global_id]
                 except KeyError:
@@ -212,7 +216,7 @@ class Scan:
                     line = file.readline().rstrip("\n").split(",")
                     local_phase_id = int(line[2])
 
-                    if materials[local_phase_id].global_id == Phase.UNINDEXED_ID:
+                    if local_phase_id == local_unindexed_id:
                         phase_id_values[y].append(None)
                         euler_angle_values[y].append(None)
                     else:
