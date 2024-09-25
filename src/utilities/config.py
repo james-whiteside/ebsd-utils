@@ -2,7 +2,7 @@
 
 from os import getcwd
 from configparser import ConfigParser
-from math import degrees, sin, cos
+from math import radians, sin, cos
 from src.utilities.geometry import Axis, AxisSet
 
 
@@ -29,17 +29,17 @@ class Config:
         self.gnd_corrective_factor = self._float(parser["dislocation_density"]["corrective_factor"])
         self.beam_atomic_number = self._int(parser["channelling_fraction"]["beam_atomic_number"])
         self.beam_energy = self._float(parser["channelling_fraction"]["beam_energy"])
-        self.beam_tilt_rad = self._float(parser["channelling_fraction"]["beam_tilt"])
+        self.beam_tilt_deg = self._float(parser["channelling_fraction"]["beam_tilt"])
         self.core_point_threshold = self._int(parser["orientation_clustering"]["neighbour_threshold"])
-        self.neighbourhood_radius_rad = self._float(parser["orientation_clustering"]["neighbourhood_radius"])
+        self.neighbourhood_radius_deg = self._float(parser["orientation_clustering"]["neighbourhood_radius"])
 
     @property
     def pixel_size(self) -> float:
         return self.pixel_size_microns * 10.0 ** -6.0
 
     @property
-    def beam_tilt_deg(self) -> float:
-        return degrees(self.beam_tilt_rad)
+    def beam_tilt_rad(self) -> float:
+        return radians(self.beam_tilt_deg)
 
     @property
     def beam_axis(self) -> Axis:
@@ -51,8 +51,8 @@ class Config:
         return self.beam_axis.vector
 
     @property
-    def neighbourhood_radius_deg(self) -> float:
-        return degrees(self.neighbourhood_radius_rad)
+    def neighbourhood_radius_rad(self) -> float:
+        return radians(self.neighbourhood_radius_deg)
 
     @staticmethod
     def _str(value: str) -> str:
