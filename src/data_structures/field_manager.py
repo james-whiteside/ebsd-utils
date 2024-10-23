@@ -72,7 +72,7 @@ class FieldManager:
     @property
     def orientation_matrix(self) -> Field[ndarray]:
         if self._orientation_matrix is None:
-            self._orientation_matrix = orientation_matrix(self._config.axis_set, self.euler_angles_rad)
+            self._orientation_matrix = orientation_matrix(self._config.data.euler_axis_set, self.euler_angles_rad)
 
         return self._orientation_matrix
 
@@ -116,7 +116,7 @@ class FieldManager:
     @property
     def gnd_density_lin(self) -> Field[float]:
         if self._gnd_density_lin is None:
-            self._gnd_density_lin = gnd_density(self._config.gnd_corrective_factor, self.nye_tensor, self.phase)
+            self._gnd_density_lin = gnd_density(self._config.dislocation.corrective_factor, self.nye_tensor, self.phase)
 
         return self._gnd_density_lin
 
@@ -128,14 +128,14 @@ class FieldManager:
     def channelling_fraction(self) -> Field[float]:
         if self._channelling_fraction is None:
             self._channelling_fraction = channelling_fraction(
-                self._config.beam_atomic_number,
-                self._config.beam_energy,
-                self._config.beam_vector,
+                self._config.channelling.beam_atomic_number,
+                self._config.channelling.beam_energy,
+                self._config.channelling.beam_vector,
                 self._scan_params.phases,
                 self.orientation_matrix,
                 self.phase,
-                self._config.materials_file,
-                self._config.channelling_cache_dir,
+                self._config.project.materials_file,
+                self._config.project.channelling_cache_dir,
             )
 
         return self._channelling_fraction
@@ -164,9 +164,9 @@ class FieldManager:
 
     def _init_orientation_cluster(self) -> None:
         self._cluster_count_result, self._clustering_category_id, self._orientation_cluster_id = orientation_cluster(
-            self._config.core_point_threshold,
-            self._config.neighbourhood_radius_rad,
+            self._config.clustering.core_point_threshold,
+            self._config.clustering.neighbourhood_radius_rad,
             self.phase,
             self.reduced_matrix,
-            self._config.use_cuda,
+            self._config.analysis.use_cuda,
         )

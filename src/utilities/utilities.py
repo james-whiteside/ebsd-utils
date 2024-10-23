@@ -34,7 +34,7 @@ def tuple_degrees(angles: tuple[float, float, float]) -> tuple[float, float, flo
     return float_degrees(angles[0]), float_degrees(angles[1]), float_degrees(angles[2])
 
 
-def tuple_radians(angles: tuple[float, float, float]) -> tuple[float, float, float,]:
+def tuple_radians(angles: tuple[float, float, float]) -> tuple[float, float, float]:
     return float_radians(angles[0]), float_radians(angles[1]), float_radians(angles[2])
 
 

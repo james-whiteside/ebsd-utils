@@ -32,7 +32,7 @@ class Scan:
         pixel_size: float = None,
     ):
         if pixel_size is None:
-            pixel_size = config.pixel_size
+            pixel_size = config.data.pixel_size
 
         self.params = ScanParams(data_ref, width, height, phases, pixel_size, reduction_factor)
         self.config = config
@@ -130,8 +130,8 @@ class Scan:
                         count += 1
 
                     try:
-                        orientation_matrix_aggregate = orthogonalise_matrix(orientation_matrix_total / count, self.config.scaling_tolerance)
-                        euler_angle_aggregate = tuple_degrees(euler_angles(orientation_matrix_aggregate, self.config.axis_set))
+                        orientation_matrix_aggregate = orthogonalise_matrix(orientation_matrix_total / count, self.config.resolution.scaling_tolerance)
+                        euler_angle_aggregate = tuple_degrees(euler_angles(orientation_matrix_aggregate, self.config.data.euler_axis_set))
                         index_quality_aggregate = index_quality_total / count
                         pattern_quality_aggregate = pattern_quality_total / len(kernel)
                     except ArithmeticError:
@@ -174,7 +174,7 @@ class Scan:
 
         with open(data_path, "r", encoding="utf-8") as file:
             materials = dict()
-            file_materials = Phase.from_materials_file(config.materials_file)
+            file_materials = Phase.from_materials_file(config.project.materials_file)
             file.readline()
 
             while True:
@@ -254,7 +254,7 @@ class Scan:
         for row in self._metadata_rows():
             yield row
 
-        if self.config.compute_clustering:
+        if self.config.analysis.compute_clustering:
             for row in self._cluster_aggregate_rows():
                 yield row
 
@@ -273,16 +273,16 @@ class Scan:
         yield f"Map scale:"
         yield f"Pixel size (μm),{self.params.pixel_size_microns}"
 
-        if self.config.compute_channelling:
+        if self.config.analysis.compute_channelling:
             yield f"Channelling:"
-            yield f"Atomic number,{self.config.beam_atomic_number}"
-            yield f"Energy (eV),{self.config.beam_energy}"
-            yield f"Tilt (deg),{self.config.beam_tilt_deg}"
+            yield f"Atomic number,{self.config.channelling.beam_atomic_number}"
+            yield f"Energy (eV),{self.config.channelling.beam_energy}"
+            yield f"Tilt (deg),{self.config.channelling.beam_tilt_deg}"
 
-        if self.config.compute_clustering:
+        if self.config.analysis.compute_clustering:
             yield f"Clustering:"
-            yield f"Core point threshold,{self.config.core_point_threshold}"
-            yield f"Point neighbourhood radius (deg),{self.config.neighbourhood_radius_deg}"
+            yield f"Core point threshold,{self.config.clustering.core_point_threshold}"
+            yield f"Point neighbourhood radius (deg),{self.config.clustering.neighbourhood_radius_deg}"
             yield f"Cluster count,{self.cluster_count}"
 
     def _cluster_aggregate_rows(self) -> Iterator[str]:
@@ -295,15 +295,15 @@ class Scan:
         columns += ["Index Quality"]
         columns += ["Pattern Quality"]
 
-        if self.config.compute_channelling:
+        if self.config.analysis.compute_channelling:
             columns += ["Beam-IPF x-coordinate", "Beam-IPF y-coordinate"]
 
         columns += ["Kernel Average Misorientation"]
 
-        if self.config.compute_dislocation:
+        if self.config.analysis.compute_dislocation:
             columns += ["GND Density"]
 
-        if self.config.compute_channelling:
+        if self.config.analysis.compute_channelling:
             columns += ["Channelling Fraction"]
 
         yield ",".join(columns)
@@ -317,15 +317,15 @@ class Scan:
             columns += self.cluster_aggregate.index_quality.serialize_value_for(id)
             columns += self.cluster_aggregate.pattern_quality.serialize_value_for(id)
 
-            if self.config.compute_channelling:
-                columns += self.cluster_aggregate.ipf_coordinates(self.config.beam_axis).serialize_value_for(id)
+            if self.config.analysis.compute_channelling:
+                columns += self.cluster_aggregate.ipf_coordinates(self.config.channelling.beam_axis).serialize_value_for(id)
 
             columns += self.cluster_aggregate.average_misorientation_deg.serialize_value_for(id)
 
-            if self.config.compute_dislocation:
+            if self.config.analysis.compute_dislocation:
                 columns += self.cluster_aggregate.gnd_density_log.serialize_value_for(id)
 
-            if self.config.compute_channelling:
+            if self.config.analysis.compute_channelling:
                 columns += self.cluster_aggregate.channelling_fraction.serialize_value_for(id)
 
             yield ",".join(columns)
@@ -339,18 +339,18 @@ class Scan:
         columns += ["Index Quality"]
         columns += ["Pattern Quality"]
 
-        if self.config.compute_channelling:
+        if self.config.analysis.compute_channelling:
             columns += ["Beam-IPF x-coordinate", "Beam-IPF y-coordinate"]
 
         columns += ["Kernel Average Misorientation"]
 
-        if self.config.compute_dislocation:
+        if self.config.analysis.compute_dislocation:
             columns += ["GND Density"]
 
-        if self.config.compute_channelling:
+        if self.config.analysis.compute_channelling:
             columns += ["Channelling Fraction"]
 
-        if self.config.compute_clustering:
+        if self.config.analysis.compute_clustering:
             columns += ["Point Category", "Point Cluster"]
 
         yield ",".join(columns)
@@ -364,18 +364,18 @@ class Scan:
                 columns += self.field.index_quality.serialize_value_at(x, y)
                 columns += self.field.pattern_quality.serialize_value_at(x, y)
 
-                if self.config.compute_channelling:
-                    columns += self.field.ipf_coordinates(self.config.beam_axis).serialize_value_at(x, y)
+                if self.config.analysis.compute_channelling:
+                    columns += self.field.ipf_coordinates(self.config.channelling.beam_axis).serialize_value_at(x, y)
 
                 columns += self.field.average_misorientation_deg.serialize_value_at(x, y)
 
-                if self.config.compute_dislocation:
+                if self.config.analysis.compute_dislocation:
                     columns += self.field.gnd_density_log.serialize_value_at(x, y)
 
-                if self.config.compute_channelling:
+                if self.config.analysis.compute_channelling:
                     columns += self.field.channelling_fraction.serialize_value_at(x, y)
 
-                if self.config.compute_clustering:
+                if self.config.analysis.compute_clustering:
                     try:
                         columns += [self.field.clustering_category.get_value_at(x, y).code]
                     except FieldNullError:
@@ -395,12 +395,12 @@ class Scan:
         yield self.map.orientation(Axis.Z)
         yield self.map.average_misorientation
 
-        if self.config.compute_dislocation:
+        if self.config.analysis.compute_dislocation:
             yield self.map.gnd_density
 
-        if self.config.compute_channelling:
-            yield self.map.orientation(self.config.beam_axis)
+        if self.config.analysis.compute_channelling:
+            yield self.map.orientation(self.config.channelling.beam_axis)
             yield self.map.channelling_fraction
 
-        if self.config.compute_clustering:
+        if self.config.analysis.compute_clustering:
             yield self.map.orientation_cluster
