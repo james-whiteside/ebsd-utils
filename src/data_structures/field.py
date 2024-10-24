@@ -125,14 +125,14 @@ class FieldLike[VALUE_TYPE](ABC):
         return False
 
     @property
-    def max_value(self):
+    def max_value(self) -> VALUE_TYPE:
         if not self.field_type.comparable:
             raise AttributeError(f"Field type is not comparable: {self.field_type.name}")
         else:
             return max(self.values)
 
     @property
-    def min_value(self):
+    def min_value(self) -> VALUE_TYPE:
         if not self.field_type.comparable:
             raise AttributeError(f"Field type is not comparable: {self.field_type.name}")
         else:
@@ -236,7 +236,7 @@ class Field[VALUE_TYPE](FieldLike):
             self._assert_value_permitted(value)
             self._values[y][x] = value
 
-    def _assert_value_permitted(self, value: VALUE_TYPE | None):
+    def _assert_value_permitted(self, value: VALUE_TYPE | None) -> None:
         if value is None:
             if self.nullable:
                 return
@@ -303,7 +303,7 @@ class MapField(Field):
         super().__init__(width, height, FieldType.VECTOR_3D, default_value, nullable=False)
         self.upscale_factor = upscale_factor
 
-    def _assert_value_permitted(self, value: tuple[float, float, float]):
+    def _assert_value_permitted(self, value: tuple[float, float, float]) -> None:
         super()._assert_value_permitted(value)
 
         if not all(0.0 <= item <= 1.0 for item in value):
