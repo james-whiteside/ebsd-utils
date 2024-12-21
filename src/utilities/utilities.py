@@ -403,7 +403,7 @@ class ProgressBar:
         bar = "|" + "█" * bar_fill + "-" * (self.length - bar_fill) + "|"
         progress = format_sig_figs_or_int(100 * self.current_step / self.total_steps, self.sigfig) + "%"
 
-        if self.current_time == self.start_time:
+        if self.current_step == 0:
             output = f"Progress: {bar} {progress}"
             padding = " " * max(0, self.last_print_length - len(output))
             self.print_function(output + padding, end='\r')
