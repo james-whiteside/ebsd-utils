@@ -101,6 +101,10 @@ class BravaisLattice(Enum):
         return CrystalFamily(self.value[0])
 
 
+class PhaseMissingError(FileNotFoundError):
+    pass
+
+
 class Phase:
     UNINDEXED_ID = 0
     GENERIC_BCC_ID = 4294967294
@@ -156,16 +160,22 @@ class Phase:
             pickle_dump(self, file)
 
     @classmethod
-    def load(cls, file_path: str) -> Self:
-        with open(file_path, "rb") as file:
-            return pickle_load(file)
+    def load(cls, cache_path: str, global_id: int) -> Self:
+        file_path = f"{cache_path}/{global_id}"
+
+        try:
+            with open(file_path, "rb") as file:
+                return pickle_load(file)
+        except FileNotFoundError:
+            raise PhaseMissingError(f"No file found in phase cache with path {file_path}")
 
     @classmethod
     def load_all(cls, cache_path: str) -> dict[int, Self]:
         phases: dict[int, Self] = dict()
+        global_ids = [int(path) for path in listdir(cache_path)]
 
-        for file in listdir(cache_path):
-            phase = cls.load(f"{cache_path}/{file}")
+        for global_id in global_ids:
+            phase = cls.load(cache_path, global_id)
             phases[phase.global_id] = phase
 
         return phases
