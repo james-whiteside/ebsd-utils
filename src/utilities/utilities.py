@@ -194,7 +194,6 @@ def _get_file_paths(directory_path: str, recursive: bool, extension: str | None,
 def get_file_paths(directory_path: str, recursive: bool = False, extension: str = None, exclusions: list[str] = None, prompt: str = "Files found:") -> list[str]:
     """
     Returns a list of absolute paths to files chosen by the user via an interactive CLI from a selection matched.
-    Note: this function has only been tested on Windows systems.
     :param directory_path: The absolute path of the directory to match files from.
     :param recursive: Match files in subdirectories.
     :param extension: Extension to match files on. If none specified, all extensions will be matched.
@@ -209,7 +208,6 @@ def get_file_paths(directory_path: str, recursive: bool = False, extension: str 
 def get_file_path(directory_path: str, recursive: bool = False, extension: str = None, exclusions: list[str] = None, prompt: str = "Files found:") -> str:
     """
     Returns the absolute path to a file chosen by the user via an interactive CLI from a selection matched.
-    Note: this function has only been tested on Windows systems.
     :param directory_path: The absolute path of the directory to match files from.
     :param recursive: Match files in subdirectories.
     :param extension: Extension to match files on. If none specified, all extensions will be matched.
