@@ -171,7 +171,7 @@ class Phase:
 
     @classmethod
     def load_all(cls, cache_path: str) -> dict[int, Self]:
-        phases: dict[int, Self] = dict()
+        phases: dict[int, Phase] = dict()
         global_ids = [int(path) for path in listdir(cache_path)]
 
         for global_id in global_ids:
