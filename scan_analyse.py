@@ -8,7 +8,8 @@ from src.scan import Scan
 
 def analyse() -> None:
     config = Config()
-    data_paths = get_file_paths(directory_path=get_directory_path(config.project.data_dir), recursive=True, extension="csv")
+    data_dir = get_directory_path(config.project.data_dir)
+    data_paths = get_file_paths(directory_path=data_dir, recursive=True, extension="csv")
 
     for data_path in data_paths:
         data_ref = data_path.split("/")[-1].split(".")[0].lstrip("p")

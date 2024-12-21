@@ -250,7 +250,7 @@ def channelling_fraction(
     phases: dict[int, Phase],
     orientation_matrix_field: FieldLike[ndarray],
     phase_field: FieldLike[Phase],
-    materials_file: str,
+    phase_cache_dir: str,
     channelling_cache_dir: str,
 ) -> Field[float]:
     input_fields = [orientation_matrix_field, phase_field]
@@ -258,7 +258,7 @@ def channelling_fraction(
     output_field = Field(width, height, FieldType.SCALAR, default_value=None, nullable=True)
 
     channel_data = {
-        phase.global_id: load_crit_data(beam_atomic_number, phase.global_id, beam_energy, materials_file, channelling_cache_dir)
+        phase.global_id: load_crit_data(beam_atomic_number, phase.global_id, beam_energy, phase_cache_dir, channelling_cache_dir)
         for local_id, phase in phases.items() if phase.global_id != Phase.UNINDEXED_ID
     }
 

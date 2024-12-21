@@ -174,7 +174,7 @@ class Scan:
 
         with open(data_path, "r", encoding="utf-8") as file:
             materials = dict()
-            file_materials = Phase.from_materials_file(config.project.materials_file)
+            file_materials = Phase.load_all(config.project.phase_cache_dir)
             file.readline()
 
             while True:

@@ -3,6 +3,8 @@
 import math
 from copy import deepcopy
 from enum import Enum
+from os import listdir, makedirs
+from pickle import dump as pickle_dump, load as pickle_load
 from typing import Self
 from numpy import ndarray, dot, array
 from src.utilities.geometry import reduce_vector
@@ -147,31 +149,23 @@ class Phase:
             case _:
                 raise NotImplementedError()
 
+    def cache(self, cache_path: str) -> None:
+        makedirs(cache_path, exist_ok=True)
+
+        with open(f"{cache_path}/{self.global_id}", "wb") as file:
+            pickle_dump(self, file)
+
     @classmethod
-    def from_materials_file(cls, materials_file: str) -> dict[int, Self]:
-        path = materials_file
-        phases = dict()
+    def load(cls, file_path: str) -> Self:
+        with open(file_path, "rb") as file:
+            return pickle_load(file)
 
-        with open(path, "r") as file:
-            file.readline()
+    @classmethod
+    def load_all(cls, cache_path: str) -> dict[int, Self]:
+        phases: dict[int, Self] = dict()
 
-            for line in file:
-                args = line.split(',')
-                global_id = int(args[0])
-
-                phase = Phase(
-                    global_id=global_id,
-                    name=args[1],
-                    atomic_number=float(args[2]),
-                    atomic_weight=float(args[3]),
-                    density=float(args[4]),
-                    vibration_amplitude=float(args[5]),
-                    lattice_type=BravaisLattice(args[6]),
-                    lattice_constants=(float(args[7]), float(args[8]), float(args[9])),
-                    lattice_angles=(math.radians(float(args[10])), math.radians(float(args[11])), math.radians(float(args[12]))),
-                    diamond_structure=args == "Y",
-                )
-
-                phases[global_id] = phase
+        for file in listdir(cache_path):
+            phase = cls.load(f"{cache_path}/{file}")
+            phases[phase.global_id] = phase
 
         return phases

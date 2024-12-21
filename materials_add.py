@@ -43,7 +43,7 @@ def decode_lattice_type(value):
 def add(database):
 	print()
 	IDs = utilities.utilities.parse_ids(input('Enter material IDs to add separated by commas/hyphens: '))
-	materials = Phase.from_materials_file(Config().project.materials_file)
+	materials = Phase.load_all(Config().project.phase_cache_dir)
 
 	for ID in IDs:
 		print()
@@ -102,29 +102,8 @@ def add(database):
 					print('No material found with ID ' + str(ID) + '.')
 					break
 
-	with open('materials/materials.csv', 'w') as output:
-		output.write(
-			'ID,Name,Z,A (g/mol), Density (g/cm3),Thermal vibration (nm),Type,a (nm),b (nm),c (nm),alpha (deg),beta (deg),gamma (deg),Diamond structure\n')
-
-		for ID, material in sorted(materials.items()):
-			output.write(str(ID) + ',')
-			output.write(str(material.name) + ',')
-			output.write(str(material.atomic_number) + ',')
-			output.write(str(material.atomic_weight) + ',')
-			output.write(str(material.density) + ',')
-			output.write(str(material.vibration_amplitude) + ',')
-			output.write(material.lattice_type.value + ',')
-			output.write(str(material.lattice_constants[0]) + ',')
-			output.write(str(material.lattice_constants[1]) + ',')
-			output.write(str(material.lattice_constants[2]) + ',')
-			output.write(str(math.degrees(material.lattice_angles[0])) + ',')
-			output.write(str(math.degrees(material.lattice_angles[1])) + ',')
-			output.write(str(math.degrees(material.lattice_angles[2])) + ',')
-
-			if diamond:
-				output.write('Y\n')
-			else:
-				output.write('N\n')
+	for material in materials.values():
+		material.cache(Config().project.phase_cache_dir)
 
 	print()
 	print('All materials added.')
