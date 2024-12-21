@@ -20,10 +20,8 @@ def analyse() -> None:
         if config.analysis.reduce_resolution:
             scan = scan.reduce_resolution(config.resolution.reduction_factor)
 
-        output_path = f"{get_directory_path(config.project.analysis_dir)}/q{scan.params.analysis_ref}.csv"
-        map_dir = f"{get_directory_path(config.project.map_dir)}/{scan.params.analysis_ref}"
-        scan.to_csv(output_path)
-        scan.to_maps(map_dir)
+        scan.to_csv(get_directory_path(config.project.analysis_dir))
+        scan.to_maps(get_directory_path(config.project.map_dir))
         time_taken = (datetime.now() - start_time).total_seconds()
         print(f"Analysis completed in: {format_time_interval(time_taken)}")
 

@@ -238,12 +238,16 @@ class Scan:
             config=config,
         )
 
-    def to_csv(self, path: str):
+    def to_csv(self, dir: str):
+        makedirs(dir, exist_ok=True)
+        path = f"{dir}/{self.params.analysis_ref}.csv"
+
         with open(path, "w", encoding="utf-8") as file:
             for row in self._rows():
                 file.write(f"{row}\n")
 
     def to_maps(self, dir: str):
+        dir = f"{dir}/{self.params.analysis_ref}"
         makedirs(dir, exist_ok=True)
 
         for map in self._maps():
