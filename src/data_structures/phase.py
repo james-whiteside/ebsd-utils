@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import math
+from math import pi, sqrt, sin, cos, tan, acos, atan2
 from copy import deepcopy
 from enum import Enum
 from os import listdir, makedirs
@@ -25,7 +25,7 @@ class CrystalFamily(Enum):
     def max_euler_angles(self) -> tuple[float, float, float]:
         match self:
             case CrystalFamily.C:
-                return 2 * math.pi, math.acos(math.sqrt(3) / 3), 0.5 * math.pi
+                return 2 * pi, acos(sqrt(3) / 3), 0.5 * pi
             case _:
                 raise NotImplementedError()
 
@@ -64,12 +64,12 @@ class CrystalFamily(Enum):
         match self:
             case CrystalFamily.C:
                 u, v, w = reduce_vector(vector)
-                r = math.sqrt(u ** 2 + v ** 2 + w ** 2)
-                theta = math.acos(w / r)
-                phi = math.atan2(v, u)
-                rho = math.tan(theta / 2)
-                X = rho * math.cos(phi)
-                Y = rho * math.sin(phi)
+                r = sqrt(u ** 2 + v ** 2 + w ** 2)
+                theta = acos(w / r)
+                phi = atan2(v, u)
+                rho = tan(theta / 2)
+                X = rho * cos(phi)
+                Y = rho * sin(phi)
             case _:
                 raise NotImplementedError()
 
@@ -147,9 +147,9 @@ class Phase:
             case BravaisLattice.CP:
                 return self.lattice_constants[0]
             case BravaisLattice.CI:
-                return math.sqrt(3) * self.lattice_constants[0] / 2
+                return sqrt(3) * self.lattice_constants[0] / 2
             case BravaisLattice.CF:
-                return math.sqrt(2) * self.lattice_constants[0] / 2
+                return sqrt(2) * self.lattice_constants[0] / 2
             case _:
                 raise NotImplementedError()
 

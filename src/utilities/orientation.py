@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 
-import itertools
-import numpy
+from itertools import permutations
+from numpy import ndarray, array, dot, cross, transpose
+from numpy.linalg import inv, norm
 from src.utilities.utilities import highest_common_factor
 
 
-def numpy_cross(a: numpy.ndarray, b: numpy.ndarray) -> numpy.ndarray:
+def numpy_cross(a: ndarray, b: ndarray) -> ndarray:
 	"""
 	Wrapper to work around return type mislabeling bug in NumPy causing IDE errors.
 	:param a: First array.
@@ -13,7 +14,7 @@ def numpy_cross(a: numpy.ndarray, b: numpy.ndarray) -> numpy.ndarray:
 	:return: Cross product of arrays.
 	"""
 
-	return numpy.cross(a, b)
+	return cross(a, b)
 
 
 def get_plane_family(indices: tuple[int, int, int]) -> list[tuple[int, int, int]]:
@@ -30,8 +31,8 @@ def get_plane_family(indices: tuple[int, int, int]) -> list[tuple[int, int, int]
 	else:
 		reduced_indices = indices
 	
-	index_permutations = sorted(list(set(itertools.permutations(reduced_indices))))
-	index_parities = sorted(list(set(itertools.permutations((1, 1, 1, -1, -1, -1), 3))))
+	index_permutations = sorted(list(set(permutations(reduced_indices))))
+	index_parities = sorted(list(set(permutations((1, 1, 1, -1, -1, -1), 3))))
 
 	planes = set()
 
@@ -63,7 +64,7 @@ def get_plane_family(indices: tuple[int, int, int]) -> list[tuple[int, int, int]
 	return plane_family
 
 
-def get_twin_matrix(indices: tuple[int, int, int]) -> numpy.ndarray:
+def get_twin_matrix(indices: tuple[int, int, int]) -> ndarray:
 	"""
 	Computes the rotation matrix for the homophase cubic orientation relationship described by a reflection in a plane.
 	Solves Eqn. 4.30.
@@ -73,7 +74,7 @@ def get_twin_matrix(indices: tuple[int, int, int]) -> numpy.ndarray:
 
 	h, k, l = indices
 
-	T = numpy.array((
+	T = array((
 		(h ** 2 - k ** 2 - l ** 2, 2 * h * k, 2 * l * h),
 		(2 * h * k, k ** 2 - l ** 2 - h ** 2, 2 * k * l),
 		(2 * l * h, 2 * k * l, l ** 2 - h ** 2 - k ** 2),
@@ -90,7 +91,7 @@ def get_relationship_matrix(
 		u2B: tuple[int, int, int],
 		a: tuple[float, float, float],
 		b: tuple[float, float, float],
-) -> numpy.ndarray:
+) -> ndarray:
 	"""
 	Computes the rotation matrix for the heterophase orientation relationship described by two pairs of parallel zone axes.
 	Parallel axis pairs are ``u1A || u1B`` and ``u2A || u2B`` for bases ``A`` and ``B``.
@@ -104,20 +105,20 @@ def get_relationship_matrix(
 	:return: The rotation matrix describing the orientation relationship between bases ``A`` and ``B``.
 	"""
 
-	u1A = numpy.array(u1A)
-	u1B = numpy.array(u1B)
-	u2A = numpy.array(u2A)
-	u2B = numpy.array(u2B)
-	u3A = numpy.array(int(element) for element in numpy_cross(numpy.array(u1A), numpy.array(u2A)))
-	u3B = numpy.array(int(element) for element in numpy_cross(numpy.array(u1B), numpy.array(u2B)))
+	u1A = array(u1A)
+	u1B = array(u1B)
+	u2A = array(u2A)
+	u2B = array(u2B)
+	u3A = array(int(element) for element in numpy_cross(array(u1A), array(u2A)))
+	u3B = array(int(element) for element in numpy_cross(array(u1B), array(u2B)))
 
-	x = numpy.array([
-		(a[0] * numpy.linalg.norm(u1A)) / (b[0] * numpy.linalg.norm(u1B)),
-		(a[1] * numpy.linalg.norm(u2A)) / (b[1] * numpy.linalg.norm(u2B)),
-		(a[2] * numpy.linalg.norm(u3A)) / (b[2] * numpy.linalg.norm(u3B)),
+	x = array([
+		(a[0] * norm(u1A)) / (b[0] * norm(u1B)),
+		(a[1] * norm(u2A)) / (b[1] * norm(u2B)),
+		(a[2] * norm(u3A)) / (b[2] * norm(u3B)),
 	])
 
-	uA = numpy.transpose(numpy.array((u1A, u2A, u3A)))
-	uB = numpy.transpose(numpy.array((u1B, u2B, u3B)))
-	J = numpy.dot(x * uB, numpy.linalg.inv(uA))
+	uA = transpose(array((u1A, u2A, u3A)))
+	uB = transpose(array((u1B, u2B, u3B)))
+	J = dot(x * uB, inv(uA))
 	return J

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import math
+from math import acos
 from numpy import ndarray, array, zeros, dot
 from numpy.linalg import inv
 from numba import jit
@@ -96,11 +96,11 @@ def _misrotation_angle(inverse_matrix_1: ndarray, matrix_2: ndarray) -> float:
     matrix = dot(inverse_matrix_1, matrix_2)
 
     if 0.5 * (abs(matrix[0][0]) + abs(matrix[1][1]) + abs(matrix[2][2]) - 1) > 1:
-        angle = math.acos(1)
+        angle = acos(1)
     elif 0.5 * (abs(matrix[0][0]) + abs(matrix[1][1]) + abs(matrix[2][2]) - 1) < -1:
-        angle = math.acos(-1)
+        angle = acos(-1)
     else:
-        angle = math.acos(0.5 * (abs(matrix[0][0]) + abs(matrix[1][1]) + abs(matrix[2][2]) - 1))
+        angle = acos(0.5 * (abs(matrix[0][0]) + abs(matrix[1][1]) + abs(matrix[2][2]) - 1))
 
     return angle
 
