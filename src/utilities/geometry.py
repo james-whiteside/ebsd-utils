@@ -116,7 +116,6 @@ def reduce_vector(vector: tuple[float, float, float]) -> tuple[float, float, flo
     Reflects a lattice vector ``(u, v, w)`` into the positive-axis region.
     Satisfies the constraint ``0 ≤ u ≤ v ≤ w``.
     :param vector: The vector ``(u, v, w)``.
-    :param symmetry: The crystal symmetry of the Bravais lattice type.
     :return: The reflected vector.
     """
 
