@@ -223,7 +223,7 @@ def fun2(r, Z1, Z2, opposing, rch, d2, e):
 	return ee - e
 
 
-def gen_crit_data(beam_z, target_id, beam_energy, max_range, max_index, phase_cache_dir: str, channelling_cache_dir: str):
+def gen_crit_data(beam_z: int, target_id: int, beam_energy: float, max_range: float, max_index: int, phase_cache_dir: str, channelling_cache_dir: str):
 	e = beam_energy
 	materials = Phase.load_all(phase_cache_dir)
 	Z1 = beam_z
