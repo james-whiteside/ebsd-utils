@@ -223,13 +223,13 @@ def fun2(r, Z1, Z2, opposing, rch, d2, e):
 	return ee - e
 
 
-def gen_crit_data(beam_z, target_id, beam_energy, max_range, max_index, materials_file: str, channelling_cache_dir: str):
+def gen_crit_data(beam_z: int, target_id: int, beam_energy: float, max_range: float, max_index: int, phase_cache_dir: str, channelling_cache_dir: str):
 	e = beam_energy
-	materials = Phase.from_materials_file(materials_file)
+	target = Phase.load(phase_cache_dir, target_id)
 	Z1 = beam_z
-	Z2 = materials[target_id].atomic_number
-	lType = materials[target_id].lattice_type.value
-	diamond = materials[target_id].diamond_structure
+	Z2 = target.atomic_number
+	lType = target.lattice_type.value
+	diamond = target.diamond_structure
 	
 	if lType == 'cP':
 		lattice = 'sc'
@@ -242,8 +242,8 @@ def gen_crit_data(beam_z, target_id, beam_energy, max_range, max_index, material
 	else:
 		raise NotImplementedError()
 	
-	alat = 10 * materials[target_id].lattice_constants[0]
-	xrms = 10 * materials[target_id].vibration_amplitude
+	alat = 10 * target.lattice_constants[0]
+	xrms = 10 * target.vibration_amplitude
 	base = get_base(lattice)
 	fileref = '[' + str(target_id) + '][' + str(beam_z) + '][' + str(beam_energy) + ']'
 	os.makedirs(channelling_cache_dir, exist_ok=True)
@@ -438,7 +438,7 @@ def gen_crit_data(beam_z, target_id, beam_energy, max_range, max_index, material
 	file_uper_p.close()
 
 
-def load_crit_data(beam_z: int, target_id: int, beam_energy: float, materials_file: str, channelling_cache_dir: str) -> dict:
+def load_crit_data(beam_z: int, target_id: int, beam_energy: float, phase_cache_dir: str, channelling_cache_dir: str) -> dict:
 	fileref = '[' + str(target_id) + '][' + str(beam_z) + '][' + str(beam_energy) + ']'
 	
 	try:
@@ -454,7 +454,7 @@ def load_crit_data(beam_z: int, target_id: int, beam_energy: float, materials_fi
 		max_range = 10  # Maximum range from origin where rows are to be considered (Å)
 		max_index = 10  # Maximum Miller index to be considered
 		print('Generating channelling fraction data for phase ID ' + str(target_id) + '.')
-		gen_crit_data(beam_z, target_id, beam_energy, max_range, max_index, materials_file, channelling_cache_dir)
+		gen_crit_data(beam_z, target_id, beam_energy, max_range, max_index, phase_cache_dir, channelling_cache_dir)
 	
 	try:
 		has, kas, las, eperpcrit_a = numpy.loadtxt(channelling_cache_dir + "/" + fileref + 'eperpcrit-a.txt', unpack=True)

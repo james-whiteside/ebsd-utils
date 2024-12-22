@@ -39,16 +39,22 @@ class ProjectParams:
     def __init__(
         self,
         data_dir: str,
-        materials_file: str,
-        channelling_cache_dir: str,
+        cache_dir: str,
         analysis_dir: str,
         map_dir: str,
     ):
         self.data_dir = data_dir
-        self.materials_file = materials_file
-        self.channelling_cache_dir = channelling_cache_dir
+        self.cache_dir = cache_dir
         self.analysis_dir = analysis_dir
         self.map_dir = map_dir
+
+    @property
+    def phase_cache_dir(self) -> str:
+        return f"{self.cache_dir}/phase"
+
+    @property
+    def channelling_cache_dir(self) -> str:
+        return f"{self.cache_dir}/channelling"
 
 
 class DataParams:

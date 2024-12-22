@@ -173,8 +173,7 @@ class Scan:
             data_ref = data_path.split("/")[-1].split(".")[0]
 
         with open(data_path, "r", encoding="utf-8") as file:
-            materials = dict()
-            file_materials = Phase.from_materials_file(config.project.materials_file)
+            phases: dict[int, Phase] = dict()
             file.readline()
 
             while True:
@@ -190,12 +189,7 @@ class Scan:
                     local_unindexed_id = local_id
                     continue
 
-                try:
-                    material = file_materials[global_id]
-                except KeyError:
-                    raise KeyError(f"No material in materials file with ID: {global_id}")
-
-                materials[local_id] = material
+                phases[local_id] = Phase.load(config.project.phase_cache_dir, global_id)
 
             width = int(file.readline().rstrip("\n").split(",")[1])
             height = int(file.readline().rstrip("\n").split(",")[1])
@@ -230,7 +224,7 @@ class Scan:
             data_ref=data_ref,
             width=width,
             height=height,
-            phases=materials,
+            phases=phases,
             phase_id_values=phase_id_values,
             euler_angle_values=euler_angle_values,
             pattern_quality_values=pattern_quality_values,
@@ -238,12 +232,16 @@ class Scan:
             config=config,
         )
 
-    def to_csv(self, path: str):
+    def to_csv(self, dir: str):
+        makedirs(dir, exist_ok=True)
+        path = f"{dir}/{self.params.analysis_ref}.csv"
+
         with open(path, "w", encoding="utf-8") as file:
             for row in self._rows():
                 file.write(f"{row}\n")
 
     def to_maps(self, dir: str):
+        dir = f"{dir}/{self.params.analysis_ref}"
         makedirs(dir, exist_ok=True)
 
         for map in self._maps():

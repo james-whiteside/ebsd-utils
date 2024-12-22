@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 
-import math
+from math import pi, sin, cos, acos, atan2
 from enum import Enum
 from typing import Self
-import numpy
+from numpy import ndarray, array, zeros, eye, dot, transpose
+from numpy.linalg import inv, svd
 from src.utilities.utilities import classproperty
 
 
@@ -63,7 +64,7 @@ class AxisSet(Enum):
     ZYZ = (Axis.Z, Axis.Y, Axis.Z)
 
 
-def single_rotation_matrix(axis: Axis, angle: float) -> numpy.ndarray:
+def single_rotation_matrix(axis: Axis, angle: float) -> ndarray:
     """
     Computes the 3D rotation matrix for an active right-handed rotation about a single axis.
     Solves Eqns. 3.59 - 3.61.
@@ -74,28 +75,28 @@ def single_rotation_matrix(axis: Axis, angle: float) -> numpy.ndarray:
 
     match axis:
         case Axis.X:
-            return numpy.array((
+            return array((
                 (1.0, 0.0, 0.0),
-                (0.0, math.cos(angle), -math.sin(angle)),
-                (0.0, math.sin(angle), math.cos(angle))
+                (0.0, cos(angle), -sin(angle)),
+                (0.0, sin(angle), cos(angle))
             ))
         case Axis.Y:
-            return numpy.array((
-                (math.cos(angle), 0.0, math.sin(angle)),
+            return array((
+                (cos(angle), 0.0, sin(angle)),
                 (0.0, 1.0, 0.0),
-                (-math.sin(angle), 0.0, math.cos(angle))
+                (-sin(angle), 0.0, cos(angle))
             ))
         case Axis.Z:
-            return numpy.array((
-                (math.cos(angle), -math.sin(angle), 0.0),
-                (math.sin(angle), math.cos(angle), 0.0),
+            return array((
+                (cos(angle), -sin(angle), 0.0),
+                (sin(angle), cos(angle), 0.0),
                 (0.0, 0.0, 1.0)
             ))
         case _:
             raise ValueError("Non-Cartesian axes are not valid for rotation matrices.")
 
 
-def euler_rotation_matrix(axis_set: AxisSet, angles: tuple[float, float, float]) -> numpy.ndarray:
+def euler_rotation_matrix(axis_set: AxisSet, angles: tuple[float, float, float]) -> ndarray:
     """
     Computes the 3D rotation matrix ``R`` for a set of Euler angles ``(α, β, γ)``.
     Solves Eqn 3.62.
@@ -104,10 +105,10 @@ def euler_rotation_matrix(axis_set: AxisSet, angles: tuple[float, float, float])
     :return: The Euler rotation matrix ``R``.
     """
 
-    R = numpy.eye(3)
-    R = numpy.dot(single_rotation_matrix(axis_set.value[0], angles[0]), R)
-    R = numpy.dot(single_rotation_matrix(axis_set.value[1], angles[1]), R)
-    R = numpy.dot(single_rotation_matrix(axis_set.value[2], angles[2]), R)
+    R = eye(3)
+    R = dot(single_rotation_matrix(axis_set.value[0], angles[0]), R)
+    R = dot(single_rotation_matrix(axis_set.value[1], angles[1]), R)
+    R = dot(single_rotation_matrix(axis_set.value[2], angles[2]), R)
     return R
 
 
@@ -116,7 +117,6 @@ def reduce_vector(vector: tuple[float, float, float]) -> tuple[float, float, flo
     Reflects a lattice vector ``(u, v, w)`` into the positive-axis region.
     Satisfies the constraint ``0 ≤ u ≤ v ≤ w``.
     :param vector: The vector ``(u, v, w)``.
-    :param symmetry: The crystal symmetry of the Bravais lattice type.
     :return: The reflected vector.
     """
 
@@ -125,7 +125,7 @@ def reduce_vector(vector: tuple[float, float, float]) -> tuple[float, float, flo
     return u, v, w
 
 
-def orthogonalise_matrix(R: numpy.ndarray, scaling_tolerance: float = None) -> numpy.ndarray:
+def orthogonalise_matrix(R: ndarray, scaling_tolerance: float = None) -> ndarray:
     """
     Symmetrically orthogonalises a 3D pseudo-rotation matrix ``R`` by singular value decomposition.
     If ``scaling_tolerance`` is specified, all scale factors in the scaling matrix must be between the tolerance and its reciprocal.
@@ -134,7 +134,7 @@ def orthogonalise_matrix(R: numpy.ndarray, scaling_tolerance: float = None) -> n
     :param scaling_tolerance:
     :return: The orthogonalised matrix.
     """
-    U, S, VT = numpy.linalg.svd(R)
+    U, S, VT = svd(R)
 
     if scaling_tolerance is not None:
         factor_bounds = sorted([scaling_tolerance, 1 / scaling_tolerance])
@@ -143,10 +143,10 @@ def orthogonalise_matrix(R: numpy.ndarray, scaling_tolerance: float = None) -> n
             if not factor_bounds[0] <= factor <= factor_bounds[1]:
                 raise ArithmeticError(f"Scale factor {factor} is outside of specified tolerance range: {factor_bounds[0]} - {factor_bounds[1]}")
 
-    return numpy.dot(U, VT)
+    return dot(U, VT)
 
 
-def euler_angles(rotation_matrix: numpy.ndarray, axis_set: AxisSet) -> tuple[float, float, float]:
+def euler_angles(rotation_matrix: ndarray, axis_set: AxisSet) -> tuple[float, float, float]:
     """
     Computes the Euler angles for a 3D rotation matrix.
     :param rotation_matrix: The rotation matrix.
@@ -159,26 +159,26 @@ def euler_angles(rotation_matrix: numpy.ndarray, axis_set: AxisSet) -> tuple[flo
         if rotation_matrix[2][2] == 1:
             angles.append(0.0)
             angles.append(0.0)
-            angles.append(math.atan2(-rotation_matrix[0][1], rotation_matrix[0][0]))
+            angles.append(atan2(-rotation_matrix[0][1], rotation_matrix[0][0]))
         elif rotation_matrix[2][2] == -1:
             angles.append(0.0)
-            angles.append(math.pi)
-            angles.append(-math.atan2(-rotation_matrix[0][1], rotation_matrix[0][0]))
+            angles.append(pi)
+            angles.append(-atan2(-rotation_matrix[0][1], rotation_matrix[0][0]))
         else:
-            angles.append(math.atan2(rotation_matrix[2][0], rotation_matrix[2][1]))
-            angles.append(math.acos(rotation_matrix[2][2]))
-            angles.append(math.atan2(rotation_matrix[0][2], -rotation_matrix[1][2]))
+            angles.append(atan2(rotation_matrix[2][0], rotation_matrix[2][1]))
+            angles.append(acos(rotation_matrix[2][2]))
+            angles.append(atan2(rotation_matrix[0][2], -rotation_matrix[1][2]))
     else:
         raise NotImplementedError()
 
     for i, angle in enumerate(angles):
         if angle < 0:
-            angles[i] += 2 * math.pi
+            angles[i] += 2 * pi
 
     return angles[0], angles[1], angles[2]
 
 
-def rotation_angle(R: numpy.ndarray) -> float:
+def rotation_angle(R: ndarray) -> float:
     """
     Computes the rotation angle ``θ`` of a rotation matrix ``R``.
     Solves Eqn. 4.1.
@@ -187,16 +187,16 @@ def rotation_angle(R: numpy.ndarray) -> float:
     """
 
     if 0.5 * (abs(R[0][0]) + abs(R[1][1]) + abs(R[2][2]) - 1) > 1:
-        theta = math.acos(1)
+        theta = acos(1)
     elif 0.5 * (abs(R[0][0]) + abs(R[1][1]) + abs(R[2][2]) - 1) < -1:
-        theta = math.acos(-1)
+        theta = acos(-1)
     else:
-        theta = math.acos(0.5 * (abs(R[0][0]) + abs(R[1][1]) + abs(R[2][2]) - 1))
+        theta = acos(0.5 * (abs(R[0][0]) + abs(R[1][1]) + abs(R[2][2]) - 1))
 
     return theta
 
 
-def misrotation_matrix(R1: numpy.ndarray, R2: numpy.ndarray) -> numpy.ndarray:
+def misrotation_matrix(R1: ndarray, R2: ndarray) -> ndarray:
     """
     Computes the misrotation matrix ``dR`` between two rotation matrices ``R1`` and ``R2``.
     Solves Eqn. 4.2.
@@ -205,11 +205,11 @@ def misrotation_matrix(R1: numpy.ndarray, R2: numpy.ndarray) -> numpy.ndarray:
     :return: The misrotation matrix ``dR``.
     """
 
-    dR = numpy.dot(numpy.linalg.inv(R1), R2)
+    dR = dot(inv(R1), R2)
     return dR
 
 
-def misrotation_tensor(dR: numpy.ndarray, dx: float) -> numpy.ndarray:
+def misrotation_tensor(dR: ndarray, dx: float) -> ndarray:
     """
     Computes an approximation of the misrotation tensor ``dω`` of the misrotation matrix ``dR`` over the finite interval ``dx``.
     Solves Eqn. 6.54.
@@ -221,6 +221,6 @@ def misrotation_tensor(dR: numpy.ndarray, dx: float) -> numpy.ndarray:
     dtheta = rotation_angle(dR)
 
     if dtheta == 0:
-        return numpy.zeros((3, 3))
+        return zeros((3, 3))
     else:
-        return numpy.dot((-3 * dtheta) / (dx * math.sin(dtheta)), numpy.transpose(dR))
+        return dot((-3 * dtheta) / (dx * sin(dtheta)), transpose(dR))

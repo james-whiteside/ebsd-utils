@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 
-import math
+from math import pi, sqrt, sin, cos, tan, acos, atan2
 from copy import deepcopy
 from enum import Enum
-from typing import Self
+from os import listdir, makedirs
+from json import dump as json_dump, load as json_load
+from typing import Self, Any
 from numpy import ndarray, dot, array
 from src.utilities.geometry import reduce_vector
 
@@ -23,7 +25,7 @@ class CrystalFamily(Enum):
     def max_euler_angles(self) -> tuple[float, float, float]:
         match self:
             case CrystalFamily.C:
-                return 2 * math.pi, math.acos(math.sqrt(3) / 3), 0.5 * math.pi
+                return 2 * pi, acos(sqrt(3) / 3), 0.5 * pi
             case _:
                 raise NotImplementedError()
 
@@ -62,12 +64,12 @@ class CrystalFamily(Enum):
         match self:
             case CrystalFamily.C:
                 u, v, w = reduce_vector(vector)
-                r = math.sqrt(u ** 2 + v ** 2 + w ** 2)
-                theta = math.acos(w / r)
-                phi = math.atan2(v, u)
-                rho = math.tan(theta / 2)
-                X = rho * math.cos(phi)
-                Y = rho * math.sin(phi)
+                r = sqrt(u ** 2 + v ** 2 + w ** 2)
+                theta = acos(w / r)
+                phi = atan2(v, u)
+                rho = tan(theta / 2)
+                X = rho * cos(phi)
+                Y = rho * sin(phi)
             case _:
                 raise NotImplementedError()
 
@@ -99,11 +101,15 @@ class BravaisLattice(Enum):
         return CrystalFamily(self.value[0])
 
 
+class PhaseMissingError(FileNotFoundError):
+    pass
+
+
 class Phase:
     UNINDEXED_ID = 0
     GENERIC_BCC_ID = 4294967294
     GENERIC_FCC_ID = 4294967295
-    GENERIC_PHASES = [UNINDEXED_ID, GENERIC_BCC_ID, GENERIC_FCC_ID]
+    GENERIC_IDS = [UNINDEXED_ID, GENERIC_BCC_ID, GENERIC_FCC_ID]
 
     def __init__(
         self,
@@ -141,37 +147,68 @@ class Phase:
             case BravaisLattice.CP:
                 return self.lattice_constants[0]
             case BravaisLattice.CI:
-                return math.sqrt(3) * self.lattice_constants[0] / 2
+                return sqrt(3) * self.lattice_constants[0] / 2
             case BravaisLattice.CF:
-                return math.sqrt(2) * self.lattice_constants[0] / 2
+                return sqrt(2) * self.lattice_constants[0] / 2
             case _:
                 raise NotImplementedError()
 
+    def cache(self, cache_path: str) -> None:
+        makedirs(cache_path, exist_ok=True)
+
+        json_rep = {
+            "global_id": self.global_id,
+            "name": self.name,
+            "atomic_number": self.atomic_number,
+            "atomic_weight": self.atomic_weight,
+            "density": self.density,
+            "vibration_amplitude": self.vibration_amplitude,
+            "lattice_type": self.lattice_type.value,
+            "lattice_constants": list(self.lattice_constants),
+            "lattice_angles": list(self.lattice_angles),
+            "diamond_structure": self.diamond_structure,
+        }
+
+        with open(f"{cache_path}/{self.global_id}.json", "w") as file:
+            json_dump(json_rep, file)
+
     @classmethod
-    def from_materials_file(cls, materials_file: str) -> dict[int, Self]:
-        path = materials_file
-        phases = dict()
+    def cache_all(cls, cache_path: str, phases: list[Self]) -> None:
+        for phase in phases:
+            phase.cache(cache_path)
 
-        with open(path, "r") as file:
-            file.readline()
+    @classmethod
+    def load(cls, cache_path: str, global_id: int) -> Self:
+        file_path = f"{cache_path}/{global_id}.json"
 
-            for line in file:
-                args = line.split(',')
-                global_id = int(args[0])
+        try:
+            with open(file_path, "r") as file:
+                json_rep: dict[str, Any] = json_load(file)
+        except FileNotFoundError:
+            raise PhaseMissingError(f"No phase found in cache with global_id {global_id}")
 
-                phase = Phase(
-                    global_id=global_id,
-                    name=args[1],
-                    atomic_number=float(args[2]),
-                    atomic_weight=float(args[3]),
-                    density=float(args[4]),
-                    vibration_amplitude=float(args[5]),
-                    lattice_type=BravaisLattice(args[6]),
-                    lattice_constants=(float(args[7]), float(args[8]), float(args[9])),
-                    lattice_angles=(math.radians(float(args[10])), math.radians(float(args[11])), math.radians(float(args[12]))),
-                    diamond_structure=args == "Y",
-                )
+        kwargs = {
+            "global_id": json_rep["global_id"],
+            "name": json_rep["name"],
+            "atomic_number": json_rep["atomic_number"],
+            "atomic_weight": json_rep["atomic_weight"],
+            "density": json_rep["density"],
+            "vibration_amplitude": json_rep["vibration_amplitude"],
+            "lattice_type": BravaisLattice(json_rep["lattice_type"]),
+            "lattice_constants": tuple(json_rep["lattice_constants"]),
+            "lattice_angles": tuple(json_rep["lattice_angles"]),
+            "diamond_structure": json_rep["diamond_structure"],
+        }
 
-                phases[global_id] = phase
+        return Phase(**kwargs)
+
+    @classmethod
+    def load_all(cls, cache_path: str) -> dict[int, Self]:
+        phases: dict[int, Phase] = dict()
+        global_ids = [int(path.split(".")[0]) for path in listdir(cache_path)]
+
+        for global_id in global_ids:
+            phase = cls.load(cache_path, global_id)
+            phases[phase.global_id] = phase
 
         return phases

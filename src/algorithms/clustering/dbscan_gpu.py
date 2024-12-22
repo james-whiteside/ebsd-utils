@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import math
+from math import ceil, acos
 from numpy import ndarray, array, zeros
 from numpy.linalg import inv
 from numba import cuda, jit
@@ -35,7 +35,7 @@ def _dbscan_gpu(
     misrotation_matrix_diagonal_cache_ = cuda.to_device(misrotation_matrix_diagonal_cache)
 
     block_size = (16, 16)
-    grid_size = (math.ceil(width / block_size[0]), math.ceil(height / block_size[1]))
+    grid_size = (ceil(width / block_size[0]), ceil(height / block_size[1]))
 
     _assign_unindexed_point_category[grid_size, block_size](
         width,
@@ -121,11 +121,11 @@ def _misrotation_angle(inverse_matrix_1: ndarray, matrix_2: ndarray, diagonal_ca
     trace_metric = 0.5 * (abs(diagonal_cache[0]) + abs(diagonal_cache[1]) + abs(diagonal_cache[2]) - 1)
 
     if trace_metric > 1:
-        angle = math.acos(1)
+        angle = acos(1)
     elif trace_metric < -1:
-        angle = math.acos(-1)
+        angle = acos(-1)
     else:
-        angle = math.acos(trace_metric)
+        angle = acos(trace_metric)
 
     return angle
 
