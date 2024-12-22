@@ -4,8 +4,8 @@ from math import pi, sqrt, sin, cos, tan, acos, atan2
 from copy import deepcopy
 from enum import Enum
 from os import listdir, makedirs
-from pickle import dump as pickle_dump, load as pickle_load
-from typing import Self
+from json import dump as json_dump, load as json_load
+from typing import Self, Any
 from numpy import ndarray, dot, array
 from src.utilities.geometry import reduce_vector
 
@@ -156,23 +156,56 @@ class Phase:
     def cache(self, cache_path: str) -> None:
         makedirs(cache_path, exist_ok=True)
 
-        with open(f"{cache_path}/{self.global_id}", "wb") as file:
-            pickle_dump(self, file)
+        json_rep = {
+            "global_id": self.global_id,
+            "name": self.name,
+            "atomic_number": self.atomic_number,
+            "atomic_weight": self.atomic_weight,
+            "density": self.density,
+            "vibration_amplitude": self.vibration_amplitude,
+            "lattice_type": self.lattice_type.value,
+            "lattice_constants": list(self.lattice_constants),
+            "lattice_angles": list(self.lattice_angles),
+            "diamond_structure": self.diamond_structure,
+        }
+
+        with open(f"{cache_path}/{self.global_id}.json", "w") as file:
+            json_dump(json_rep, file)
+
+    @classmethod
+    def cache_all(cls, cache_path: str, phases: list[Self]) -> None:
+        for phase in phases:
+            phase.cache(cache_path)
 
     @classmethod
     def load(cls, cache_path: str, global_id: int) -> Self:
-        file_path = f"{cache_path}/{global_id}"
+        file_path = f"{cache_path}/{global_id}.json"
 
         try:
-            with open(file_path, "rb") as file:
-                return pickle_load(file)
+            with open(file_path, "r") as file:
+                json_rep: dict[str, Any] = json_load(file)
         except FileNotFoundError:
-            raise PhaseMissingError(f"No file found in phase cache with path {file_path}")
+            raise PhaseMissingError(f"No phase found in cache with global_id {global_id}")
+
+        kwargs = {
+            "global_id": json_rep["global_id"],
+            "name": json_rep["name"],
+            "atomic_number": json_rep["atomic_number"],
+            "atomic_weight": json_rep["atomic_weight"],
+            "density": json_rep["density"],
+            "vibration_amplitude": json_rep["vibration_amplitude"],
+            "lattice_type": BravaisLattice(json_rep["lattice_type"]),
+            "lattice_constants": tuple(json_rep["lattice_constants"]),
+            "lattice_angles": tuple(json_rep["lattice_angles"]),
+            "diamond_structure": json_rep["diamond_structure"],
+        }
+
+        return Phase(**kwargs)
 
     @classmethod
     def load_all(cls, cache_path: str) -> dict[int, Self]:
         phases: dict[int, Phase] = dict()
-        global_ids = [int(path) for path in listdir(cache_path)]
+        global_ids = [int(path.split(".")[0]) for path in listdir(cache_path)]
 
         for global_id in global_ids:
             phase = cls.load(cache_path, global_id)
