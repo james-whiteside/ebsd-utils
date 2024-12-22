@@ -23,7 +23,6 @@ class Config:
 
         self.project = ProjectParams(
             data_dir=self._str(parser["project"]["ebsd_data_dir"]),
-            materials_file=self._str(parser["project"]["materials_file"]),
             cache_dir=self._str(parser["project"]["cache_dir"]),
             analysis_dir=self._str(parser["project"]["analysis_output_dir"]),
             map_dir=self._str(parser["project"]["map_output_dir"]),

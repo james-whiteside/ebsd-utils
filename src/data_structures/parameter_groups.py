@@ -39,13 +39,11 @@ class ProjectParams:
     def __init__(
         self,
         data_dir: str,
-        materials_file: str,
         cache_dir: str,
         analysis_dir: str,
         map_dir: str,
     ):
         self.data_dir = data_dir
-        self.materials_file = materials_file
         self.cache_dir = cache_dir
         self.analysis_dir = analysis_dir
         self.map_dir = map_dir
