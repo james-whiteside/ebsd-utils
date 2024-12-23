@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from os import getcwd
 from configparser import ConfigParser
 from src.utilities.geometry import AxisSet
 from src.data_structures.parameter_groups import (
@@ -16,16 +15,16 @@ from src.data_structures.parameter_groups import (
 
 
 class Config:
-    def __init__(self, path: str = "config.ini"):
-        config_path = f"{getcwd()}/{path}"
+    def __init__(self, path: str):
         parser = ConfigParser()
-        parser.read(config_path)
+        parser.read(path)
 
         self.project = ProjectParams(
             data_dir=self._str(parser["project"]["ebsd_data_dir"]),
-            cache_dir=self._str(parser["project"]["cache_dir"]),
+            phase_dir=self._str(parser["project"]["phase_data_dir"]),
             analysis_dir=self._str(parser["project"]["analysis_output_dir"]),
             map_dir=self._str(parser["project"]["map_output_dir"]),
+            cache_dir=self._str(parser["project"]["cache_dir"]),
         )
 
         self.data = DataParams(
@@ -38,7 +37,9 @@ class Config:
             compute_dislocation=self._bool(parser["analysis"]["compute_dislocation_densities"]),
             compute_channelling=self._bool(parser["analysis"]["compute_channelling_fractions"]),
             compute_clustering=self._bool(parser["analysis"]["compute_orientation_clusters"]),
+            use_cache=self._bool(parser["analysis"]["use_cache"]),
             use_cuda=self._bool(parser["analysis"]["use_cuda"]),
+            random_seed=self._int(parser["analysis"]["random_seed"]),
         )
 
         self.maps = MapParams(

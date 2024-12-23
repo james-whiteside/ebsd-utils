@@ -17,7 +17,7 @@ from src.data_structures.field import FieldType, FieldLike
 from src.data_structures.field_manager import FieldManager
 from src.utilities.geometry import euler_angles, Axis
 from src.data_structures.phase import Phase
-from src.utilities.utilities import float_degrees, tuple_degrees, log_or_zero
+from src.utilities.utils import float_degrees, tuple_degrees, log_or_zero
 
 
 class AggregateManager:

@@ -185,7 +185,7 @@ class Phase:
             with open(file_path, "r") as file:
                 json_rep: dict[str, Any] = json_load(file)
         except FileNotFoundError:
-            raise PhaseMissingError(f"No phase found in cache with global_id {global_id}")
+            raise PhaseMissingError(f"No phase found in cache with ID {global_id}")
 
         kwargs = {
             "global_id": json_rep["global_id"],

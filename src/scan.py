@@ -2,6 +2,7 @@
 
 from collections.abc import Iterator
 from os import makedirs
+from random import Random
 from typing import Self
 from numpy import zeros
 from src.data_structures.aggregate_manager import AggregateManager
@@ -13,7 +14,7 @@ from src.utilities.geometry import orthogonalise_matrix, euler_angles, Axis
 from src.data_structures.map_manager import MapManager
 from src.data_structures.parameter_groups import ScanParams
 from src.data_structures.phase import Phase
-from src.utilities.utilities import tuple_degrees
+from src.utilities.utils import tuple_degrees
 
 
 class Scan:
@@ -36,6 +37,7 @@ class Scan:
 
         self.params = ScanParams(data_ref, width, height, phases, pixel_size, reduction_factor)
         self.config = config
+        self._random_source = Random(config.analysis.random_seed)
 
         self.field = FieldManager(
             self.params,
@@ -44,6 +46,7 @@ class Scan:
             pattern_quality_values,
             index_quality_values,
             self.config,
+            self._random_source,
         )
 
         self._map = None
@@ -189,7 +192,7 @@ class Scan:
                     local_unindexed_id = local_id
                     continue
 
-                phases[local_id] = Phase.load(config.project.phase_cache_dir, global_id)
+                phases[local_id] = Phase.load(config.project.phase_dir, global_id)
 
             width = int(file.readline().rstrip("\n").split(",")[1])
             height = int(file.readline().rstrip("\n").split(",")[1])

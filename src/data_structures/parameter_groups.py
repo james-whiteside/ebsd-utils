@@ -39,22 +39,24 @@ class ProjectParams:
     def __init__(
         self,
         data_dir: str,
-        cache_dir: str,
+        phase_dir: str,
         analysis_dir: str,
         map_dir: str,
+        cache_dir: str,
     ):
         self.data_dir = data_dir
-        self.cache_dir = cache_dir
+        self.phase_dir = phase_dir
         self.analysis_dir = analysis_dir
         self.map_dir = map_dir
-
-    @property
-    def phase_cache_dir(self) -> str:
-        return f"{self.cache_dir}/phase"
+        self.cache_dir = cache_dir
 
     @property
     def channelling_cache_dir(self) -> str:
         return f"{self.cache_dir}/channelling"
+
+    @property
+    def test_cache_dir(self) -> str:
+        return f"{self.cache_dir}/test"
 
 
 class DataParams:
@@ -78,13 +80,17 @@ class AnalysisParams:
         compute_dislocation: bool,
         compute_channelling: bool,
         compute_clustering: bool,
+        use_cache: bool,
         use_cuda: bool,
+        random_seed: int,
     ):
         self.reduce_resolution = reduce_resolution
         self.compute_dislocation = compute_dislocation
         self.compute_channelling = compute_channelling
         self.compute_clustering = compute_clustering
+        self.use_cache = use_cache
         self.use_cuda = use_cuda
+        self.random_seed = random_seed
 
 
 class MapParams:
