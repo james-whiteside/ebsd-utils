@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from os import getcwd
 from configparser import ConfigParser
 from src.utilities.geometry import AxisSet
 from src.data_structures.parameter_groups import (
