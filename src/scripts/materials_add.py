@@ -111,10 +111,3 @@ def add(database):
 	print()
 	print('All materials added.')
 	input('Press ENTER to close: ')
-
-# materials.add(database)
-# database: Location of Pathfinder crystal database
-
-if __name__ == '__main__':
-	database = 'C:/ProgramData/Thermo Scientific/NSS/NSS Libraries/EBSD/DefaultCrystalDatabase.XML'
-	add(database)
