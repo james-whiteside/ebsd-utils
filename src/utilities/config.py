@@ -17,9 +17,8 @@ from src.data_structures.parameter_groups import (
 
 class Config:
     def __init__(self, path: str = "config.ini"):
-        config_path = f"{getcwd()}/{path}"
         parser = ConfigParser()
-        parser.read(config_path)
+        parser.read(path)
 
         self.project = ProjectParams(
             data_dir=self._str(parser["project"]["ebsd_data_dir"]),
