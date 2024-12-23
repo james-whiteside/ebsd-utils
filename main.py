@@ -2,7 +2,7 @@
 
 from src.scripts.analyse import analyse
 from src.utilities.config import Config
-from src.utilities.utilities import get_file_paths
+from src.utilities.utils import get_file_paths
 
 
 CONFIG_PATH = "config.ini"

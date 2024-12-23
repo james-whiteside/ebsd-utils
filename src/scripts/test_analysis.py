@@ -6,7 +6,7 @@ from shutil import rmtree
 from PIL.Image import open as open_image
 from src.utilities.config import Config
 from src.scripts.analyse import analyse
-from src.utilities.utilities import format_time_interval
+from src.utilities.utils import format_time_interval
 
 
 def test_analysis(data_path: str, analysis_path: str, map_dir: str, config: Config) -> str:

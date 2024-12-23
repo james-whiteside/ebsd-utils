@@ -5,7 +5,7 @@ from enum import Enum
 from typing import Self
 from numpy import ndarray, array, zeros, eye, dot, transpose
 from numpy.linalg import inv, svd
-from src.utilities.utilities import classproperty
+from src.utilities.utils import classproperty
 
 
 class Axis:

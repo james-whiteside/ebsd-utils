@@ -3,7 +3,7 @@
 from itertools import permutations
 from numpy import ndarray, array, dot, cross, transpose
 from numpy.linalg import inv, norm
-from src.utilities.utilities import highest_common_factor
+from src.utilities.utils import highest_common_factor
 
 
 def numpy_cross(a: ndarray, b: ndarray) -> ndarray:

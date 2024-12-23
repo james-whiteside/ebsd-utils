@@ -16,7 +16,7 @@ from src.utilities.geometry import (
     misrotation_tensor as misrotation_tensor_,
     reduce_vector,
 )
-from src.utilities.utilities import maximise_brightness
+from src.utilities.utils import maximise_brightness
 
 
 def orientation_matrix(

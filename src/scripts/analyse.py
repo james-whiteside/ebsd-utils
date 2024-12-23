@@ -2,7 +2,7 @@
 
 from datetime import datetime
 from src.utilities.config import Config
-from src.utilities.utilities import format_time_interval
+from src.utilities.utils import format_time_interval
 from src.scan import Scan
 
 

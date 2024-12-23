@@ -14,7 +14,7 @@ from src.utilities.geometry import orthogonalise_matrix, euler_angles, Axis
 from src.data_structures.map_manager import MapManager
 from src.data_structures.parameter_groups import ScanParams
 from src.data_structures.phase import Phase
-from src.utilities.utilities import tuple_degrees
+from src.utilities.utils import tuple_degrees
 
 
 class Scan:

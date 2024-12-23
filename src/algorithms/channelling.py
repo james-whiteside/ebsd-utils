@@ -12,7 +12,7 @@ from shutil import rmtree
 import numpy
 from scipy import special, constants, optimize
 from src.data_structures.phase import Phase
-from src.utilities.utilities import ProgressBar
+from src.utilities.utils import ProgressBar
 
 
 def get_base(lattice):

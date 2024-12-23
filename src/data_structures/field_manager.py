@@ -19,7 +19,7 @@ from src.utilities.geometry import Axis
 from src.data_structures.phase import Phase
 from src.algorithms.clustering.dbscan import ClusterCategory
 from src.data_structures.parameter_groups import ScanParams
-from src.utilities.utilities import tuple_degrees, tuple_radians, float_degrees, float_radians, log_or_zero
+from src.utilities.utils import tuple_degrees, tuple_radians, float_degrees, float_radians, log_or_zero
 
 
 class FieldManager:
