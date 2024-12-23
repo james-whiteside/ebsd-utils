@@ -11,6 +11,7 @@ def test(data_path: str, analysis_path: str, map_dir: str, config: Config) -> st
     try:
         config.project.analysis_dir = f"{config.project.test_cache_dir}/{config.project.analysis_dir}"
         config.project.map_dir = f"{config.project.test_cache_dir}/{config.project.map_dir}"
+        config.analysis.use_cache = False
         analysis_ref = analyse(data_path, config)
 
         with (
