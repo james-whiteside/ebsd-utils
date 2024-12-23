@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from os import listdir
+from shutil import rmtree
 from PIL.Image import open as open_image
 from src.utilities.config import Config
 from src.scripts.analyse import analyse
@@ -58,4 +59,5 @@ def test(data_path: str, analysis_path: str, map_dir: str, config: Config) -> st
 
                         raise AssertionError(message)
 
+    rmtree(config.project.test_cache_dir)
     return analysis_ref
