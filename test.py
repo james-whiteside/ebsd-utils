@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from os import listdir
-from src.scripts.test import test as run_test
+from src.scripts.test_analysis import test_analysis
 from src.utilities.config import Config
 
 
@@ -19,7 +19,7 @@ def test() -> None:
         analysis_path = f"{ANALYSIS_DIR}/{data_ref}.csv"
         map_dir = f"{MAP_DIR}/{data_ref}"
         config = Config(f"{CONFIG_DIR}/{data_ref}.ini")
-        run_test(data_path, analysis_path, map_dir, config)
+        test_analysis(data_path, analysis_path, map_dir, config)
 
     print()
     print("All tests complete.")
