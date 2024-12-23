@@ -56,6 +56,10 @@ class ProjectParams:
     def channelling_cache_dir(self) -> str:
         return f"{self.cache_dir}/channelling"
 
+    @property
+    def test_cache_dir(self) -> str:
+        return f"{self.cache_dir}/test"
+
 
 class DataParams:
     def __init__(
