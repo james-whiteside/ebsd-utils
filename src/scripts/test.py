@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 
+from datetime import datetime
 from os import listdir
 from shutil import rmtree
 from PIL.Image import open as open_image
 from src.utilities.config import Config
 from src.scripts.analyse import analyse
+from src.utilities.utilities import format_time_interval
 
 
 def test(data_path: str, analysis_path: str, map_dir: str, config: Config) -> str:
@@ -13,6 +15,8 @@ def test(data_path: str, analysis_path: str, map_dir: str, config: Config) -> st
         config.project.map_dir = f"{config.project.test_cache_dir}/{config.project.map_dir}"
         config.analysis.use_cache = False
         analysis_ref = analyse(data_path, config)
+        print(f"Running tests for {analysis_ref}.")
+        start_time = datetime.now()
 
         with (
             open(analysis_path) as control_analysis,
@@ -61,6 +65,8 @@ def test(data_path: str, analysis_path: str, map_dir: str, config: Config) -> st
 
                             raise AssertionError(message)
 
+        time_taken = (datetime.now() - start_time).total_seconds()
+        print(f"Tests completed in: {format_time_interval(time_taken)}")
         return analysis_ref
     finally:
         rmtree(config.project.test_cache_dir)
