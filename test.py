@@ -10,6 +10,7 @@ ANALYSIS_DIR = "test/analyses"
 MAP_DIR = "test/maps"
 CONFIG_DIR = "test/config"
 
+
 def test() -> None:
     data_refs = [path.split("/")[-1].split(".")[0] for path in listdir(DATA_DIR)]
 
@@ -22,7 +23,6 @@ def test() -> None:
 
     print()
     print("All tests complete.")
-    input("Press ENTER to close: ")
 
 
 if __name__ == "__main__":

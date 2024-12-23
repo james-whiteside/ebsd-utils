@@ -5,8 +5,11 @@ from src.utilities.config import Config
 from src.utilities.utilities import get_file_paths
 
 
+CONFIG_PATH = "config.ini"
+
+
 def main() -> None:
-    config = Config()
+    config = Config(CONFIG_PATH)
     data_paths = get_file_paths(directory_path=config.project.data_dir, recursive=True, extension="csv")
 
     for data_path in data_paths:
@@ -14,7 +17,6 @@ def main() -> None:
 
     print()
     print("All analyses complete.")
-    input("Press ENTER to close: ")
 
 
 if __name__ == "__main__":

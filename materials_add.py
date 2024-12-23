@@ -6,6 +6,9 @@ from src.data_structures.phase import BravaisLattice, Phase
 from src.utilities.config import Config
 
 
+CONFIG_PATH = "config.ini"
+
+
 def decode_lattice_type(value):
 	match value:
 		case 1:
@@ -43,7 +46,7 @@ def decode_lattice_type(value):
 def add(database):
 	print()
 	IDs = utilities.utilities.parse_ids(input('Enter material IDs to add separated by commas/hyphens: '))
-	materials = Phase.load_all(Config().project.phase_dir)
+	materials = Phase.load_all(Config(CONFIG_PATH).project.phase_dir)
 
 	for ID in IDs:
 		print()
@@ -103,7 +106,7 @@ def add(database):
 					break
 
 	for material in materials.values():
-		material.cache(Config().project.phase_dir)
+		material.cache(Config(CONFIG_PATH).project.phase_dir)
 
 	print()
 	print('All materials added.')

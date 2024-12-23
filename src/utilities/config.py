@@ -15,7 +15,7 @@ from src.data_structures.parameter_groups import (
 
 
 class Config:
-    def __init__(self, path: str = "config.ini"):
+    def __init__(self, path: str):
         parser = ConfigParser()
         parser.read(path)
 
