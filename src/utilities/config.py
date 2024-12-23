@@ -21,9 +21,10 @@ class Config:
 
         self.project = ProjectParams(
             data_dir=self._str(parser["project"]["ebsd_data_dir"]),
-            cache_dir=self._str(parser["project"]["cache_dir"]),
+            phase_dir=self._str(parser["project"]["phase_data_dir"]),
             analysis_dir=self._str(parser["project"]["analysis_output_dir"]),
             map_dir=self._str(parser["project"]["map_output_dir"]),
+            cache_dir=self._str(parser["project"]["cache_dir"]),
         )
 
         self.data = DataParams(

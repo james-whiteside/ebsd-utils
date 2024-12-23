@@ -192,7 +192,7 @@ class Scan:
                     local_unindexed_id = local_id
                     continue
 
-                phases[local_id] = Phase.load(config.project.phase_cache_dir, global_id)
+                phases[local_id] = Phase.load(config.project.phase_dir, global_id)
 
             width = int(file.readline().rstrip("\n").split(",")[1])
             height = int(file.readline().rstrip("\n").split(",")[1])

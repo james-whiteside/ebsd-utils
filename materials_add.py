@@ -43,7 +43,7 @@ def decode_lattice_type(value):
 def add(database):
 	print()
 	IDs = utilities.utilities.parse_ids(input('Enter material IDs to add separated by commas/hyphens: '))
-	materials = Phase.load_all(Config().project.phase_cache_dir)
+	materials = Phase.load_all(Config().project.phase_dir)
 
 	for ID in IDs:
 		print()
@@ -103,7 +103,7 @@ def add(database):
 					break
 
 	for material in materials.values():
-		material.cache(Config().project.phase_cache_dir)
+		material.cache(Config().project.phase_dir)
 
 	print()
 	print('All materials added.')
