@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from random import Random
 from numpy import ndarray
 from src.algorithms.field_transforms import (
     orientation_matrix,
@@ -30,9 +31,11 @@ class FieldManager:
         pattern_quality_values: list[list[float]],
         index_quality_values: list[list[float]],
         config: Config,
+        random_source: Random,
     ):
         self._scan_params = scan_params
         self._config = config
+        self._random_source = random_source
         self._phase_id: Field[int] = Field.from_array(self._scan_params.width, self._scan_params.height, FieldType.DISCRETE, phase_id_values, nullable=True)
         self.euler_angles_rad: Field[tuple[float, float, float]] = None
         self.euler_angles_deg: Field[tuple[float, float, float]] = Field.from_array(self._scan_params.width, self._scan_params.height, FieldType.VECTOR_3D, euler_angle_values, nullable=True)
@@ -127,6 +130,8 @@ class FieldManager:
     @property
     def channelling_fraction(self) -> Field[float]:
         if self._channelling_fraction is None:
+            random_source = Random(self._random_source.random())
+
             self._channelling_fraction = channelling_fraction(
                 self._config.channelling.beam_atomic_number,
                 self._config.channelling.beam_energy,
@@ -136,6 +141,7 @@ class FieldManager:
                 self.phase,
                 self._config.project.phase_cache_dir,
                 self._config.project.channelling_cache_dir,
+                random_source,
             )
 
         return self._channelling_fraction

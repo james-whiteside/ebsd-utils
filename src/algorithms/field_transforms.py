@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from math import sqrt
+from random import Random
 from numpy import ndarray, array, dot, zeros
 from src.algorithms.channelling import load_crit_data, fraction
 from src.algorithms.clustering.dbscan import dbscan
@@ -252,13 +253,14 @@ def channelling_fraction(
     phase_field: FieldLike[Phase],
     phase_cache_dir: str,
     channelling_cache_dir: str,
+    random_source: Random,
 ) -> Field[float]:
     input_fields = [orientation_matrix_field, phase_field]
     width, height, nullable = FieldLike.get_params(input_fields)
     output_field = Field(width, height, FieldType.SCALAR, default_value=None, nullable=True)
 
     channel_data = {
-        phase.global_id: load_crit_data(beam_atomic_number, phase.global_id, beam_energy, phase_cache_dir, channelling_cache_dir)
+        phase.global_id: load_crit_data(beam_atomic_number, phase.global_id, beam_energy, phase_cache_dir, channelling_cache_dir, random_source)
         for local_id, phase in phases.items() if phase.global_id != Phase.UNINDEXED_ID
     }
 

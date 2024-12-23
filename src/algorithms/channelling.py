@@ -7,6 +7,7 @@ import math
 import copy
 import os
 from itertools import permutations
+from random import Random
 import numpy
 from scipy import special, constants, optimize
 from src.data_structures.phase import Phase
@@ -223,7 +224,7 @@ def fun2(r, Z1, Z2, opposing, rch, d2, e):
 	return ee - e
 
 
-def gen_crit_data(beam_z: int, target_id: int, beam_energy: float, max_range: float, max_index: int, phase_cache_dir: str, channelling_cache_dir: str):
+def gen_crit_data(beam_z: int, target_id: int, beam_energy: float, max_range: float, max_index: int, phase_cache_dir: str, channelling_cache_dir: str, random_source: Random):
 	e = beam_energy
 	target = Phase.load(phase_cache_dir, target_id)
 	Z1 = beam_z
@@ -263,9 +264,9 @@ def gen_crit_data(beam_z: int, target_id: int, beam_energy: float, max_range: fl
 	file_eperpcrit_p.write('# h  k  l  E_perp_crit\n')
 	file_uper_a.write('# h  k  l  U_percentiles\n')
 	file_uper_p.write('# h  k  l  U_percentiles\n')
-	xrand = numpy.random.rand(10000)
-	yrand = numpy.random.rand(10000)
-	zrand = numpy.random.rand(10000)
+	xrand = numpy.array([random_source.random() for _ in range(10000)])
+	yrand = numpy.array([random_source.random() for _ in range(10000)])
+	zrand = numpy.array([random_source.random() for _ in range(10000)])
 	millers = list()
 	emins = list()
 	total = 0
@@ -438,7 +439,7 @@ def gen_crit_data(beam_z: int, target_id: int, beam_energy: float, max_range: fl
 	file_uper_p.close()
 
 
-def load_crit_data(beam_z: int, target_id: int, beam_energy: float, phase_cache_dir: str, channelling_cache_dir: str) -> dict:
+def load_crit_data(beam_z: int, target_id: int, beam_energy: float, phase_cache_dir: str, channelling_cache_dir: str, random_source: Random) -> dict:
 	fileref = '[' + str(target_id) + '][' + str(beam_z) + '][' + str(beam_energy) + ']'
 	
 	try:
@@ -453,8 +454,8 @@ def load_crit_data(beam_z: int, target_id: int, beam_energy: float, phase_cache_
 	except FileNotFoundError:
 		max_range = 10  # Maximum range from origin where rows are to be considered (Å)
 		max_index = 10  # Maximum Miller index to be considered
-		print('Generating channelling fraction data for phase ID ' + str(target_id) + '.')
-		gen_crit_data(beam_z, target_id, beam_energy, max_range, max_index, phase_cache_dir, channelling_cache_dir)
+		print('Generating channelling fraction data for phase ' + str(target_id) + '.')
+		gen_crit_data(beam_z, target_id, beam_energy, max_range, max_index, phase_cache_dir, channelling_cache_dir, random_source)
 	
 	try:
 		has, kas, las, eperpcrit_a = numpy.loadtxt(channelling_cache_dir + "/" + fileref + 'eperpcrit-a.txt', unpack=True)
