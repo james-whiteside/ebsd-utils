@@ -142,6 +142,7 @@ class FieldManager:
                 self._config.project.phase_cache_dir,
                 self._config.project.channelling_cache_dir,
                 random_source,
+                self._config.analysis.use_cache,
             )
 
         return self._channelling_fraction

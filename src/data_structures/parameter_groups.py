@@ -82,6 +82,7 @@ class AnalysisParams:
         compute_dislocation: bool,
         compute_channelling: bool,
         compute_clustering: bool,
+        use_cache: bool,
         use_cuda: bool,
         random_seed: int,
     ):
@@ -89,6 +90,7 @@ class AnalysisParams:
         self.compute_dislocation = compute_dislocation
         self.compute_channelling = compute_channelling
         self.compute_clustering = compute_clustering
+        self.use_cache = use_cache
         self.use_cuda = use_cuda
         self.random_seed = random_seed
 

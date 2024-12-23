@@ -36,8 +36,9 @@ class Config:
             compute_dislocation=self._bool(parser["analysis"]["compute_dislocation_densities"]),
             compute_channelling=self._bool(parser["analysis"]["compute_channelling_fractions"]),
             compute_clustering=self._bool(parser["analysis"]["compute_orientation_clusters"]),
+            use_cache=self._bool(parser["analysis"]["use_cache"]),
             use_cuda=self._bool(parser["analysis"]["use_cuda"]),
-            random_seed=self._int(parser["analysis"]["random_seed"])
+            random_seed=self._int(parser["analysis"]["random_seed"]),
         )
 
         self.maps = MapParams(

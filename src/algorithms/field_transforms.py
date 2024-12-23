@@ -254,13 +254,14 @@ def channelling_fraction(
     phase_cache_dir: str,
     channelling_cache_dir: str,
     random_source: Random,
+    use_cache: bool,
 ) -> Field[float]:
     input_fields = [orientation_matrix_field, phase_field]
     width, height, nullable = FieldLike.get_params(input_fields)
     output_field = Field(width, height, FieldType.SCALAR, default_value=None, nullable=True)
 
     channel_data = {
-        phase.global_id: load_crit_data(beam_atomic_number, phase.global_id, beam_energy, phase_cache_dir, channelling_cache_dir, random_source)
+        phase.global_id: load_crit_data(beam_atomic_number, phase.global_id, beam_energy, phase_cache_dir, channelling_cache_dir, random_source, use_cache)
         for local_id, phase in phases.items() if phase.global_id != Phase.UNINDEXED_ID
     }
 

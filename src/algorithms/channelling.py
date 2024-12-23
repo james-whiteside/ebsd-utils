@@ -8,6 +8,7 @@ import copy
 import os
 from itertools import permutations
 from random import Random
+from shutil import rmtree
 import numpy
 from scipy import special, constants, optimize
 from src.data_structures.phase import Phase
@@ -439,74 +440,81 @@ def gen_crit_data(beam_z: int, target_id: int, beam_energy: float, max_range: fl
 	file_uper_p.close()
 
 
-def load_crit_data(beam_z: int, target_id: int, beam_energy: float, phase_cache_dir: str, channelling_cache_dir: str, random_source: Random) -> dict:
-	fileref = '[' + str(target_id) + '][' + str(beam_z) + '][' + str(beam_energy) + ']'
-	
+def load_crit_data(beam_z: int, target_id: int, beam_energy: float, phase_cache_dir: str, channelling_cache_dir: str, random_source: Random, use_cache: bool) -> dict:
+	if not use_cache:
+		channelling_cache_dir = f"{channelling_cache_dir}/temp"
+
 	try:
-		file_eperpcrit_a = open(channelling_cache_dir + "/" + fileref + 'eperpcrit-a.txt', 'r')
-		file_eperpcrit_p = open(channelling_cache_dir + "/" + fileref + 'eperpcrit-p.txt', 'r')
-		file_uper_a = open(channelling_cache_dir + "/" + fileref + 'uper-a.txt', 'r')
-		file_uper_p = open(channelling_cache_dir + "/" + fileref + 'uper-p.txt', 'r')
-		file_eperpcrit_a.close()
-		file_eperpcrit_p.close()
-		file_uper_a.close()
-		file_uper_p.close()
-	except FileNotFoundError:
-		max_range = 10  # Maximum range from origin where rows are to be considered (Å)
-		max_index = 10  # Maximum Miller index to be considered
-		print('Generating channelling fraction data for phase ' + str(target_id) + '.')
-		gen_crit_data(beam_z, target_id, beam_energy, max_range, max_index, phase_cache_dir, channelling_cache_dir, random_source)
-	
-	try:
-		has, kas, las, eperpcrit_a = numpy.loadtxt(channelling_cache_dir + "/" + fileref + 'eperpcrit-a.txt', unpack=True)
-		line_tuples = numpy.loadtxt(channelling_cache_dir + "/" + fileref + 'uper-a.txt')
-		has_u = line_tuples[:,0]
-		kas_u = line_tuples[:,1]
-		las_u = line_tuples[:,2]
-		
-		if not (all(has_u == has) and all(kas_u == kas) and all(las_u == las)):
-			exit('Inconsistent files ' + channelling_cache_dir + "/" + fileref + 'eperpcrit-a.txt\' and ' + channelling_cache_dir + "/" + fileref + 'uper-a.txt\'')
-		
-		u_percentiles_a = line_tuples[:,3:]
-		axial = True
-	except IndexError:
-		u_percentiles_a = 0
-		axial = False
-	
-	try:
-		hps, kps, lps, eperpcrit_p = numpy.loadtxt(channelling_cache_dir + "/" + fileref + 'eperpcrit-p.txt', unpack=True)
-		line_tuples = numpy.loadtxt(channelling_cache_dir + "/" + fileref + 'uper-p.txt')
-		hps_u = line_tuples[:,0]
-		kps_u = line_tuples[:,1]
-		lps_u = line_tuples[:,2]
-		
-		if not (all(hps_u == hps) and all(kps_u == kps) and all(lps_u == lps)):
-			exit('Inconsistent files ' + channelling_cache_dir + "/" + fileref + 'eperpcrit-p.txt\' and ' + channelling_cache_dir + "/" + fileref + 'uper-p.txt\'')
-		
-		u_percentiles_p = line_tuples[:,3:]
-		planar = True
-	except IndexError:
-		u_percentiles_p = 0
-		planar = False
-	
-	output = dict()
-	output['beam_z'] = beam_z
-	output['target_id'] = target_id
-	output['energy'] = beam_energy
-	output['data'] = dict()
-	output['data']['axial'] = axial
-	output['data']['has'] = has
-	output['data']['kas'] = kas
-	output['data']['las'] = las
-	output['data']['eperpcrit_a'] = eperpcrit_a
-	output['data']['u_percentiles_a'] = u_percentiles_a
-	output['data']['planar'] = planar
-	output['data']['hps'] = hps
-	output['data']['kps'] = kps
-	output['data']['lps'] = lps
-	output['data']['eperpcrit_p'] = eperpcrit_p
-	output['data']['u_percentiles_p'] = u_percentiles_p
-	return output
+		fileref = '[' + str(target_id) + '][' + str(beam_z) + '][' + str(beam_energy) + ']'
+
+		try:
+			file_eperpcrit_a = open(channelling_cache_dir + "/" + fileref + 'eperpcrit-a.txt', 'r')
+			file_eperpcrit_p = open(channelling_cache_dir + "/" + fileref + 'eperpcrit-p.txt', 'r')
+			file_uper_a = open(channelling_cache_dir + "/" + fileref + 'uper-a.txt', 'r')
+			file_uper_p = open(channelling_cache_dir + "/" + fileref + 'uper-p.txt', 'r')
+			file_eperpcrit_a.close()
+			file_eperpcrit_p.close()
+			file_uper_a.close()
+			file_uper_p.close()
+		except FileNotFoundError:
+			max_range = 10  # Maximum range from origin where rows are to be considered (Å)
+			max_index = 10  # Maximum Miller index to be considered
+			print('Generating channelling fraction data for phase ' + str(target_id) + '.')
+			gen_crit_data(beam_z, target_id, beam_energy, max_range, max_index, phase_cache_dir, channelling_cache_dir, random_source)
+
+		try:
+			has, kas, las, eperpcrit_a = numpy.loadtxt(channelling_cache_dir + "/" + fileref + 'eperpcrit-a.txt', unpack=True)
+			line_tuples = numpy.loadtxt(channelling_cache_dir + "/" + fileref + 'uper-a.txt')
+			has_u = line_tuples[:,0]
+			kas_u = line_tuples[:,1]
+			las_u = line_tuples[:,2]
+
+			if not (all(has_u == has) and all(kas_u == kas) and all(las_u == las)):
+				exit('Inconsistent files ' + channelling_cache_dir + "/" + fileref + 'eperpcrit-a.txt\' and ' + channelling_cache_dir + "/" + fileref + 'uper-a.txt\'')
+
+			u_percentiles_a = line_tuples[:,3:]
+			axial = True
+		except IndexError:
+			u_percentiles_a = 0
+			axial = False
+
+		try:
+			hps, kps, lps, eperpcrit_p = numpy.loadtxt(channelling_cache_dir + "/" + fileref + 'eperpcrit-p.txt', unpack=True)
+			line_tuples = numpy.loadtxt(channelling_cache_dir + "/" + fileref + 'uper-p.txt')
+			hps_u = line_tuples[:,0]
+			kps_u = line_tuples[:,1]
+			lps_u = line_tuples[:,2]
+
+			if not (all(hps_u == hps) and all(kps_u == kps) and all(lps_u == lps)):
+				exit('Inconsistent files ' + channelling_cache_dir + "/" + fileref + 'eperpcrit-p.txt\' and ' + channelling_cache_dir + "/" + fileref + 'uper-p.txt\'')
+
+			u_percentiles_p = line_tuples[:,3:]
+			planar = True
+		except IndexError:
+			u_percentiles_p = 0
+			planar = False
+
+		output = dict()
+		output['beam_z'] = beam_z
+		output['target_id'] = target_id
+		output['energy'] = beam_energy
+		output['data'] = dict()
+		output['data']['axial'] = axial
+		output['data']['has'] = has
+		output['data']['kas'] = kas
+		output['data']['las'] = las
+		output['data']['eperpcrit_a'] = eperpcrit_a
+		output['data']['u_percentiles_a'] = u_percentiles_a
+		output['data']['planar'] = planar
+		output['data']['hps'] = hps
+		output['data']['kps'] = kps
+		output['data']['lps'] = lps
+		output['data']['eperpcrit_p'] = eperpcrit_p
+		output['data']['u_percentiles_p'] = u_percentiles_p
+		return output
+	finally:
+		if not use_cache:
+			rmtree(channelling_cache_dir)
 
 
 def fraction(effective_beam_vector: tuple[float, float, float], crit_data: dict) -> float:
