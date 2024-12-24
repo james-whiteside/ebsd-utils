@@ -46,7 +46,7 @@ def dbscan(
                 neighbourhood_radius
             )
         else:
-            print(f"Warning: Config specifies to use CUDA but no compatible CUDA device was detected.")
+            print(f"Warning: Config specifies to use CUDA but no compatible CUDA device was detected. Using non-CUDA mode.")
 
     return _dbscan_cpu(
         width,
