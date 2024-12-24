@@ -139,10 +139,11 @@ class FieldManager:
                 self._scan_params.phases,
                 self.orientation_matrix,
                 self.phase,
-                self._config.project.phase_dir,
-                self._config.project.channelling_cache_dir,
                 random_source,
                 self._config.analysis.use_cache,
+                self._config.project.channelling_cache_dir,
+                self._config.project.phase_dir,
+                self._config.project.database_path,
             )
 
         return self._channelling_fraction

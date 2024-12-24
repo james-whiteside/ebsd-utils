@@ -36,38 +36,24 @@ class FieldType(Enum):
     @property
     def type(self) -> type:
         match self:
-            case self.BOOLEAN:
-                return bool
-            case self.DISCRETE:
-                return int
-            case self.SCALAR:
-                return float
-            case self.VECTOR_2D:
-                return tuple
-            case self.VECTOR_3D:
-                return tuple
-            case self.MATRIX:
-                return ndarray
-            case self.OBJECT:
-                return object
+            case self.BOOLEAN: return bool
+            case self.DISCRETE: return int
+            case self.SCALAR: return float
+            case self.VECTOR_2D: return tuple
+            case self.VECTOR_3D: return tuple
+            case self.MATRIX: return ndarray
+            case self.OBJECT: return object
 
     @property
     def size(self) -> int:
         match self:
-            case self.BOOLEAN:
-                return 1
-            case self.DISCRETE:
-                return 1
-            case self.SCALAR:
-                return 1
-            case self.VECTOR_2D:
-                return 2
-            case self.VECTOR_3D:
-                return 3
-            case self.MATRIX:
-                raise AttributeError(f"Field type is not serializable: {self.name}")
-            case self.OBJECT:
-                raise AttributeError(f"Field type is not serializable: {self.name}")
+            case self.BOOLEAN: return 1
+            case self.DISCRETE: return 1
+            case self.SCALAR: return 1
+            case self.VECTOR_2D: return 2
+            case self.VECTOR_3D: return 3
+            case self.MATRIX: raise AttributeError(f"Field type is not serializable: {self.name}")
+            case self.OBJECT: raise AttributeError(f"Field type is not serializable: {self.name}")
 
 
 class FieldNullError(ValueError):

@@ -25,6 +25,7 @@ class Config:
             analysis_dir=self._str(parser["project"]["analysis_output_dir"]),
             map_dir=self._str(parser["project"]["map_output_dir"]),
             cache_dir=self._str(parser["project"]["cache_dir"]),
+            database_path=self._str(parser["project"]["phase_database_path"]),
         )
 
         self.data = DataParams(

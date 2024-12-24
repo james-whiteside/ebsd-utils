@@ -180,10 +180,8 @@ class AverageAggregate[VALUE_TYPE](Aggregate):
         self._aggregates: dict[int, VALUE_TYPE] = dict()
 
         match self._values.field_type:
-            case FieldType.SCALAR:
-                self._init_scalar_aggregates()
-            case FieldType.MATRIX:
-                self._init_matrix_aggregates()
+            case FieldType.SCALAR: self._init_scalar_aggregates()
+            case FieldType.MATRIX: self._init_matrix_aggregates()
 
     def _init_scalar_aggregates(self) -> None:
         totals: dict[int, float] = dict()

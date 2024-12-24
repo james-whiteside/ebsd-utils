@@ -140,14 +140,10 @@ def misrotation_tensor(
     for y in range(height):
         for x in range(width):
             match axis:
-                case Axis.X:
-                    kernel = [(-1, 0), (+1, 0)]
-                case Axis.Y:
-                    kernel = [(0, -1), (0, +1)]
-                case Axis.Z:
-                    raise ValueError("Misrotation data not available for z-axis intervals.")
-                case _:
-                    raise ValueError("Non-Cartesian axes are not valid for misrotation data.")
+                case Axis.X: kernel = [(-1, 0), (+1, 0)]
+                case Axis.Y: kernel = [(0, -1), (0, +1)]
+                case Axis.Z: raise ValueError("Misrotation data not available for z-axis intervals.")
+                case _: raise ValueError("Non-Cartesian axes are not valid for misrotation data.")
 
             total = zeros((3, 3))
             count = 0
@@ -233,7 +229,7 @@ def gnd_density(
         for x in range(width):
             try:
                 nye_tensor_norm = sum(abs(element) for row in nye_tensor_field.get_value_at(x, y).tolist() for element in row)
-                close_pack_distance = phase_field.get_value_at(x, y).close_pack_distance
+                close_pack_distance = phase_field.get_value_at(x, y).close_pack_distance_nm
             except FieldNullError:
                 continue
 
@@ -251,18 +247,27 @@ def channelling_fraction(
     phases: dict[int, Phase],
     orientation_matrix_field: FieldLike[ndarray],
     phase_field: FieldLike[Phase],
-    phase_cache_dir: str,
-    channelling_cache_dir: str,
     random_source: Random,
     use_cache: bool,
+    cache_dir: str,
+    phase_dir: str,
+    phase_database_path: str,
 ) -> Field[float]:
     input_fields = [orientation_matrix_field, phase_field]
     width, height, nullable = FieldLike.get_params(input_fields)
     output_field = Field(width, height, FieldType.SCALAR, default_value=None, nullable=True)
 
     channel_data = {
-        phase.global_id: load_crit_data(beam_atomic_number, phase.global_id, beam_energy, phase_cache_dir, channelling_cache_dir, random_source, use_cache)
-        for local_id, phase in phases.items() if phase.global_id != Phase.UNINDEXED_ID
+        phase.global_id: load_crit_data(
+            beam_atomic_number=beam_atomic_number,
+            target_id=phase.global_id,
+            beam_energy=beam_energy,
+            random_source=random_source,
+            use_cache=use_cache,
+            cache_dir=cache_dir,
+            phase_dir=phase_dir,
+            phase_database_path=phase_database_path,
+        ) for local_id, phase in phases.items() if phase.global_id != Phase.UNINDEXED_ID
     }
 
     for y in range(height):

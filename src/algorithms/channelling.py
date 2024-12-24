@@ -225,10 +225,20 @@ def fun2(r, Z1, Z2, opposing, rch, d2, e):
 	return ee - e
 
 
-def gen_crit_data(beam_z: int, target_id: int, beam_energy: float, max_range: float, max_index: int, phase_cache_dir: str, channelling_cache_dir: str, random_source: Random):
+def gen_crit_data(
+	beam_atomic_number: int,
+	target_id: int,
+	beam_energy: float,
+	max_range: float,
+	max_index: int,
+	random_source: Random,
+	cache_dir: str,
+	phase_dir: str,
+	phase_database_path: str,
+):
 	e = beam_energy
-	target = Phase.load(phase_cache_dir, target_id)
-	Z1 = beam_z
+	target = Phase.load(target_id, phase_dir, phase_database_path)
+	Z1 = beam_atomic_number
 	Z2 = target.atomic_number
 	lType = target.lattice_type.value
 	diamond = target.diamond_structure
@@ -244,19 +254,19 @@ def gen_crit_data(beam_z: int, target_id: int, beam_energy: float, max_range: fl
 	else:
 		raise NotImplementedError()
 	
-	alat = 10 * target.lattice_constants[0]
-	xrms = 10 * target.vibration_amplitude
+	alat = 10 * target.lattice_constants_nm[0]
+	xrms = 10 * target.vibration_amplitude_nm
 	base = get_base(lattice)
-	fileref = '[' + str(target_id) + '][' + str(beam_z) + '][' + str(beam_energy) + ']'
-	os.makedirs(channelling_cache_dir, exist_ok=True)
-	file_emin_a = open(channelling_cache_dir + "/" + fileref + 'emin-a.txt', 'w')
-	file_emin_p = open(channelling_cache_dir + "/" + fileref + 'emin-p.txt', 'w')
-	file_psicrit_a = open(channelling_cache_dir + "/" + fileref + 'psicrit-a.txt', 'w')
-	file_psicrit_p = open(channelling_cache_dir + "/" + fileref + 'psicrit-p.txt', 'w')
-	file_eperpcrit_a = open(channelling_cache_dir + "/" + fileref + 'eperpcrit-a.txt', 'w')
-	file_eperpcrit_p = open(channelling_cache_dir + "/" + fileref + 'eperpcrit-p.txt', 'w')
-	file_uper_a = open(channelling_cache_dir + "/" + fileref + 'uper-a.txt', 'w')
-	file_uper_p = open(channelling_cache_dir + "/" + fileref + 'uper-p.txt', 'w')
+	fileref = '[' + str(target_id) + '][' + str(beam_atomic_number) + '][' + str(beam_energy) + ']'
+	os.makedirs(cache_dir, exist_ok=True)
+	file_emin_a = open(cache_dir + "/" + fileref + 'emin-a.txt', 'w')
+	file_emin_p = open(cache_dir + "/" + fileref + 'emin-p.txt', 'w')
+	file_psicrit_a = open(cache_dir + "/" + fileref + 'psicrit-a.txt', 'w')
+	file_psicrit_p = open(cache_dir + "/" + fileref + 'psicrit-p.txt', 'w')
+	file_eperpcrit_a = open(cache_dir + "/" + fileref + 'eperpcrit-a.txt', 'w')
+	file_eperpcrit_p = open(cache_dir + "/" + fileref + 'eperpcrit-p.txt', 'w')
+	file_uper_a = open(cache_dir + "/" + fileref + 'uper-a.txt', 'w')
+	file_uper_p = open(cache_dir + "/" + fileref + 'uper-p.txt', 'w')
 	file_emin_a.write('# h  k  l  E_min\n')
 	file_emin_p.write('# h  k  l  E_min\n')
 	file_psicrit_a.write('# h  k  l  psi_crit\n')
@@ -440,18 +450,27 @@ def gen_crit_data(beam_z: int, target_id: int, beam_energy: float, max_range: fl
 	file_uper_p.close()
 
 
-def load_crit_data(beam_z: int, target_id: int, beam_energy: float, phase_cache_dir: str, channelling_cache_dir: str, random_source: Random, use_cache: bool) -> dict:
+def load_crit_data(
+	beam_atomic_number: int,
+	target_id: int,
+	beam_energy: float,
+	random_source: Random,
+	use_cache: bool,
+	cache_dir: str,
+	phase_dir: str,
+	phase_database_path: str,
+) -> dict:
 	if not use_cache:
-		channelling_cache_dir = f"{channelling_cache_dir}/temp"
+		cache_dir = f"{cache_dir}/temp"
 
 	try:
-		fileref = '[' + str(target_id) + '][' + str(beam_z) + '][' + str(beam_energy) + ']'
+		fileref = '[' + str(target_id) + '][' + str(beam_atomic_number) + '][' + str(beam_energy) + ']'
 
 		try:
-			file_eperpcrit_a = open(channelling_cache_dir + "/" + fileref + 'eperpcrit-a.txt', 'r')
-			file_eperpcrit_p = open(channelling_cache_dir + "/" + fileref + 'eperpcrit-p.txt', 'r')
-			file_uper_a = open(channelling_cache_dir + "/" + fileref + 'uper-a.txt', 'r')
-			file_uper_p = open(channelling_cache_dir + "/" + fileref + 'uper-p.txt', 'r')
+			file_eperpcrit_a = open(cache_dir + "/" + fileref + 'eperpcrit-a.txt', 'r')
+			file_eperpcrit_p = open(cache_dir + "/" + fileref + 'eperpcrit-p.txt', 'r')
+			file_uper_a = open(cache_dir + "/" + fileref + 'uper-a.txt', 'r')
+			file_uper_p = open(cache_dir + "/" + fileref + 'uper-p.txt', 'r')
 			file_eperpcrit_a.close()
 			file_eperpcrit_p.close()
 			file_uper_a.close()
@@ -460,17 +479,28 @@ def load_crit_data(beam_z: int, target_id: int, beam_energy: float, phase_cache_
 			max_range = 10  # Maximum range from origin where rows are to be considered (Å)
 			max_index = 10  # Maximum Miller index to be considered
 			print('Generating channelling fraction data for phase ' + str(target_id) + '.')
-			gen_crit_data(beam_z, target_id, beam_energy, max_range, max_index, phase_cache_dir, channelling_cache_dir, random_source)
+
+			gen_crit_data(
+				beam_atomic_number=beam_atomic_number,
+				target_id=target_id,
+				beam_energy=beam_energy,
+				max_range=max_range,
+				max_index=max_index,
+				random_source=random_source,
+				cache_dir=cache_dir,
+				phase_dir=phase_dir,
+				phase_database_path=phase_database_path,
+			)
 
 		try:
-			has, kas, las, eperpcrit_a = numpy.loadtxt(channelling_cache_dir + "/" + fileref + 'eperpcrit-a.txt', unpack=True)
-			line_tuples = numpy.loadtxt(channelling_cache_dir + "/" + fileref + 'uper-a.txt')
+			has, kas, las, eperpcrit_a = numpy.loadtxt(cache_dir + "/" + fileref + 'eperpcrit-a.txt', unpack=True)
+			line_tuples = numpy.loadtxt(cache_dir + "/" + fileref + 'uper-a.txt')
 			has_u = line_tuples[:,0]
 			kas_u = line_tuples[:,1]
 			las_u = line_tuples[:,2]
 
 			if not (all(has_u == has) and all(kas_u == kas) and all(las_u == las)):
-				exit('Inconsistent files ' + channelling_cache_dir + "/" + fileref + 'eperpcrit-a.txt\' and ' + channelling_cache_dir + "/" + fileref + 'uper-a.txt\'')
+				exit('Inconsistent files ' + cache_dir + "/" + fileref + 'eperpcrit-a.txt\' and ' + cache_dir + "/" + fileref + 'uper-a.txt\'')
 
 			u_percentiles_a = line_tuples[:,3:]
 			axial = True
@@ -479,14 +509,14 @@ def load_crit_data(beam_z: int, target_id: int, beam_energy: float, phase_cache_
 			axial = False
 
 		try:
-			hps, kps, lps, eperpcrit_p = numpy.loadtxt(channelling_cache_dir + "/" + fileref + 'eperpcrit-p.txt', unpack=True)
-			line_tuples = numpy.loadtxt(channelling_cache_dir + "/" + fileref + 'uper-p.txt')
+			hps, kps, lps, eperpcrit_p = numpy.loadtxt(cache_dir + "/" + fileref + 'eperpcrit-p.txt', unpack=True)
+			line_tuples = numpy.loadtxt(cache_dir + "/" + fileref + 'uper-p.txt')
 			hps_u = line_tuples[:,0]
 			kps_u = line_tuples[:,1]
 			lps_u = line_tuples[:,2]
 
 			if not (all(hps_u == hps) and all(kps_u == kps) and all(lps_u == lps)):
-				exit('Inconsistent files ' + channelling_cache_dir + "/" + fileref + 'eperpcrit-p.txt\' and ' + channelling_cache_dir + "/" + fileref + 'uper-p.txt\'')
+				exit('Inconsistent files ' + cache_dir + "/" + fileref + 'eperpcrit-p.txt\' and ' + cache_dir + "/" + fileref + 'uper-p.txt\'')
 
 			u_percentiles_p = line_tuples[:,3:]
 			planar = True
@@ -495,7 +525,7 @@ def load_crit_data(beam_z: int, target_id: int, beam_energy: float, phase_cache_
 			planar = False
 
 		output = dict()
-		output['beam_z'] = beam_z
+		output['beam_z'] = beam_atomic_number
 		output['target_id'] = target_id
 		output['energy'] = beam_energy
 		output['data'] = dict()
@@ -514,7 +544,7 @@ def load_crit_data(beam_z: int, target_id: int, beam_energy: float, phase_cache_
 		return output
 	finally:
 		if not use_cache:
-			rmtree(channelling_cache_dir)
+			rmtree(cache_dir)
 
 
 def fraction(effective_beam_vector: tuple[float, float, float], crit_data: dict) -> float:
