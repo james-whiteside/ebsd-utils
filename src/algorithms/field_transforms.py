@@ -233,7 +233,7 @@ def gnd_density(
         for x in range(width):
             try:
                 nye_tensor_norm = sum(abs(element) for row in nye_tensor_field.get_value_at(x, y).tolist() for element in row)
-                close_pack_distance = phase_field.get_value_at(x, y).close_pack_distance
+                close_pack_distance = phase_field.get_value_at(x, y).close_pack_distance_nm
             except FieldNullError:
                 continue
 

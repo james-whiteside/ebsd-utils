@@ -244,8 +244,8 @@ def gen_crit_data(beam_z: int, target_id: int, beam_energy: float, max_range: fl
 	else:
 		raise NotImplementedError()
 	
-	alat = 10 * target.lattice_constants[0]
-	xrms = 10 * target.vibration_amplitude
+	alat = 10 * target.lattice_constants_nm[0]
+	xrms = 10 * target.vibration_amplitude_nm
 	base = get_base(lattice)
 	fileref = '[' + str(target_id) + '][' + str(beam_z) + '][' + str(beam_energy) + ']'
 	os.makedirs(channelling_cache_dir, exist_ok=True)

@@ -8,6 +8,7 @@ from json import dump as json_dump, load as json_load
 from typing import Self, Any
 from numpy import ndarray, dot, array
 from src.utilities.geometry import reduce_vector
+from src.utilities.utils import tuple_radians
 
 
 class CrystalFamily(Enum):
@@ -117,22 +118,22 @@ class Phase:
         name: str,
         atomic_number: float,
         atomic_weight: float,
-        density: float,
-        vibration_amplitude: float,
+        density_cgs: float,
+        vibration_amplitude_nm: float,
         lattice_type: BravaisLattice,
-        lattice_constants: tuple[float, float, float],
-        lattice_angles: tuple[float, float, float],
+        lattice_constants_nm: tuple[float, float, float],
+        lattice_angles_deg: tuple[float, float, float],
         diamond_structure: bool,
     ):
         self.global_id = global_id
         self.name = name
         self.atomic_number = atomic_number
         self.atomic_weight = atomic_weight
-        self.density = density
-        self.vibration_amplitude = vibration_amplitude
+        self.density_cgs = density_cgs
+        self.vibration_amplitude_nm = vibration_amplitude_nm
         self.lattice_type = lattice_type
-        self.lattice_constants = lattice_constants
-        self.lattice_angles = lattice_angles
+        self.lattice_constants_nm = lattice_constants_nm
+        self.lattice_angles_deg = lattice_angles_deg
         self.diamond_structure = diamond_structure
 
     def __eq__(self, other):
@@ -140,6 +141,26 @@ class Phase:
             return False
 
         return self.global_id == other.global_id
+
+    @property
+    def density(self) -> float:
+        return self.density_cgs * 10.0 ** 3.0
+
+    @property
+    def vibration_amplitude(self) -> float:
+        return self.vibration_amplitude_nm * 10 ** -9.0
+
+    @property
+    def lattice_constants(self) -> tuple[float, float, float]:
+        return (
+            self.lattice_constants_nm[0] * 10.0 ** -9.0,
+            self.lattice_constants_nm[1] * 10.0 ** -9.0,
+            self.lattice_constants_nm[2] * 10.0 ** -9.0,
+        )
+
+    @property
+    def lattice_angles_rad(self) -> tuple[float, float, float]:
+        return tuple_radians(self.lattice_angles_deg)
 
     @property
     def close_pack_distance(self) -> float:
@@ -153,6 +174,10 @@ class Phase:
             case _:
                 raise NotImplementedError()
 
+    @property
+    def close_pack_distance_nm(self) -> float:
+        return self.close_pack_distance * 10.0 ** 9.0
+
     def cache(self, cache_path: str) -> None:
         makedirs(cache_path, exist_ok=True)
 
@@ -161,11 +186,11 @@ class Phase:
             "name": self.name,
             "atomic_number": self.atomic_number,
             "atomic_weight": self.atomic_weight,
-            "density": self.density,
-            "vibration_amplitude": self.vibration_amplitude,
+            "density_cgs": self.density_cgs,
+            "vibration_amplitude_nm": self.vibration_amplitude_nm,
             "lattice_type": self.lattice_type.value,
-            "lattice_constants": list(self.lattice_constants),
-            "lattice_angles": list(self.lattice_angles),
+            "lattice_constants_nm": list(self.lattice_constants_nm),
+            "lattice_angles_deg": list(self.lattice_angles_deg),
             "diamond_structure": self.diamond_structure,
         }
 
@@ -185,18 +210,18 @@ class Phase:
             with open(file_path, "r") as file:
                 json_rep: dict[str, Any] = json_load(file)
         except FileNotFoundError:
-            raise PhaseMissingError(f"No phase found in cache with ID {global_id}")
+            raise PhaseMissingError(f"No phase found in cache with ID {global_id}.")
 
         kwargs = {
             "global_id": json_rep["global_id"],
             "name": json_rep["name"],
             "atomic_number": json_rep["atomic_number"],
             "atomic_weight": json_rep["atomic_weight"],
-            "density": json_rep["density"],
-            "vibration_amplitude": json_rep["vibration_amplitude"],
+            "density_cgs": json_rep["density_cgs"],
+            "vibration_amplitude_nm": json_rep["vibration_amplitude_nm"],
             "lattice_type": BravaisLattice(json_rep["lattice_type"]),
-            "lattice_constants": tuple(json_rep["lattice_constants"]),
-            "lattice_angles": tuple(json_rep["lattice_angles"]),
+            "lattice_constants_nm": tuple(json_rep["lattice_constants_nm"]),
+            "lattice_angles_deg": tuple(json_rep["lattice_angles_deg"]),
             "diamond_structure": json_rep["diamond_structure"],
         }
 
