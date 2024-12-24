@@ -205,8 +205,8 @@ class Phase:
     def close_pack_distance_nm(self) -> float:
         return self.close_pack_distance * 10.0 ** 9.0
 
-    def cache(self, cache_path: str) -> None:
-        makedirs(cache_path, exist_ok=True)
+    def save(self, phase_dir: str) -> None:
+        makedirs(phase_dir, exist_ok=True)
 
         json_rep = {
             "global_id": self.global_id,
@@ -221,12 +221,12 @@ class Phase:
             "diamond_structure": self.diamond_structure,
         }
 
-        with open(f"{cache_path}/{self.global_id}.json", "w") as file:
+        with open(f"{phase_dir}/{self.global_id}.json", "w") as file:
             json_dump(json_rep, file)
 
     @classmethod
-    def load(cls, cache_path: str, global_id: int, database_path: str = None) -> Self:
-        file_path = f"{cache_path}/{global_id}.json"
+    def load(cls, global_id: int, phase_dir: str, database_path: str = None) -> Self:
+        file_path = f"{phase_dir}/{global_id}.json"
 
         try:
             with open(file_path, "r") as file:
@@ -247,11 +247,11 @@ class Phase:
 
                 return Phase(**kwargs)
         except FileNotFoundError:
-            print(f"Warning: No phase found in cache with ID {global_id}.")
+            print(f"Warning: No data found for phase with ID {global_id}.")
 
             if input("Enter phase information now? (Y/N): ").lower() == "y":
                 phase = cls.build(global_id, database_path)
-                phase.cache(cache_path)
+                phase.save(phase_dir)
                 return phase
             else:
                 raise PhaseMissingError(f"No data available for phase with ID {global_id}.")
