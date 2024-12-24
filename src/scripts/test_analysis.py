@@ -32,8 +32,8 @@ def test_analysis(data_path: str, analysis_path: str, map_dir: str, config: Conf
                 if control_line != test_line:
                     message = (
                         f"Lines in analysis files differ:\n"
-                        f"Control: {control_line}\n"
-                        f"Test: {test_line}"
+                        f"Control: {control_line.rstrip("\n")}\n"
+                        f"Test: {test_line.rstrip("\n")}"
                     )
 
                     raise AssertionError(message)
