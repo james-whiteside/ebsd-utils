@@ -140,14 +140,10 @@ def misrotation_tensor(
     for y in range(height):
         for x in range(width):
             match axis:
-                case Axis.X:
-                    kernel = [(-1, 0), (+1, 0)]
-                case Axis.Y:
-                    kernel = [(0, -1), (0, +1)]
-                case Axis.Z:
-                    raise ValueError("Misrotation data not available for z-axis intervals.")
-                case _:
-                    raise ValueError("Non-Cartesian axes are not valid for misrotation data.")
+                case Axis.X: kernel = [(-1, 0), (+1, 0)]
+                case Axis.Y: kernel = [(0, -1), (0, +1)]
+                case Axis.Z: raise ValueError("Misrotation data not available for z-axis intervals.")
+                case _: raise ValueError("Non-Cartesian axes are not valid for misrotation data.")
 
             total = zeros((3, 3))
             count = 0

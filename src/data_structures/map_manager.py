@@ -21,30 +21,18 @@ class MapManager:
 
     def get(self, map_type: MapType) -> Map:
         match map_type:
-            case MapType.P:
-                return self.phase
-            case MapType.EA:
-                return self.euler_angle
-            case MapType.PQ:
-                return self.pattern_quality
-            case MapType.IQ:
-                return self.index_quality
-            case MapType.OX:
-                return self.orientation(Axis.X)
-            case MapType.OY:
-                return self.orientation(Axis.Y)
-            case MapType.OZ:
-                return self.orientation(Axis.Z)
-            case MapType.OB:
-                return self.orientation(self._field_manager._config.channelling.beam_axis)
-            case MapType.KAM:
-                return self.average_misorientation
-            case MapType.GND:
-                return self.gnd_density
-            case MapType.CF:
-                return self.channelling_fraction
-            case MapType.OC:
-                return self.orientation_cluster
+            case MapType.P: return self.phase
+            case MapType.EA: return self.euler_angle
+            case MapType.PQ: return self.pattern_quality
+            case MapType.IQ: return self.index_quality
+            case MapType.OX: return self.orientation(Axis.X)
+            case MapType.OY: return self.orientation(Axis.Y)
+            case MapType.OZ: return self.orientation(Axis.Z)
+            case MapType.OB: return self.orientation(self._field_manager._config.channelling.beam_axis)
+            case MapType.KAM: return self.average_misorientation
+            case MapType.GND: return self.gnd_density
+            case MapType.CF: return self.channelling_fraction
+            case MapType.OC: return self.orientation_cluster
 
     @property
     def phase(self) -> Map:
@@ -93,14 +81,10 @@ class MapManager:
 
     def orientation(self, axis: Axis) -> Map:
         match axis:
-            case Axis.X:
-                map_type = MapType.OX
-            case Axis.Y:
-                map_type = MapType.OY
-            case Axis.Z:
-                map_type = MapType.OZ
-            case self._field_manager._config.channelling.beam_axis:
-                map_type = MapType.OB
+            case Axis.X: map_type = MapType.OX
+            case Axis.Y: map_type = MapType.OY
+            case Axis.Z: map_type = MapType.OZ
+            case self._field_manager._config.channelling.beam_axis: map_type = MapType.OB
 
         return Map(
             map_type=map_type,
