@@ -225,11 +225,6 @@ class Phase:
             json_dump(json_rep, file)
 
     @classmethod
-    def cache_all(cls, cache_path: str, phases: list[Self]) -> None:
-        for phase in phases:
-            phase.cache(cache_path)
-
-    @classmethod
     def load(cls, cache_path: str, global_id: int, database_path: str = None) -> Self:
         file_path = f"{cache_path}/{global_id}.json"
 
@@ -260,17 +255,6 @@ class Phase:
                 return phase
             else:
                 raise PhaseMissingError(f"No data available for phase with ID {global_id}.")
-
-    @classmethod
-    def load_all(cls, cache_path: str) -> dict[int, Self]:
-        phases: dict[int, Phase] = dict()
-        global_ids = [int(path.split(".")[0]) for path in listdir(cache_path)]
-
-        for global_id in global_ids:
-            phase = cls.load(cache_path, global_id)
-            phases[phase.global_id] = phase
-
-        return phases
 
     @classmethod
     def build(cls, global_id: int, database_path: str = None) -> Self:
