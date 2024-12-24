@@ -6,6 +6,7 @@ from enum import Enum
 from os import listdir, makedirs
 from json import dump as json_dump, load as json_load
 from typing import Self, Any
+from xml.etree import ElementTree
 from numpy import ndarray, dot, array
 from src.utilities.geometry import reduce_vector
 from src.utilities.utils import tuple_radians
@@ -100,6 +101,32 @@ class BravaisLattice(Enum):
     @property
     def family(self) -> CrystalFamily:
         return CrystalFamily(self.value[0])
+
+    @property
+    def code(self) -> int:
+        match self:
+            case BravaisLattice.CP: return 1
+            case BravaisLattice.CI: return 2
+            case BravaisLattice.CF: return 3
+            case BravaisLattice.TP: return 4
+            case BravaisLattice.TI: return 5
+            case BravaisLattice.OP: return 6
+            case BravaisLattice.OI: return 7
+            case BravaisLattice.OS: return 8
+            case BravaisLattice.OF: return 9
+            case BravaisLattice.HR: return 10
+            case BravaisLattice.HP: return 11
+            case BravaisLattice.MP: return 12
+            case BravaisLattice.MS: return 13
+            case BravaisLattice.AP: return 14
+
+    @classmethod
+    def from_code(cls, code: int) -> Self:
+        for lattice in BravaisLattice:
+            if lattice.code == code:
+                return lattice
+
+        raise ValueError(f"Value is not a valid Bravais lattice code: {code}")
 
 
 class PhaseMissingError(FileNotFoundError):
@@ -237,3 +264,62 @@ class Phase:
             phases[phase.global_id] = phase
 
         return phases
+
+    @classmethod
+    def build(cls, global_id: int, database_path: str | None) -> Self:
+        info_found = False
+
+        if database_path is not None:
+            db = ElementTree.parse(database_path).getroot()
+
+            for phase_info in db.iter("CrystalPhaseInfo"):
+                if int(phase_info.find("CrystalID").text) == global_id:
+                    info_found = True
+                    global_id = int(phase_info.find("CrystalID").text)
+                    name = phase_info.find("ElementName").text
+                    lattice_type = BravaisLattice.from_code(int(phase_info.find("BravaisLatticeID").text))
+                    a = float(phase_info.find("Cell_A").text)
+                    b = float(phase_info.find("Cell_B").text)
+                    c = float(phase_info.find("Cell_C").text)
+                    alpha = float(phase_info.find("Cell_Alpha").text)
+                    beta = float(phase_info.find("Cell_Beta").text)
+                    gamma = float(phase_info.find("Cell_Gamma").text)
+                    print(f"Name: {name}")
+                    print(f"Lattice type: {lattice_type.value}")
+                    print(f"Lattice constants: {a} nm, {b} nm, {c} nm")
+                    print(f"Lattice angles: {alpha} deg, {beta} deg, {gamma} deg")
+                    break
+
+            if not info_found:
+                print(f"Warning: No phase found in database with ID {global_id}. Manual entry required.")
+
+        if not info_found:
+            name = input("Enter phase name: ")
+            lattice_type = BravaisLattice[input("Enter Bravais lattice Pearson symbol: ").upper()]
+            a = float(input("Enter first lattice constant (nm): "))
+            b = float(input("Enter second lattice constant (nm): "))
+            c = float(input("Enter third lattice constant (nm): "))
+            alpha = float(input("Enter first lattice angle (deg): "))
+            beta = float(input("Enter second lattice angle (deg): "))
+            gamma = float(input("Enter third lattice angle (deg): "))
+
+        atomic_number = float(input("Enter average atomic number: "))
+        atomic_weight = float(input("Enter average atomic weight: "))
+        density_cgs = float(input("Enter density (g/cm³): "))
+        vibration_amplitude_nm = float(input("Enter thermal vibration amplitude (nm): "))
+        diamond_structure = (lattice_type.value == "cF") and (input("Does crystal have diamond structure? (Y/N): ").lower() == "y")
+
+        phase = Phase(
+            global_id=global_id,
+            name=name,
+            atomic_number=atomic_number,
+            atomic_weight=atomic_weight,
+            density_cgs=density_cgs,
+            vibration_amplitude_nm=vibration_amplitude_nm,
+            lattice_type=lattice_type,
+            lattice_constants_nm=(a, b, c),
+            lattice_angles_deg=(alpha, beta, gamma),
+            diamond_structure=diamond_structure,
+        )
+
+        return phase
