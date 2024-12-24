@@ -43,12 +43,14 @@ class ProjectParams:
         analysis_dir: str,
         map_dir: str,
         cache_dir: str,
+        database_path: str,
     ):
         self.data_dir = data_dir
         self.phase_dir = phase_dir
         self.analysis_dir = analysis_dir
         self.map_dir = map_dir
         self.cache_dir = cache_dir
+        self.database_path = database_path
 
     @property
     def channelling_cache_dir(self) -> str:

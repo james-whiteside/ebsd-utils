@@ -230,29 +230,36 @@ class Phase:
             phase.cache(cache_path)
 
     @classmethod
-    def load(cls, cache_path: str, global_id: int) -> Self:
+    def load(cls, cache_path: str, global_id: int, database_path: str = None) -> Self:
         file_path = f"{cache_path}/{global_id}.json"
 
         try:
             with open(file_path, "r") as file:
                 json_rep: dict[str, Any] = json_load(file)
+
+                kwargs = {
+                    "global_id": json_rep["global_id"],
+                    "name": json_rep["name"],
+                    "atomic_number": json_rep["atomic_number"],
+                    "atomic_weight": json_rep["atomic_weight"],
+                    "density_cgs": json_rep["density_cgs"],
+                    "vibration_amplitude_nm": json_rep["vibration_amplitude_nm"],
+                    "lattice_type": BravaisLattice(json_rep["lattice_type"]),
+                    "lattice_constants_nm": tuple(json_rep["lattice_constants_nm"]),
+                    "lattice_angles_deg": tuple(json_rep["lattice_angles_deg"]),
+                    "diamond_structure": json_rep["diamond_structure"],
+                }
+
+                return Phase(**kwargs)
         except FileNotFoundError:
-            raise PhaseMissingError(f"No phase found in cache with ID {global_id}.")
+            print(f"Warning: No phase found in cache with ID {global_id}.")
 
-        kwargs = {
-            "global_id": json_rep["global_id"],
-            "name": json_rep["name"],
-            "atomic_number": json_rep["atomic_number"],
-            "atomic_weight": json_rep["atomic_weight"],
-            "density_cgs": json_rep["density_cgs"],
-            "vibration_amplitude_nm": json_rep["vibration_amplitude_nm"],
-            "lattice_type": BravaisLattice(json_rep["lattice_type"]),
-            "lattice_constants_nm": tuple(json_rep["lattice_constants_nm"]),
-            "lattice_angles_deg": tuple(json_rep["lattice_angles_deg"]),
-            "diamond_structure": json_rep["diamond_structure"],
-        }
-
-        return Phase(**kwargs)
+            if input("Enter phase information now? (Y/N): ").lower() == "y":
+                phase = cls.build(global_id, database_path)
+                phase.cache(cache_path)
+                return phase
+            else:
+                raise PhaseMissingError(f"No data available for phase with ID {global_id}.")
 
     @classmethod
     def load_all(cls, cache_path: str) -> dict[int, Self]:
@@ -266,32 +273,35 @@ class Phase:
         return phases
 
     @classmethod
-    def build(cls, global_id: int, database_path: str | None) -> Self:
+    def build(cls, global_id: int, database_path: str = None) -> Self:
         info_found = False
 
         if database_path is not None:
-            db = ElementTree.parse(database_path).getroot()
+            try:
+                db = ElementTree.parse(database_path).getroot()
 
-            for phase_info in db.iter("CrystalPhaseInfo"):
-                if int(phase_info.find("CrystalID").text) == global_id:
-                    info_found = True
-                    global_id = int(phase_info.find("CrystalID").text)
-                    name = phase_info.find("ElementName").text
-                    lattice_type = BravaisLattice.from_code(int(phase_info.find("BravaisLatticeID").text))
-                    a = float(phase_info.find("Cell_A").text)
-                    b = float(phase_info.find("Cell_B").text)
-                    c = float(phase_info.find("Cell_C").text)
-                    alpha = float(phase_info.find("Cell_Alpha").text)
-                    beta = float(phase_info.find("Cell_Beta").text)
-                    gamma = float(phase_info.find("Cell_Gamma").text)
-                    print(f"Name: {name}")
-                    print(f"Lattice type: {lattice_type.value}")
-                    print(f"Lattice constants: {a} nm, {b} nm, {c} nm")
-                    print(f"Lattice angles: {alpha} deg, {beta} deg, {gamma} deg")
-                    break
+                for phase_info in db.iter("CrystalPhaseInfo"):
+                    if int(phase_info.find("CrystalID").text) == global_id:
+                        info_found = True
+                        global_id = int(phase_info.find("CrystalID").text)
+                        name = phase_info.find("ElementName").text
+                        lattice_type = BravaisLattice.from_code(int(phase_info.find("BravaisLatticeID").text))
+                        a = float(phase_info.find("Cell_A").text)
+                        b = float(phase_info.find("Cell_B").text)
+                        c = float(phase_info.find("Cell_C").text)
+                        alpha = float(phase_info.find("Cell_Alpha").text)
+                        beta = float(phase_info.find("Cell_Beta").text)
+                        gamma = float(phase_info.find("Cell_Gamma").text)
+                        print(f"Name: {name}")
+                        print(f"Lattice type: {lattice_type.value}")
+                        print(f"Lattice constants: {a} nm, {b} nm, {c} nm")
+                        print(f"Lattice angles: {alpha} deg, {beta} deg, {gamma} deg")
+                        break
 
-            if not info_found:
-                print(f"Warning: No phase found in database with ID {global_id}. Manual entry required.")
+                if not info_found:
+                    print(f"Warning: No phase found in database with ID {global_id}. Manual entry required.")
+            except FileNotFoundError:
+                print("Warning: Phase database missing. Manual entry required.")
 
         if not info_found:
             name = input("Enter phase name: ")

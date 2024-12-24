@@ -225,9 +225,9 @@ def fun2(r, Z1, Z2, opposing, rch, d2, e):
 	return ee - e
 
 
-def gen_crit_data(beam_z: int, target_id: int, beam_energy: float, max_range: float, max_index: int, phase_cache_dir: str, channelling_cache_dir: str, random_source: Random):
+def gen_crit_data(beam_z: int, target_id: int, beam_energy: float, max_range: float, max_index: int, phase_cache_dir: str, channelling_cache_dir: str, random_source: Random, phase_database_path: str = None):
 	e = beam_energy
-	target = Phase.load(phase_cache_dir, target_id)
+	target = Phase.load(phase_cache_dir, target_id, phase_database_path)
 	Z1 = beam_z
 	Z2 = target.atomic_number
 	lType = target.lattice_type.value
@@ -440,7 +440,7 @@ def gen_crit_data(beam_z: int, target_id: int, beam_energy: float, max_range: fl
 	file_uper_p.close()
 
 
-def load_crit_data(beam_z: int, target_id: int, beam_energy: float, phase_cache_dir: str, channelling_cache_dir: str, random_source: Random, use_cache: bool) -> dict:
+def load_crit_data(beam_z: int, target_id: int, beam_energy: float, phase_cache_dir: str, channelling_cache_dir: str, random_source: Random, use_cache: bool, phase_database_path: str = None) -> dict:
 	if not use_cache:
 		channelling_cache_dir = f"{channelling_cache_dir}/temp"
 
@@ -460,7 +460,7 @@ def load_crit_data(beam_z: int, target_id: int, beam_energy: float, phase_cache_
 			max_range = 10  # Maximum range from origin where rows are to be considered (Å)
 			max_index = 10  # Maximum Miller index to be considered
 			print('Generating channelling fraction data for phase ' + str(target_id) + '.')
-			gen_crit_data(beam_z, target_id, beam_energy, max_range, max_index, phase_cache_dir, channelling_cache_dir, random_source)
+			gen_crit_data(beam_z, target_id, beam_energy, max_range, max_index, phase_cache_dir, channelling_cache_dir, random_source, phase_database_path)
 
 		try:
 			has, kas, las, eperpcrit_a = numpy.loadtxt(channelling_cache_dir + "/" + fileref + 'eperpcrit-a.txt', unpack=True)
