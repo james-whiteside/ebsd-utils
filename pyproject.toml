@@ -11,7 +11,7 @@ requires-python = ">= 3.12"
 license = {file = "LICENSE"}
 authors = [
     {name = "Dr O.J. Whiteside", email = "o.j.whiteside@surrey.ac.uk"},
-    {name = "Dr G. Höbler", email = "gerhard.hobler@tuwien.ac.at"},
+    {name = "Dr G. Hobler", email = "gerhard.hobler@tuwien.ac.at"},
 ]
 classifiers = [
     "Development Status :: 4 - Beta",

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Modified version of code written by Dr Gerhard Höbler (gerhard.hobler@tuwien.ac.at).
+# Modified version of code written by Dr Gerhard Hobler (gerhard.hobler@tuwien.ac.at).
 # Original code was used to generate figures in his paper DOI: 10.1103/PhysRevB.94.214109
 
 import math

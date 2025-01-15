@@ -17,4 +17,4 @@ This code is provided without any guarantees, as set out in the licence. During 
 
 ## Contributors:
 - O.J. Whiteside, primary author.
-- Dr G. Höbler, author of original code to calculate channelling fractions.
+- Dr G. Hobler, author of original code to calculate channelling fractions.
