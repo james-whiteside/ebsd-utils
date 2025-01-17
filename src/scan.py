@@ -262,7 +262,7 @@ class Scan:
         for row in self._data_rows():
             yield row
 
-    def _metadata_rows(self) -> str:
+    def _metadata_rows(self) -> Iterator[str]:
         yield "Phases:"
 
         for local_id, phase in self.params.phases.items():
