@@ -43,7 +43,7 @@ def load_from_data(data_path: str, config: Config, data_ref: str = None) -> Anal
                     add_phase(global_id, config)
                     phases[local_id] = load_phase(global_id, config.project.phase_dir)
                 else:
-                    raise PhaseMissingError(f"No data available for phase with ID {global_id}.")
+                    raise PhaseMissingError(global_id)
 
         width = int(file.readline().rstrip("\n").split(",")[1])
         height = int(file.readline().rstrip("\n").split(",")[1])
@@ -349,7 +349,7 @@ def load_phase_database_entry(global_id: int, path: str) -> Phase.DatabaseEntry:
                 lattice_angles_deg=(alpha, beta, gamma),
             )
 
-    raise PhaseMissingError(f"No database entry found for phase {global_id}.")
+    raise PhaseMissingError(global_id)
 
 
 def _enter_phase_data(global_id: int) -> Phase.DatabaseEntry:

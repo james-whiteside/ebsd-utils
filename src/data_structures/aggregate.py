@@ -95,7 +95,7 @@ class Aggregate[VALUE_TYPE](AggregateLike, ABC):
             value = self._aggregates[id]
 
             if value is None:
-                raise AggregateNullError(f"Aggregate is null for group with ID {id}.")
+                raise AggregateNullError(id)
             else:
                 return value
 
@@ -156,8 +156,8 @@ class CheckAggregate[VALUE_TYPE](Aggregate):
                 if values[group_id] is None:
                     values[group_id] = value
 
-                if value != values[group_id]:
-                    raise AggregateInconsistentError(f"Value field for check aggregate has inconsistent values {values[group_id]} and {value} for group with ID {group_id}.")
+                if values[group_id] != value:
+                    raise AggregateInconsistentError(group_id, (values[group_id], value))
                 else:
                     continue
 

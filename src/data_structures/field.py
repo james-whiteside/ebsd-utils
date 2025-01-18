@@ -76,7 +76,7 @@ class FieldLike[VALUE_TYPE](ABC):
     @nullable.setter
     def nullable(self, value: bool) -> None:
         if not value and self.has_null_value:
-            raise FieldNullError(f"Field has at least one null value.")
+            raise FieldNullError()
         else:
             self._nullable = value
 
@@ -153,10 +153,10 @@ class FieldLike[VALUE_TYPE](ABC):
 
         for field in fields:
             if field.width != width:
-                raise FieldsInconsistentError(f"Widths {field.width} and {width} of supplied fields do not match.")
+                raise FieldsInconsistentError.width((field.width, width))
 
             if field.height != height:
-                raise FieldsInconsistentError(f"Heights {field.height} and {height} of supplied fields do not match.")
+                raise FieldsInconsistentError.height((field.height, height))
 
         nullable = any(field.nullable for field in fields)
         return width, height, nullable
@@ -215,7 +215,7 @@ class Field[VALUE_TYPE](FieldLike):
             value = self._values[y][x]
 
             if value is None:
-                raise FieldNullError(f"Field is null at coordinate ({x}, {y}).")
+                raise FieldNullError((x, y))
             else:
                 return value
 
