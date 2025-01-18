@@ -263,7 +263,7 @@ def channelling_fraction(
             random_source=random_source,
             use_cache=use_cache,
             cache_dir=cache_dir,
-        ) for local_id, phase in phases.items() if phase.global_id != Phase.UNINDEXED_ID
+        ) for local_id, phase in phases.items()
     }
 
     for y in range(height):
