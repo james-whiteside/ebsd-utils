@@ -144,7 +144,7 @@ class FieldLike[VALUE_TYPE](ABC):
                     return [null_serialization for _ in range(self.field_type.size)]
 
     @classmethod
-    def get_params(cls, fields: list[Self]) -> tuple[int, int, bool]:
+    def get_combined_params(cls, fields: list[Self]) -> tuple[int, int, bool]:
         if len(fields) == 0:
             raise ValueError("List must contain at least one field.")
 

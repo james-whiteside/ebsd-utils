@@ -25,7 +25,7 @@ def orientation_matrix(
     euler_angle_field: FieldLike[tuple[float, float, float]],
 ) -> Field[ndarray]:
     input_fields = [euler_angle_field]
-    width, height, nullable = FieldLike.get_params(input_fields)
+    width, height, nullable = FieldLike.get_combined_params(input_fields)
     output_field = Field(width, height, FieldType.MATRIX, default_value=None, nullable=True)
 
     for y in range(height):
@@ -47,7 +47,7 @@ def reduced_matrix(
     phase_field: FieldLike[Phase],
 ) -> Field[ndarray]:
     input_fields = [orientation_matrix_field, phase_field]
-    width, height, nullable = FieldLike.get_params(input_fields)
+    width, height, nullable = FieldLike.get_combined_params(input_fields)
     output_field = Field(width, height, FieldType.MATRIX, default_value=None, nullable=True)
 
     for y in range(height):
@@ -71,7 +71,7 @@ def ipf_coordinates(
     phase_field: FieldLike[Phase],
 ) -> Field[tuple[float, float]]:
     input_fields = [reduced_matrix_field, phase_field]
-    width, height, nullable = FieldLike.get_params(input_fields)
+    width, height, nullable = FieldLike.get_combined_params(input_fields)
     output_field = Field(width, height, FieldType.VECTOR_2D, default_value=None, nullable=True)
 
     for y in range(height):
@@ -95,7 +95,7 @@ def average_misorientation(
     phase_field: FieldLike[Phase],
 ) -> Field[float]:
     input_fields = [reduced_matrix_field, phase_field]
-    width, height, nullable = FieldLike.get_params(input_fields)
+    width, height, nullable = FieldLike.get_combined_params(input_fields)
     output_field = Field(width, height, FieldType.SCALAR, default_value=None, nullable=True)
 
     for y in range(height):
@@ -135,7 +135,7 @@ def misrotation_tensor(
     phase_field: FieldLike[Phase],
 ) -> Field[ndarray]:
     input_fields = [reduced_matrix_field, phase_field]
-    width, height, nullable = FieldLike.get_params(input_fields)
+    width, height, nullable = FieldLike.get_combined_params(input_fields)
     output_field = Field(width, height, FieldType.MATRIX, default_value=None, nullable=True)
 
     for y in range(height):
@@ -178,7 +178,7 @@ def nye_tensor(
     misrotation_y_tensor_field: FieldLike[ndarray],
 ) -> Field[ndarray]:
     input_fields = [misrotation_x_tensor_field, misrotation_y_tensor_field]
-    width, height, nullable = FieldLike.get_params(input_fields)
+    width, height, nullable = FieldLike.get_combined_params(input_fields)
     output_field = Field(width, height, FieldType.MATRIX, default_value=None, nullable=True)
 
     for y in range(height):
@@ -223,7 +223,7 @@ def gnd_density(
     phase_field: FieldLike[Phase],
 ) -> Field[float]:
     input_fields = [nye_tensor_field, phase_field]
-    width, height, nullable = FieldLike.get_params(input_fields)
+    width, height, nullable = FieldLike.get_combined_params(input_fields)
     output_field = Field(width, height, FieldType.SCALAR, default_value=None, nullable=True)
 
     for y in range(height):
@@ -253,7 +253,7 @@ def channelling_fraction(
     cache_dir: str,
 ) -> Field[float]:
     input_fields = [orientation_matrix_field, phase_field]
-    width, height, nullable = FieldLike.get_params(input_fields)
+    width, height, nullable = FieldLike.get_combined_params(input_fields)
     output_field = Field(width, height, FieldType.SCALAR, default_value=None, nullable=True)
 
     channel_data = {
@@ -291,7 +291,7 @@ def orientation_cluster(
     use_cuda: bool,
 ) -> tuple[int, Field[int], Field[int]]:
     input_fields = [phase_field, reduced_matrix_field]
-    width, height, nullable = FieldLike.get_params(input_fields)
+    width, height, nullable = FieldLike.get_combined_params(input_fields)
 
     phase = zeros((height, width))
     reduced_euler_rotation_matrix = zeros((height, width, 3, 3))
@@ -336,7 +336,7 @@ def euler_angle_colours(
     phase_field: FieldLike[Phase],
 ) -> Field[tuple[float, float, float]]:
     input_fields = [euler_angle_field, phase_field]
-    width, height, nullable = FieldLike.get_params(input_fields)
+    width, height, nullable = FieldLike.get_combined_params(input_fields)
     output_field = Field(width, height, FieldType.VECTOR_3D, default_value=(0.0, 0.0, 0.0))
 
     for y in range(height):
@@ -364,7 +364,7 @@ def ipf_colours(
     phase_field: FieldLike[Phase],
 ) -> Field[tuple[float, float, float]]:
     input_fields = [reduced_matrix_field, phase_field]
-    width, height, nullable = FieldLike.get_params(input_fields)
+    width, height, nullable = FieldLike.get_combined_params(input_fields)
     output_field = Field(width, height, FieldType.VECTOR_3D, default_value=(0.0, 0.0, 0.0))
 
     for y in range(height):
