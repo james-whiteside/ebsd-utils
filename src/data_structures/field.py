@@ -6,6 +6,7 @@ from enum import Enum
 from typing import Callable, Self
 from PIL.Image import Image, new as new_image
 from numpy import ndarray
+from src.utilities.utils import format_sig_figs
 
 
 class FieldType(Enum):
@@ -32,6 +33,10 @@ class FieldType(Enum):
     @property
     def serializable(self) -> bool:
         return self in (FieldType.BOOLEAN, FieldType.DISCRETE, FieldType.SCALAR, FieldType.VECTOR_2D, FieldType.VECTOR_3D)
+
+    @property
+    def roundable(self) -> bool:
+        return self in (FieldType.SCALAR, FieldType.VECTOR_2D, FieldType.VECTOR_3D)
 
     @property
     def type(self) -> type:
@@ -124,18 +129,24 @@ class FieldLike[VALUE_TYPE](ABC):
         else:
             return min(self.values)
 
-    def serialize_value_at(self, x: int, y: int, null_serialization: str = "") -> list[str]:
+    def serialize_value_at(self, x: int, y: int, null_serialization: str = "", sig_figs: int = None) -> list[str]:
+        def format(value: VALUE_TYPE) -> str:
+            if sig_figs is not None and self.field_type.roundable:
+                return format_sig_figs(value, sig_figs)
+            else:
+                return str(value)
+
         if not self.field_type.serializable:
             raise AttributeError(f"Field type is not serializable: {self.field_type.name}")
         else:
             if self.field_type.size == 1:
                 try:
-                    return [str(self.get_value_at(x, y))]
+                    return [format(self.get_value_at(x, y))]
                 except FieldNullError:
                     return [null_serialization]
             else:
                 try:
-                    return [str(element) for element in self.get_value_at(x, y)]
+                    return [format(element) for element in self.get_value_at(x, y)]
                 except FieldNullError:
                     return [null_serialization for _ in range(self.field_type.size)]
 

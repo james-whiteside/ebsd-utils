@@ -6,6 +6,7 @@ from enum import Enum
 from numpy import zeros, ndarray
 from src.data_structures.field import FieldLike, FieldType, FieldNullError
 from src.utilities.geometry import orthogonalise_matrix
+from src.utilities.utils import format_sig_figs
 
 
 class AggregateType(Enum):
@@ -42,18 +43,24 @@ class AggregateLike[VALUE_TYPE](ABC):
     def get_value_for(self, id: int) -> VALUE_TYPE:
         ...
 
-    def serialize_value_for(self, id: int, null_serialization: str = "") -> list[str]:
+    def serialize_value_for(self, id: int, null_serialization: str = "", sig_figs: int = None) -> list[str]:
+        def format(value: VALUE_TYPE) -> str:
+            if sig_figs is not None and self.field_type.roundable:
+                return format_sig_figs(value, sig_figs)
+            else:
+                return str(value)
+
         if not self.field_type.serializable:
             raise AttributeError(f"Field type is not serializable: {self.field_type.name}")
         else:
             if self.field_type.size == 1:
                 try:
-                    return [str(self.get_value_for(id))]
+                    return [format(self.get_value_for(id))]
                 except AggregateNullError:
                     return [null_serialization]
             else:
                 try:
-                    return [str(element) for element in self.get_value_for(id)]
+                    return [format(element) for element in self.get_value_for(id)]
                 except AggregateNullError:
                     return [null_serialization for _ in range(self.field_type.size)]
 

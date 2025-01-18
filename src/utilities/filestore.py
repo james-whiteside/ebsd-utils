@@ -152,20 +152,20 @@ def _analysis_cluster_aggregate_rows(analysis: Analysis) -> Iterator[str]:
         columns += [str(id)]
         columns += analysis.cluster_aggregate.count.serialize_value_for(id)
         columns += analysis.cluster_aggregate._phase_id.serialize_value_for(id)
-        columns += analysis.cluster_aggregate.euler_angles_deg.serialize_value_for(id)
-        columns += analysis.cluster_aggregate.index_quality.serialize_value_for(id)
-        columns += analysis.cluster_aggregate.pattern_quality.serialize_value_for(id)
+        columns += analysis.cluster_aggregate.euler_angles_deg.serialize_value_for(id, sig_figs=6)
+        columns += analysis.cluster_aggregate.index_quality.serialize_value_for(id, sig_figs=6)
+        columns += analysis.cluster_aggregate.pattern_quality.serialize_value_for(id, sig_figs=6)
 
         if analysis.config.analysis.compute_channelling:
-            columns += analysis.cluster_aggregate.ipf_coordinates(analysis.config.channelling.beam_axis).serialize_value_for(id)
+            columns += analysis.cluster_aggregate.ipf_coordinates(analysis.config.channelling.beam_axis).serialize_value_for(id, sig_figs=6)
 
-        columns += analysis.cluster_aggregate.average_misorientation_deg.serialize_value_for(id)
+        columns += analysis.cluster_aggregate.average_misorientation_deg.serialize_value_for(id, sig_figs=6)
 
         if analysis.config.analysis.compute_dislocation:
-            columns += analysis.cluster_aggregate.gnd_density_log.serialize_value_for(id)
+            columns += analysis.cluster_aggregate.gnd_density_log.serialize_value_for(id, sig_figs=6)
 
         if analysis.config.analysis.compute_channelling:
-            columns += analysis.cluster_aggregate.channelling_fraction.serialize_value_for(id)
+            columns += analysis.cluster_aggregate.channelling_fraction.serialize_value_for(id, sig_figs=6)
 
         yield ",".join(columns)
 
@@ -200,20 +200,20 @@ def _analysis_data_rows(analysis: Analysis) -> Iterator[str]:
             columns = list()
             columns += [str(x), str(y)]
             columns += analysis.field._phase_id.serialize_value_at(x, y, null_serialization=str(Phase.UNINDEXED_ID))
-            columns += analysis.field.euler_angles_deg.serialize_value_at(x, y)
-            columns += analysis.field.index_quality.serialize_value_at(x, y)
-            columns += analysis.field.pattern_quality.serialize_value_at(x, y)
+            columns += analysis.field.euler_angles_deg.serialize_value_at(x, y, sig_figs=6)
+            columns += analysis.field.index_quality.serialize_value_at(x, y, sig_figs=6)
+            columns += analysis.field.pattern_quality.serialize_value_at(x, y, sig_figs=6)
 
             if analysis.config.analysis.compute_channelling:
-                columns += analysis.field.ipf_coordinates(analysis.config.channelling.beam_axis).serialize_value_at(x, y)
+                columns += analysis.field.ipf_coordinates(analysis.config.channelling.beam_axis).serialize_value_at(x, y, sig_figs=6)
 
-            columns += analysis.field.average_misorientation_deg.serialize_value_at(x, y)
+            columns += analysis.field.average_misorientation_deg.serialize_value_at(x, y, sig_figs=6)
 
             if analysis.config.analysis.compute_dislocation:
-                columns += analysis.field.gnd_density_log.serialize_value_at(x, y)
+                columns += analysis.field.gnd_density_log.serialize_value_at(x, y, sig_figs=6)
 
             if analysis.config.analysis.compute_channelling:
-                columns += analysis.field.channelling_fraction.serialize_value_at(x, y)
+                columns += analysis.field.channelling_fraction.serialize_value_at(x, y, sig_figs=6)
 
             if analysis.config.analysis.compute_clustering:
                 try:
