@@ -15,7 +15,7 @@ from src.data_structures.phase import Phase
 from src.utilities.utils import tuple_degrees
 
 
-class Scan:
+class Analysis:
     def __init__(
         self,
         data_ref: str,
@@ -146,7 +146,7 @@ class Scan:
                 index_quality_values[y].append(index_quality_aggregate)
                 pattern_quality_values[y].append(pattern_quality_aggregate)
 
-        scan = Scan(
+        analysis = Analysis(
             data_ref=data_ref,
             width=width,
             height=height,
@@ -160,7 +160,7 @@ class Scan:
             pixel_size=pixel_size,
         )
 
-        return scan
+        return analysis
 
     def reduce_resolution(self, reduction_factor: int) -> Self:
         if reduction_factor <= 0:

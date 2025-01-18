@@ -8,12 +8,12 @@ from xml.etree import ElementTree
 from src.data_structures.field import FieldNullError
 from src.data_structures.map import Map
 from src.data_structures.phase import Phase, BravaisLattice, PhaseMissingError
-from src.scan import Scan
+from src.analysis import Analysis
 from src.utilities.config import Config
 from src.utilities.geometry import Axis
 
 
-def load_data(data_path: str, config: Config, data_ref: str) -> Scan:
+def load_data(data_path: str, config: Config, data_ref: str) -> Analysis:
     if data_ref is None:
         data_ref = data_path.split("/")[-1].split(".")[0]
 
@@ -65,7 +65,7 @@ def load_data(data_path: str, config: Config, data_ref: str) -> Scan:
                 index_quality_values[y].append(float(line[6]))
                 pattern_quality_values[y].append(float(line[7]))
 
-    return Scan(
+    return Analysis(
         data_ref=data_ref,
         width=width,
         height=height,
@@ -78,7 +78,7 @@ def load_data(data_path: str, config: Config, data_ref: str) -> Scan:
     )
 
 
-def dump_analysis(analysis: Scan, dir: str) -> None:
+def dump_analysis(analysis: Analysis, dir: str) -> None:
     makedirs(dir, exist_ok=True)
     path = f"{dir}/{analysis.params.analysis_ref}.csv"
 
@@ -87,7 +87,7 @@ def dump_analysis(analysis: Scan, dir: str) -> None:
             file.write(f"{row}\n")
 
 
-def _analysis_rows(analysis: Scan) -> Iterator[str]:
+def _analysis_rows(analysis: Analysis) -> Iterator[str]:
     for row in _analysis_metadata_rows(analysis):
         yield row
 
@@ -99,7 +99,7 @@ def _analysis_rows(analysis: Scan) -> Iterator[str]:
         yield row
 
 
-def _analysis_metadata_rows(analysis: Scan) -> Iterator[str]:
+def _analysis_metadata_rows(analysis: Analysis) -> Iterator[str]:
     yield "Phases:"
 
     for local_id, phase in analysis.params.phases.items():
@@ -124,7 +124,7 @@ def _analysis_metadata_rows(analysis: Scan) -> Iterator[str]:
         yield f"Cluster count,{analysis.cluster_count}"
 
 
-def _analysis_cluster_aggregate_rows(analysis: Scan) -> Iterator[str]:
+def _analysis_cluster_aggregate_rows(analysis: Analysis) -> Iterator[str]:
     yield "Cluster aggregates:"
     columns: list[str] = list()
     columns += ["Cluster ID"]
@@ -170,7 +170,7 @@ def _analysis_cluster_aggregate_rows(analysis: Scan) -> Iterator[str]:
         yield ",".join(columns)
 
 
-def _analysis_data_rows(analysis: Scan) -> Iterator[str]:
+def _analysis_data_rows(analysis: Analysis) -> Iterator[str]:
     yield "Data:"
     columns: list[str] = list()
     columns += ["X", "Y"]
@@ -226,7 +226,7 @@ def _analysis_data_rows(analysis: Scan) -> Iterator[str]:
             yield ",".join(columns)
 
 
-def dump_maps(analysis: Scan, dir: str):
+def dump_maps(analysis: Analysis, dir: str):
     dir = f"{dir}/{analysis.params.analysis_ref}"
     makedirs(dir, exist_ok=True)
 
@@ -235,7 +235,7 @@ def dump_maps(analysis: Scan, dir: str):
         map.image.save(path)
 
 
-def _analysis_maps(analysis: Scan) -> Iterator[Map]:
+def _analysis_maps(analysis: Analysis) -> Iterator[Map]:
     yield analysis.map.phase
     yield analysis.map.euler_angle
     yield analysis.map.pattern_quality
