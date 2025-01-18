@@ -1,16 +1,14 @@
 # -*- coding: utf-8 -*-
 
-from collections.abc import Iterator
-from os import makedirs
 from random import Random
 from typing import Self
 from numpy import zeros
 from src.data_structures.aggregate_manager import AggregateManager
 from src.data_structures.field import FieldNullError
 from src.data_structures.field_manager import FieldManager
-from src.data_structures.map import Map
 from src.utilities.config import Config
-from src.utilities.geometry import orthogonalise_matrix, euler_angles, Axis
+from src.utilities.filestore import load_data, dump_analysis, dump_maps
+from src.utilities.geometry import orthogonalise_matrix, euler_angles
 from src.data_structures.map_manager import MapManager
 from src.data_structures.parameter_groups import ScanParams
 from src.data_structures.phase import Phase
@@ -172,236 +170,10 @@ class Scan:
 
     @classmethod
     def from_csv(cls, data_path: str, config: Config, data_ref: str = None) -> Self:
-        if data_ref is None:
-            data_ref = data_path.split("/")[-1].split(".")[0]
-
-        with open(data_path, "r", encoding="utf-8") as file:
-            phases: dict[int, Phase] = dict()
-            file.readline()
-
-            while True:
-                line = file.readline().rstrip("\n").split(",")
-
-                if line == ["Map Size:"]:
-                    break
-
-                local_id = int(line[0])
-                global_id = int(line[2])
-
-                if global_id == Phase.UNINDEXED_ID:
-                    local_unindexed_id = local_id
-                    continue
-
-                phases[local_id] = Phase.load(global_id, config.project.phase_dir, config.project.database_path)
-
-            width = int(file.readline().rstrip("\n").split(",")[1])
-            height = int(file.readline().rstrip("\n").split(",")[1])
-            phase_id_values: list[list[int | None]] = list()
-            euler_angle_values: list[list[tuple[float, float, float] | None]] = list()
-            index_quality_values: list[list[float]] = list()
-            pattern_quality_values: list[list[float]] = list()
-            file.readline()
-            file.readline()
-
-            for y in range(height):
-                phase_id_values.append(list())
-                euler_angle_values.append(list())
-                index_quality_values.append(list())
-                pattern_quality_values.append(list())
-
-                for x in range(width):
-                    line = file.readline().rstrip("\n").split(",")
-                    local_phase_id = int(line[2])
-
-                    if local_phase_id == local_unindexed_id:
-                        phase_id_values[y].append(None)
-                        euler_angle_values[y].append(None)
-                    else:
-                        phase_id_values[y].append(local_phase_id)
-                        euler_angle_values[y].append((float(line[3]), float(line[4]), float(line[5])))
-
-                    index_quality_values[y].append(float(line[6]))
-                    pattern_quality_values[y].append(float(line[7]))
-
-        return Scan(
-            data_ref=data_ref,
-            width=width,
-            height=height,
-            phases=phases,
-            phase_id_values=phase_id_values,
-            euler_angle_values=euler_angle_values,
-            pattern_quality_values=pattern_quality_values,
-            index_quality_values=index_quality_values,
-            config=config,
-        )
+        return load_data(data_path, config, data_ref)
 
     def to_csv(self, dir: str):
-        makedirs(dir, exist_ok=True)
-        path = f"{dir}/{self.params.analysis_ref}.csv"
-
-        with open(path, "w", encoding="utf-8") as file:
-            for row in self._rows():
-                file.write(f"{row}\n")
+        dump_analysis(self, dir)
 
     def to_maps(self, dir: str):
-        dir = f"{dir}/{self.params.analysis_ref}"
-        makedirs(dir, exist_ok=True)
-
-        for map in self._maps():
-            path = f"{dir}/{map.map_type.name}.png"
-            map.image.save(path)
-
-    def _rows(self) -> Iterator[str]:
-        for row in self._metadata_rows():
-            yield row
-
-        if self.config.analysis.compute_clustering:
-            for row in self._cluster_aggregate_rows():
-                yield row
-
-        for row in self._data_rows():
-            yield row
-
-    def _metadata_rows(self) -> Iterator[str]:
-        yield "Phases:"
-
-        for local_id, phase in self.params.phases.items():
-            yield f"{local_id},{phase.name},{phase.global_id}"
-
-        yield f"Map size:"
-        yield f"X,{self.params.width}"
-        yield f"Y,{self.params.height}"
-        yield f"Map scale:"
-        yield f"Pixel size (μm),{self.params.pixel_size_microns}"
-
-        if self.config.analysis.compute_channelling:
-            yield f"Channelling:"
-            yield f"Atomic number,{self.config.channelling.beam_atomic_number}"
-            yield f"Energy (eV),{self.config.channelling.beam_energy}"
-            yield f"Tilt (deg),{self.config.channelling.beam_tilt_deg}"
-
-        if self.config.analysis.compute_clustering:
-            yield f"Clustering:"
-            yield f"Core point threshold,{self.config.clustering.core_point_threshold}"
-            yield f"Point neighbourhood radius (deg),{self.config.clustering.neighbourhood_radius_deg}"
-            yield f"Cluster count,{self.cluster_count}"
-
-    def _cluster_aggregate_rows(self) -> Iterator[str]:
-        yield "Cluster aggregates:"
-        columns: list[str] = list()
-        columns += ["Cluster ID"]
-        columns += ["Cluster Size"]
-        columns += ["Phase"]
-        columns += ["Euler1", "Euler2", "Euler3"]
-        columns += ["Index Quality"]
-        columns += ["Pattern Quality"]
-
-        if self.config.analysis.compute_channelling:
-            columns += ["Beam-IPF x-coordinate", "Beam-IPF y-coordinate"]
-
-        columns += ["Kernel Average Misorientation"]
-
-        if self.config.analysis.compute_dislocation:
-            columns += ["GND Density"]
-
-        if self.config.analysis.compute_channelling:
-            columns += ["Channelling Fraction"]
-
-        yield ",".join(columns)
-
-        for id in self.cluster_aggregate.group_ids:
-            columns: list[str] = list()
-            columns += [str(id)]
-            columns += self.cluster_aggregate.count.serialize_value_for(id)
-            columns += self.cluster_aggregate._phase_id.serialize_value_for(id)
-            columns += self.cluster_aggregate.euler_angles_deg.serialize_value_for(id)
-            columns += self.cluster_aggregate.index_quality.serialize_value_for(id)
-            columns += self.cluster_aggregate.pattern_quality.serialize_value_for(id)
-
-            if self.config.analysis.compute_channelling:
-                columns += self.cluster_aggregate.ipf_coordinates(self.config.channelling.beam_axis).serialize_value_for(id)
-
-            columns += self.cluster_aggregate.average_misorientation_deg.serialize_value_for(id)
-
-            if self.config.analysis.compute_dislocation:
-                columns += self.cluster_aggregate.gnd_density_log.serialize_value_for(id)
-
-            if self.config.analysis.compute_channelling:
-                columns += self.cluster_aggregate.channelling_fraction.serialize_value_for(id)
-
-            yield ",".join(columns)
-
-    def _data_rows(self) -> Iterator[str]:
-        yield "Data:"
-        columns: list[str] = list()
-        columns += ["X", "Y"]
-        columns += ["Phase"]
-        columns += ["Euler1", "Euler2", "Euler3"]
-        columns += ["Index Quality"]
-        columns += ["Pattern Quality"]
-
-        if self.config.analysis.compute_channelling:
-            columns += ["Beam-IPF x-coordinate", "Beam-IPF y-coordinate"]
-
-        columns += ["Kernel Average Misorientation"]
-
-        if self.config.analysis.compute_dislocation:
-            columns += ["GND Density"]
-
-        if self.config.analysis.compute_channelling:
-            columns += ["Channelling Fraction"]
-
-        if self.config.analysis.compute_clustering:
-            columns += ["Point Category", "Point Cluster"]
-
-        yield ",".join(columns)
-
-        for y in range(self.params.height):
-            for x in range(self.params.width):
-                columns = list()
-                columns += [str(x), str(y)]
-                columns += self.field._phase_id.serialize_value_at(x, y, null_serialization=str(Phase.UNINDEXED_ID))
-                columns += self.field.euler_angles_deg.serialize_value_at(x, y)
-                columns += self.field.index_quality.serialize_value_at(x, y)
-                columns += self.field.pattern_quality.serialize_value_at(x, y)
-
-                if self.config.analysis.compute_channelling:
-                    columns += self.field.ipf_coordinates(self.config.channelling.beam_axis).serialize_value_at(x, y)
-
-                columns += self.field.average_misorientation_deg.serialize_value_at(x, y)
-
-                if self.config.analysis.compute_dislocation:
-                    columns += self.field.gnd_density_log.serialize_value_at(x, y)
-
-                if self.config.analysis.compute_channelling:
-                    columns += self.field.channelling_fraction.serialize_value_at(x, y)
-
-                if self.config.analysis.compute_clustering:
-                    try:
-                        columns += [self.field.clustering_category.get_value_at(x, y).code]
-                    except FieldNullError:
-                        columns += [""]
-
-                    columns += self.field.orientation_cluster_id.serialize_value_at(x, y)
-
-                yield ",".join(columns)
-
-    def _maps(self) -> Iterator[Map]:
-        yield self.map.phase
-        yield self.map.euler_angle
-        yield self.map.pattern_quality
-        yield self.map.index_quality
-        yield self.map.orientation(Axis.X)
-        yield self.map.orientation(Axis.Y)
-        yield self.map.orientation(Axis.Z)
-        yield self.map.average_misorientation
-
-        if self.config.analysis.compute_dislocation:
-            yield self.map.gnd_density
-
-        if self.config.analysis.compute_channelling:
-            yield self.map.orientation(self.config.channelling.beam_axis)
-            yield self.map.channelling_fraction
-
-        if self.config.analysis.compute_clustering:
-            yield self.map.orientation_cluster
+        dump_maps(self, dir)
