@@ -76,7 +76,7 @@ class FieldLike[VALUE_TYPE](ABC):
     @nullable.setter
     def nullable(self, value: bool) -> None:
         if not value and self.has_null_value:
-            raise FieldNullError()
+            raise ValueError("Field has at least one null value so cannot be set to non-nullable.")
         else:
             self._nullable = value
 
