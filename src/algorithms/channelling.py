@@ -227,17 +227,14 @@ def fun2(r, Z1, Z2, opposing, rch, d2, e):
 
 def gen_crit_data(
 	beam_atomic_number: int,
-	target_id: int,
+	target: Phase,
 	beam_energy: float,
 	max_range: float,
 	max_index: int,
 	random_source: Random,
 	cache_dir: str,
-	phase_dir: str,
-	phase_database_path: str,
 ):
 	e = beam_energy
-	target = Phase.load(target_id, phase_dir, phase_database_path)
 	Z1 = beam_atomic_number
 	Z2 = target.atomic_number
 	lType = target.lattice_type.value
@@ -257,7 +254,7 @@ def gen_crit_data(
 	alat = 10 * target.lattice_constants_nm[0]
 	xrms = 10 * target.vibration_amplitude_nm
 	base = get_base(lattice)
-	fileref = '[' + str(target_id) + '][' + str(beam_atomic_number) + '][' + str(beam_energy) + ']'
+	fileref = '[' + str(target.global_id) + '][' + str(beam_atomic_number) + '][' + str(beam_energy) + ']'
 	os.makedirs(cache_dir, exist_ok=True)
 	file_emin_a = open(cache_dir + "/" + fileref + 'emin-a.txt', 'w')
 	file_emin_p = open(cache_dir + "/" + fileref + 'emin-p.txt', 'w')
@@ -452,19 +449,17 @@ def gen_crit_data(
 
 def load_crit_data(
 	beam_atomic_number: int,
-	target_id: int,
+	target: Phase,
 	beam_energy: float,
 	random_source: Random,
 	use_cache: bool,
 	cache_dir: str,
-	phase_dir: str,
-	phase_database_path: str,
 ) -> dict:
 	if not use_cache:
 		cache_dir = f"{cache_dir}/temp"
 
 	try:
-		fileref = '[' + str(target_id) + '][' + str(beam_atomic_number) + '][' + str(beam_energy) + ']'
+		fileref = '[' + str(target.global_id) + '][' + str(beam_atomic_number) + '][' + str(beam_energy) + ']'
 
 		try:
 			file_eperpcrit_a = open(cache_dir + "/" + fileref + 'eperpcrit-a.txt', 'r')
@@ -478,18 +473,16 @@ def load_crit_data(
 		except FileNotFoundError:
 			max_range = 10  # Maximum range from origin where rows are to be considered (Å)
 			max_index = 10  # Maximum Miller index to be considered
-			print('Generating channelling fraction data for phase ' + str(target_id) + '.')
+			print('Generating channelling fraction data for phase ' + str(target.global_id) + '.')
 
 			gen_crit_data(
 				beam_atomic_number=beam_atomic_number,
-				target_id=target_id,
+				target=target,
 				beam_energy=beam_energy,
 				max_range=max_range,
 				max_index=max_index,
 				random_source=random_source,
 				cache_dir=cache_dir,
-				phase_dir=phase_dir,
-				phase_database_path=phase_database_path,
 			)
 
 		try:
@@ -526,7 +519,7 @@ def load_crit_data(
 
 		output = dict()
 		output['beam_z'] = beam_atomic_number
-		output['target_id'] = target_id
+		output['target_id'] = target.global_id
 		output['energy'] = beam_energy
 		output['data'] = dict()
 		output['data']['axial'] = axial

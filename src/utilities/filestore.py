@@ -13,7 +13,7 @@ from src.utilities.config import Config
 from src.utilities.geometry import Axis
 
 
-def load_data(data_path: str, config: Config, data_ref: str) -> Analysis:
+def load_from_data(data_path: str, config: Config, data_ref: str = None) -> Analysis:
     if data_ref is None:
         data_ref = data_path.split("/")[-1].split(".")[0]
 
@@ -34,7 +34,16 @@ def load_data(data_path: str, config: Config, data_ref: str) -> Analysis:
                 local_unindexed_id = local_id
                 continue
 
-            phases[local_id] = Phase.load(global_id, config.project.phase_dir, config.project.database_path)
+            try:
+                phases[local_id] = load_phase(global_id, config.project.phase_dir)
+            except FileNotFoundError:
+                print(f"Warning: No data found for phase with ID {global_id}.")
+
+                if input("Enter phase information now? (Y/N): ").lower() == "y":
+                    add_phase(global_id, config)
+                    phases[local_id] = load_phase(global_id, config.project.phase_dir)
+                else:
+                    raise PhaseMissingError(f"No data available for phase with ID {global_id}.")
 
         width = int(file.readline().rstrip("\n").split(",")[1])
         height = int(file.readline().rstrip("\n").split(",")[1])
@@ -256,26 +265,6 @@ def _analysis_maps(analysis: Analysis) -> Iterator[Map]:
         yield analysis.map.orientation_cluster
 
 
-def dump_phase(phase: Phase, dir: str) -> None:
-    makedirs(dir, exist_ok=True)
-
-    json_rep = {
-        "global_id": phase.global_id,
-        "name": phase.name,
-        "atomic_number": phase.atomic_number,
-        "atomic_weight": phase.atomic_weight,
-        "density_cgs": phase.density_cgs,
-        "vibration_amplitude_nm": phase.vibration_amplitude_nm,
-        "lattice_type": phase.lattice_type.value,
-        "lattice_constants_nm": list(phase.lattice_constants_nm),
-        "lattice_angles_deg": list(phase.lattice_angles_deg),
-        "diamond_structure": phase.diamond_structure,
-    }
-
-    with open(f"{dir}/{phase.global_id}.json", "w") as file:
-        dump_json(json_rep, file)
-
-
 def load_phase(global_id: int, dir: str) -> Phase:
     file_path = f"{dir}/{global_id}.json"
 
@@ -296,6 +285,46 @@ def load_phase(global_id: int, dir: str) -> Phase:
         }
 
         return Phase(**kwargs)
+
+
+def dump_phase(phase: Phase, dir: str) -> None:
+    makedirs(dir, exist_ok=True)
+
+    json_rep = {
+        "global_id": phase.global_id,
+        "name": phase.name,
+        "atomic_number": phase.atomic_number,
+        "atomic_weight": phase.atomic_weight,
+        "density_cgs": phase.density_cgs,
+        "vibration_amplitude_nm": phase.vibration_amplitude_nm,
+        "lattice_type": phase.lattice_type.value,
+        "lattice_constants_nm": list(phase.lattice_constants_nm),
+        "lattice_angles_deg": list(phase.lattice_angles_deg),
+        "diamond_structure": phase.diamond_structure,
+    }
+
+    with open(f"{dir}/{phase.global_id}.json", "w") as file:
+        dump_json(json_rep, file)
+
+
+def add_phase(global_id: int, config: Config) -> None:
+    try:
+        database_entry = load_phase_database_entry(global_id, config.project.database_path)
+        print(f"Database entry found for phase {global_id}:")
+        print(f"Name: {database_entry.name}")
+        print(f"Lattice type: {database_entry.lattice_type.value}")
+        print(f"Lattice constants: {", ".join(f"{constant} nm" for constant in database_entry.lattice_constants_nm)}")
+        print(f"Lattice angles: {", ".join(f"{angle} deg" for angle in database_entry.lattice_angles_deg)}")
+    except FileNotFoundError:
+        print("Warning: Phase database missing. Manual entry required.")
+        database_entry = _enter_phase_data(global_id)
+    except PhaseMissingError as error:
+        print(f"Warning: {error} Manual entry required.")
+        database_entry = _enter_phase_data(global_id)
+
+    supplementary_data = _enter_supplementary_data()
+    phase = Phase.from_parts(database_entry, supplementary_data)
+    dump_phase(phase, config.project.phase_dir)
 
 
 def load_phase_database_entry(global_id: int, path: str) -> Phase.DatabaseEntry:
@@ -320,5 +349,39 @@ def load_phase_database_entry(global_id: int, path: str) -> Phase.DatabaseEntry:
                 lattice_angles_deg=(alpha, beta, gamma),
             )
 
-    raise PhaseMissingError()
+    raise PhaseMissingError(f"No database entry found for phase {global_id}.")
 
+
+def _enter_phase_data(global_id: int) -> Phase.DatabaseEntry:
+    name = input("Enter phase name: ")
+    lattice_type = BravaisLattice[input("Enter Bravais lattice Pearson symbol: ").upper()]
+    a = float(input("Enter first lattice constant (nm): "))
+    b = float(input("Enter second lattice constant (nm): "))
+    c = float(input("Enter third lattice constant (nm): "))
+    alpha = float(input("Enter first lattice angle (deg): "))
+    beta = float(input("Enter second lattice angle (deg): "))
+    gamma = float(input("Enter third lattice angle (deg): "))
+
+    return Phase.DatabaseEntry(
+        global_id=global_id,
+        name=name,
+        lattice_type=lattice_type,
+        lattice_constants_nm=(a, b, c),
+        lattice_angles_deg=(alpha, beta, gamma),
+    )
+
+
+def _enter_supplementary_data() -> Phase.SupplementaryData:
+    atomic_number = int(input("Enter average atomic number: "))
+    atomic_weight = float(input("Enter average atomic weight: "))
+    density_cgs = float(input("Enter density (g/cm³): "))
+    vibration_amplitude_nm = float(input("Enter thermal vibration amplitude (nm): "))
+    diamond_structure = input("Does crystal have diamond structure? (Y/N): ").lower() == "y"
+
+    return Phase.SupplementaryData(
+        atomic_number=atomic_number,
+        atomic_weight=atomic_weight,
+        density_cgs=density_cgs,
+        vibration_amplitude_nm=vibration_amplitude_nm,
+        diamond_structure=diamond_structure,
+    )

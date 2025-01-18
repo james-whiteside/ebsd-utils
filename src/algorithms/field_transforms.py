@@ -250,8 +250,6 @@ def channelling_fraction(
     random_source: Random,
     use_cache: bool,
     cache_dir: str,
-    phase_dir: str,
-    phase_database_path: str,
 ) -> Field[float]:
     input_fields = [orientation_matrix_field, phase_field]
     width, height, nullable = FieldLike.get_params(input_fields)
@@ -260,13 +258,11 @@ def channelling_fraction(
     channel_data = {
         phase.global_id: load_crit_data(
             beam_atomic_number=beam_atomic_number,
-            target_id=phase.global_id,
+            target=phase,
             beam_energy=beam_energy,
             random_source=random_source,
             use_cache=use_cache,
             cache_dir=cache_dir,
-            phase_dir=phase_dir,
-            phase_database_path=phase_database_path,
         ) for local_id, phase in phases.items() if phase.global_id != Phase.UNINDEXED_ID
     }
 

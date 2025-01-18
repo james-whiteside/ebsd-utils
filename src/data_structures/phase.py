@@ -6,7 +6,6 @@ from copy import deepcopy
 from enum import Enum
 from typing import Self
 from numpy import ndarray, dot, array
-from src.utilities.filestore import dump_phase, load_phase, load_phase_database_entry
 from src.utilities.geometry import reduce_vector
 from src.utilities.utils import tuple_radians
 
@@ -168,6 +167,39 @@ class Phase:
 
         return self.global_id == other.global_id
 
+    @dataclass
+    class DatabaseEntry:
+        global_id: int
+        name: str
+        lattice_type: BravaisLattice
+        lattice_constants_nm: tuple[float, float, float]
+        lattice_angles_deg: tuple[float, float, float]
+
+    @dataclass
+    class SupplementaryData:
+        atomic_number: int
+        atomic_weight: float
+        density_cgs: float
+        vibration_amplitude_nm: float
+        diamond_structure: bool
+
+    @classmethod
+    def from_parts(cls, database_entry: DatabaseEntry, supplementary_data: SupplementaryData):
+        diamond_structure = (database_entry.lattice_type is BravaisLattice.CF) and supplementary_data.diamond_structure
+
+        return cls(
+            global_id=database_entry.global_id,
+            name=database_entry.name,
+            atomic_number=supplementary_data.atomic_number,
+            atomic_weight=supplementary_data.atomic_weight,
+            density_cgs=supplementary_data.density_cgs,
+            vibration_amplitude_nm=supplementary_data.vibration_amplitude_nm,
+            lattice_type=database_entry.lattice_type,
+            lattice_constants_nm=database_entry.lattice_constants_nm,
+            lattice_angles_deg=database_entry.lattice_angles_deg,
+            diamond_structure=diamond_structure,
+        )
+
     @property
     def density(self) -> float:
         return self.density_cgs * 10.0 ** 3.0
@@ -203,86 +235,3 @@ class Phase:
     @property
     def close_pack_distance_nm(self) -> float:
         return self.close_pack_distance * 10.0 ** 9.0
-
-    def save(self, phase_dir: str) -> None:
-        dump_phase(self, phase_dir)
-
-    @classmethod
-    def load(cls, global_id: int, phase_dir: str, database_path: str = None) -> Self:
-        try:
-            return load_phase(global_id, phase_dir)
-        except FileNotFoundError:
-            print(f"Warning: No data found for phase with ID {global_id}.")
-
-            if input("Enter phase information now? (Y/N): ").lower() == "y":
-                phase = cls.build(global_id, database_path)
-                phase.save(phase_dir)
-                return phase
-            else:
-                raise PhaseMissingError(f"No data available for phase with ID {global_id}.")
-
-    @dataclass
-    class DatabaseEntry:
-        global_id: int
-        name: str
-        lattice_type: BravaisLattice
-        lattice_constants_nm: tuple[float, float, float]
-        lattice_angles_deg: tuple[float, float, float]
-
-    @classmethod
-    def build(cls, global_id: int, database_path: str = None) -> Self:
-        if database_path is not None:
-            try:
-                database_entry = load_phase_database_entry(global_id, database_path)
-            except FileNotFoundError:
-                print("Warning: Phase database missing. Manual entry required.")
-                database_entry = None
-            except PhaseMissingError:
-                print(f"Warning: No phase found in database with ID {global_id}. Manual entry required.")
-                database_entry = None
-        else:
-            database_entry = None
-
-        if database_entry is None:
-            name = input("Enter phase name: ")
-            lattice_type = BravaisLattice[input("Enter Bravais lattice Pearson symbol: ").upper()]
-            a = float(input("Enter first lattice constant (nm): "))
-            b = float(input("Enter second lattice constant (nm): "))
-            c = float(input("Enter third lattice constant (nm): "))
-            alpha = float(input("Enter first lattice angle (deg): "))
-            beta = float(input("Enter second lattice angle (deg): "))
-            gamma = float(input("Enter third lattice angle (deg): "))
-
-            database_entry = cls.DatabaseEntry(
-                global_id=global_id,
-                name=name,
-                lattice_type=lattice_type,
-                lattice_constants_nm=(a, b, c),
-                lattice_angles_deg=(alpha, beta, gamma),
-            )
-        else:
-            print(f"Name: {database_entry.name}")
-            print(f"Lattice type: {database_entry.lattice_type.value}")
-            print(f"Lattice constants: {", ".join(f"{constant} nm" for constant in database_entry.lattice_constants_nm)}")
-            print(f"Lattice angles: {", ".join(f"{angle} deg" for angle in database_entry.lattice_angles_deg)}")
-
-        atomic_number = float(input("Enter average atomic number: "))
-        atomic_weight = float(input("Enter average atomic weight: "))
-        density_cgs = float(input("Enter density (g/cm³): "))
-        vibration_amplitude_nm = float(input("Enter thermal vibration amplitude (nm): "))
-        diamond_structure = (database_entry.lattice_type == BravaisLattice.CF) and (input("Does crystal have diamond structure? (Y/N): ").lower() == "y")
-
-        phase = Phase(
-            global_id=global_id,
-            name=database_entry.name,
-            atomic_number=atomic_number,
-            atomic_weight=atomic_weight,
-            density_cgs=density_cgs,
-            vibration_amplitude_nm=vibration_amplitude_nm,
-            lattice_type=database_entry.lattice_type,
-            lattice_constants_nm=database_entry.lattice_constants_nm,
-            lattice_angles_deg=database_entry.lattice_angles_deg,
-            diamond_structure=diamond_structure,
-        )
-
-        return phase

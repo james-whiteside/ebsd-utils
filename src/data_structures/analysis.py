@@ -7,7 +7,6 @@ from src.data_structures.aggregate_manager import AggregateManager
 from src.data_structures.field import FieldNullError
 from src.data_structures.field_manager import FieldManager
 from src.utilities.config import Config
-from src.utilities.filestore import load_data, dump_analysis, dump_maps
 from src.utilities.geometry import orthogonalise_matrix, euler_angles
 from src.data_structures.map_manager import MapManager
 from src.data_structures.parameter_groups import ScanParams
@@ -167,13 +166,3 @@ class Analysis:
             return self
         else:
             return self._reduce_resolution().reduce_resolution(reduction_factor - 1)
-
-    @classmethod
-    def from_csv(cls, data_path: str, config: Config, data_ref: str = None) -> Self:
-        return load_data(data_path, config, data_ref)
-
-    def to_csv(self, dir: str):
-        dump_analysis(self, dir)
-
-    def to_maps(self, dir: str):
-        dump_maps(self, dir)
