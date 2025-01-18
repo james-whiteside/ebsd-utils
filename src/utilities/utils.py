@@ -288,7 +288,7 @@ class ProgressBar:
 
         self.total_steps = total_steps
         self.length = length
-        self.sigfig = sig_figs
+        self.sig_figs = sig_figs
         self.print_function = print_function
         self.current_step = 0
         self.last_print_length = 0
@@ -329,12 +329,12 @@ class ProgressBar:
         self.current_time = datetime.now()
         bar_fill = int(self.length * self.current_step // self.total_steps)
         bar = "|" + "█" * bar_fill + "-" * (self.length - bar_fill) + "|"
-        progress = format_sig_figs_or_int(100 * self.current_step / self.total_steps, self.sigfig) + "%"
+        progress = format_sig_figs_or_int(100 * self.current_step / self.total_steps, self.sig_figs) + "%"
 
         if self.current_step == 0:
             output = f"Progress: {bar} {progress}"
             padding = " " * max(0, self.last_print_length - len(output))
-            self.print_function(output + padding, end='\r')
+            self.print_function(output + padding, end="\r")
             print_length = max(self.last_print_length, len(output))
         else:
             elapsed_seconds = (self.current_time - self.start_time).total_seconds()
@@ -343,7 +343,7 @@ class ProgressBar:
             remaining_time = format_time_interval(remaining_seconds)
             output = f"Progress: {bar} {progress}   Elapsed: {elapsed_time}   Remaining: {remaining_time}"
             padding = " " * max(0, self.last_print_length - len(output))
-            self.print_function(output + padding, end='\r')
+            self.print_function(output + padding, end="\r")
             print_length = max(self.last_print_length, len(output))
 
         self.last_print_length = print_length
@@ -351,7 +351,7 @@ class ProgressBar:
     def increment_print(self) -> None:
         """
         Increments the current progress bar step by one and prints it to the CLI.
-        :return:
+        :return: None
         """
 
         self.increment()
