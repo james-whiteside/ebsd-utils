@@ -8,7 +8,7 @@ from xml.etree import ElementTree
 from src.data_structures.field import FieldNullError
 from src.data_structures.map import Map
 from src.data_structures.phase import Phase, BravaisLattice, PhaseMissingError
-from src.analysis import Analysis
+from src.data_structures.analysis import Analysis
 from src.utilities.config import Config
 from src.utilities.geometry import Axis
 

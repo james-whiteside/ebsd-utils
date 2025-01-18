@@ -3,7 +3,7 @@
 from datetime import datetime
 from src.utilities.config import Config
 from src.utilities.utils import format_time_interval
-from src.analysis import Analysis
+from src.data_structures.analysis import Analysis
 
 
 def analyse(data_path: str, config: Config) -> str:
