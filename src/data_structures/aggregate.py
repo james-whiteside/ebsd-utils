@@ -5,7 +5,7 @@ from collections.abc import Callable, Iterator
 from enum import Enum
 from numpy import zeros, ndarray
 from src.data_structures.field import FieldLike, FieldType
-from src.utilities.exception import FieldNullError, AggregateNullError, AggregateInconsistentError
+from src.utilities.exception import FieldNullError, AggregateNullError, CheckAggregationError
 from src.utilities.geometry import orthogonalise_matrix
 from src.utilities.utils import format_sig_figs
 
@@ -157,7 +157,7 @@ class CheckAggregate[VALUE_TYPE](Aggregate):
                     values[group_id] = value
 
                 if values[group_id] != value:
-                    raise AggregateInconsistentError(group_id, (values[group_id], value))
+                    raise CheckAggregationError(group_id, (values[group_id], value))
                 else:
                     continue
 

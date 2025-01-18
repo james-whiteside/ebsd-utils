@@ -6,7 +6,7 @@ from enum import Enum
 from typing import Callable, Self
 from PIL.Image import Image, new as new_image
 from numpy import ndarray
-from src.utilities.exception import FieldNullError, FieldsInconsistentError
+from src.utilities.exception import FieldNullError, FieldSizeMismatchError
 from src.utilities.utils import format_sig_figs
 
 
@@ -153,10 +153,10 @@ class FieldLike[VALUE_TYPE](ABC):
 
         for field in fields:
             if field.width != width:
-                raise FieldsInconsistentError.width((field.width, width))
+                raise FieldSizeMismatchError.width((field.width, width))
 
             if field.height != height:
-                raise FieldsInconsistentError.height((field.height, height))
+                raise FieldSizeMismatchError.height((field.height, height))
 
         nullable = any(field.nullable for field in fields)
         return width, height, nullable
