@@ -1,37 +1,19 @@
 # -*- coding: utf-8 -*-
 
-from enum import Enum
 from PIL.Image import Image
 from src.data_structures.field import Field, FieldType, FieldLike, MapField, FieldNullError
 from src.utilities.utils import colour_wheel
 
 
-class MapType(Enum):
-    P = "phase"
-    EA = "euler angle"
-    PQ = "pattern quality"
-    IQ = "index quality"
-    OX = "x-axis orientation"
-    OY = "y-axis orientation"
-    OZ = "z-axis orientation"
-    OB = "beam-axis orientation"
-    KAM = "kernel average misorientation"
-    GND = "geometrically necessary dislocation density"
-    CF = "channelling fraction"
-    OC = "orientation cluster"
-
-
 class Map[VALUE_TYPE]:
     def __init__(
         self,
-        map_type: MapType,
         value_field: FieldLike[VALUE_TYPE],
         coordinates_field: FieldLike[tuple] = None,
         max_value: VALUE_TYPE = None,
         min_value: VALUE_TYPE = None,
         upscale_factor: int = 1,
     ):
-        self.map_type = map_type
         self.upscale_factor = upscale_factor
 
         if not value_field.field_type.mappable:

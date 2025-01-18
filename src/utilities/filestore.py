@@ -239,30 +239,30 @@ def dump_maps(analysis: Analysis, dir: str):
     dir = f"{dir}/{analysis.params.analysis_ref}"
     makedirs(dir, exist_ok=True)
 
-    for map in _analysis_maps(analysis):
-        path = f"{dir}/{map.map_type.name}.png"
+    for name, map in _analysis_maps(analysis):
+        path = f"{dir}/{name}.png"
         map.image.save(path)
 
 
-def _analysis_maps(analysis: Analysis) -> Iterator[Map]:
-    yield analysis.map.phase
-    yield analysis.map.euler_angle
-    yield analysis.map.pattern_quality
-    yield analysis.map.index_quality
-    yield analysis.map.orientation(Axis.X)
-    yield analysis.map.orientation(Axis.Y)
-    yield analysis.map.orientation(Axis.Z)
-    yield analysis.map.average_misorientation
+def _analysis_maps(analysis: Analysis) -> Iterator[str, Map]:
+    yield "phase", analysis.map.phase
+    yield "euler_angle", analysis.map.euler_angle
+    yield "pattern_quality", analysis.map.pattern_quality
+    yield "index_quality", analysis.map.index_quality
+    yield "orientation_x", analysis.map.orientation(Axis.X)
+    yield "orientation_y", analysis.map.orientation(Axis.Y)
+    yield "orientation_z", analysis.map.orientation(Axis.Z)
+    yield "average_misorientation", analysis.map.average_misorientation
 
     if analysis.config.analysis.compute_dislocation:
-        yield analysis.map.gnd_density
+        yield "gnd_density", analysis.map.gnd_density
 
     if analysis.config.analysis.compute_channelling:
-        yield analysis.map.orientation(analysis.config.channelling.beam_axis)
-        yield analysis.map.channelling_fraction
+        yield "orientation_beam", analysis.map.orientation(analysis.config.channelling.beam_axis)
+        yield "channelling_fraction", analysis.map.channelling_fraction
 
     if analysis.config.analysis.compute_clustering:
-        yield analysis.map.orientation_cluster
+        yield "orientation_cluster", analysis.map.orientation_cluster
 
 
 def load_phase(global_id: int, dir: str) -> Phase:
