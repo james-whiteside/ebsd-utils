@@ -2,11 +2,13 @@
 
 from datetime import datetime
 from glob import glob
+from shutil import rmtree
 from sys import exit
 from os.path import getsize
 from math import floor, log10, degrees, radians
 from copy import copy
 from collections.abc import Callable
+from time import sleep
 
 
 class classproperty(object):
@@ -217,6 +219,20 @@ def get_file_path(directory_path: str, recursive: bool = False, extension: str =
     """
 
     return _get_file_paths(directory_path, recursive, extension, exclusions, prompt, False)[0]
+
+
+def delete_dir(dir: str, retry_wait=1.0, retry_attempts=10) -> None:
+    attempt = 1
+
+    while attempt <= retry_attempts:
+        try:
+            rmtree(dir)
+            return
+        except Exception as error:
+            sleep(retry_wait)
+            continue
+
+    raise RuntimeError(f"Failed to delete directory \"{dir}\" due to {type(error).__name__}:\n{error}")
 
 
 def colour_wheel(i: int, n: int) -> tuple[float, float, float]:

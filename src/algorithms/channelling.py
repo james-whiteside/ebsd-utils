@@ -8,11 +8,10 @@ import copy
 import os
 from itertools import permutations
 from random import Random
-from shutil import rmtree
 import numpy
 from scipy import special, constants, optimize
 from src.data_structures.phase import Phase
-from src.utilities.utils import ProgressBar
+from src.utilities.utils import ProgressBar, delete_dir
 
 
 def get_base(lattice):
@@ -537,7 +536,7 @@ def load_crit_data(
 		return output
 	finally:
 		if not use_cache:
-			rmtree(cache_dir)
+			delete_dir(cache_dir)
 
 
 def fraction(effective_beam_vector: tuple[float, float, float], crit_data: dict) -> float:

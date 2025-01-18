@@ -2,11 +2,10 @@
 
 from datetime import datetime
 from os import listdir
-from shutil import rmtree
 from PIL.Image import open as open_image
 from src.utilities.config import Config
 from src.scripts.analyse import analyse
-from src.utilities.utils import format_time_interval
+from src.utilities.utils import format_time_interval, delete_dir
 
 
 def test_analysis(data_path: str, analysis_path: str, map_dir: str, config: Config) -> str:
@@ -69,4 +68,4 @@ def test_analysis(data_path: str, analysis_path: str, map_dir: str, config: Conf
         print(f"Tests completed in: {format_time_interval(time_taken)}")
         return analysis_ref
     finally:
-        rmtree(config.project.test_cache_dir)
+        delete_dir(config.project.test_cache_dir)
