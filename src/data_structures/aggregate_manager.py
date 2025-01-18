@@ -11,8 +11,8 @@ from src.data_structures.aggregate import (
     CustomAggregate,
     DiscreteAggregateMapper,
     FunctionalAggregateMapper,
-    AggregateNullError,
 )
+from src.utilities.exception import AggregateNullError
 from src.data_structures.field import FieldType, FieldLike
 from src.data_structures.field_manager import FieldManager
 from src.utilities.geometry import euler_angles, Axis

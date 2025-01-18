@@ -5,9 +5,9 @@ from os import makedirs
 from typing import Any
 from json import dump as dump_json, load as load_json
 from xml.etree import ElementTree
-from src.data_structures.field import FieldNullError
+from src.utilities.exception import FieldNullError, PhaseMissingError
 from src.data_structures.map import Map
-from src.data_structures.phase import Phase, BravaisLattice, PhaseMissingError
+from src.data_structures.phase import Phase, BravaisLattice
 from src.data_structures.analysis import Analysis
 from src.utilities.config import Config
 from src.utilities.geometry import Axis

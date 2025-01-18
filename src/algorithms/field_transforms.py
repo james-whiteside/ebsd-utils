@@ -5,7 +5,8 @@ from random import Random
 from numpy import ndarray, array, dot, zeros
 from src.algorithms.channelling import load_crit_data, fraction
 from src.algorithms.clustering.dbscan import dbscan
-from src.data_structures.field import FieldLike, FieldNullError, FieldType, Field
+from src.data_structures.field import FieldLike, FieldType, Field
+from src.utilities.exception import FieldNullError
 from src.data_structures.phase import Phase, CrystalFamily
 from src.utilities.geometry import (
     Axis,

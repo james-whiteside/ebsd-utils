@@ -6,6 +6,7 @@ from enum import Enum
 from typing import Callable, Self
 from PIL.Image import Image, new as new_image
 from numpy import ndarray
+from src.utilities.exception import FieldNullError, FieldsInconsistentError
 from src.utilities.utils import format_sig_figs
 
 
@@ -59,14 +60,6 @@ class FieldType(Enum):
             case self.VECTOR_3D: return 3
             case self.MATRIX: raise AttributeError(f"Field type is not serializable: {self.name}")
             case self.OBJECT: raise AttributeError(f"Field type is not serializable: {self.name}")
-
-
-class FieldNullError(ValueError):
-    pass
-
-
-class FieldsInconsistentError(AssertionError):
-    pass
 
 
 class FieldLike[VALUE_TYPE](ABC):

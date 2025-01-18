@@ -127,10 +127,6 @@ class BravaisLattice(Enum):
         raise ValueError(f"Value is not a valid Bravais lattice code: {code}")
 
 
-class PhaseMissingError(LookupError):
-    pass
-
-
 class Phase:
     UNINDEXED_ID = 0
     GENERIC_BCC_ID = 4294967294

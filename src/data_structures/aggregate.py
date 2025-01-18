@@ -4,7 +4,8 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterator
 from enum import Enum
 from numpy import zeros, ndarray
-from src.data_structures.field import FieldLike, FieldType, FieldNullError
+from src.data_structures.field import FieldLike, FieldType
+from src.utilities.exception import FieldNullError, AggregateNullError, AggregateInconsistentError
 from src.utilities.geometry import orthogonalise_matrix
 from src.utilities.utils import format_sig_figs
 
@@ -13,14 +14,6 @@ class AggregateType(Enum):
     COUNT = "count"
     CHECK = "check"
     AVERAGE = "average"
-
-
-class AggregateNullError(ValueError):
-    pass
-
-
-class AggregateInconsistentError(ValueError):
-    pass
 
 
 class AggregateLike[VALUE_TYPE](ABC):
@@ -164,8 +157,7 @@ class CheckAggregate[VALUE_TYPE](Aggregate):
                     values[group_id] = value
 
                 if value != values[group_id]:
-                    raise AggregateInconsistentError(
-                        f"Value field for check aggregate has inconsistent values {values[group_id]} and {value} for group with ID {group_id}.")
+                    raise AggregateInconsistentError(f"Value field for check aggregate has inconsistent values {values[group_id]} and {value} for group with ID {group_id}.")
                 else:
                     continue
 
