@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from enum import Enum
 from typing import Type, Any, Self
 from src.data_structures.field import FieldType
@@ -5,13 +7,15 @@ from src.data_structures.phase import CrystalFamily, BravaisLattice
 
 
 class FieldNullError(ValueError):
-    def __init__(self, coordinates: tuple[int, int]):
+    def __init__(self, x: int, y: int):
         """
         Exception raised when a null value in a nullable field is accessed.
-        :param coordinates: Coordinates of the null value.
+        :param x: The x-coordinate of the null value.
+        :param y: The y-coordinate of the null value.
         """
-        self.coordinates = coordinates
-        self.message = f"Field has a null value at coordinate ({self.coordinates[0]}, {self.coordinates[1]})."
+        self.x = x
+        self.y = y
+        self.message = f"Field has a null value at coordinate ({self.x}, {self.y})."
         super().__init__(self.message)
 
 
@@ -41,26 +45,26 @@ class FieldSizeMismatchError(ValueError):
 
 
 class AggregateNullError(ValueError):
-    def __init__(self, group_id: int = None):
+    def __init__(self, id: int = None):
         """
         Exception raised when a null value in a nullable aggregate is accessed.
-        :param group_id: ID of the group containing the null value.
+        :param id: ID of the group containing the null value.
         """
-        self.group_id = group_id
-        self.message = f"Aggregate has a null value for group {self.group_id}."
+        self.id = id
+        self.message = f"Aggregate has a null value for group {self.id}."
         super().__init__(self.message)
 
 
 class CheckAggregationError(ValueError):
-    def __init__(self, group_id: int, values: tuple[int, int]):
+    def __init__(self, id: int, values: tuple[int, int]):
         """
         Exception raised when a group of points in a check-aggregate have inconsistent values.
-        :param group_id: ID of the group.
+        :param id: ID of the group.
         :param values: Inconsistent values.
         """
-        self.group_id = group_id
+        self.id = id
         self.values = values
-        self.message = f"Value field for check aggregate has inconsistent values {self.values[0]} and {self.values[1]} for group {self.group_id}."
+        self.message = f"Value field for check aggregate has inconsistent values {self.values[0]} and {self.values[1]} for group {self.id}."
         super().__init__(self.message)
 
 
@@ -78,7 +82,7 @@ class PhaseMissingError(LookupError):
 class SymmetryNotImplementedError(NotImplementedError):
     def __init__(self, symmetry_group: CrystalFamily | BravaisLattice):
         """
-        Exception thrown when attempting to use properties of an unimplemented crystal family or Bravais lattice.
+        Exception raised when attempting to use properties of an unimplemented crystal family or Bravais lattice.
         :param symmetry_group: The crystal family or Bravais lattice.
         """
         self.symmetry_type: Type = type(symmetry_group)
@@ -90,13 +94,13 @@ class SymmetryNotImplementedError(NotImplementedError):
 class FieldTypeError(TypeError):
     def __init__(self, field_type: FieldType, reason: str):
         """
-        Exception thrown when attempting to perform an operation on a field with an inappropriate type.
+        Exception raised when attempting to perform an operation on a field with an inappropriate type.
         :param field_type: The field type.
         :param reason: The reason the field type is inappropriate.
         """
         self.field_type = field_type
         self.reason = reason
-        self.message = f"{self.reason}: {self.field_type.value}."
+        self.message = f"{self.reason}: {self.field_type.value}"
         super().__init__(self.message)
 
     @classmethod
@@ -113,13 +117,13 @@ class FieldTypeError(TypeError):
 class FieldValueError(ValueError):
     def __init__(self, value: Any, reason: str):
         """
-        Exception thrown when attempting to write an inappropriate value to a field.
-        :param field_type: The field type.
+        Exception raised when attempting to write an inappropriate value to a field.
+        :param value: The value.
         :param reason: The reason the value is inappropriate.
         """
         self.value = value
         self.reason = reason
-        self.message = f"{self.reason}: {self.value}."
+        self.message = f"{self.reason}: {self.value}"
         super().__init__(self.message)
 
     @classmethod
