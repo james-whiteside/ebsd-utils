@@ -222,9 +222,11 @@ def get_file_path(directory_path: str, recursive: bool = False, extension: str =
 
 
 def delete_dir(dir: str, retry_wait=1.0, retry_attempts=10) -> None:
-    attempt = 1
+    attempts = 0
 
-    while attempt <= retry_attempts:
+    while attempts < retry_attempts:
+        attempts += 1
+
         try:
             rmtree(dir)
             return
