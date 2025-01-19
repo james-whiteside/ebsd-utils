@@ -6,7 +6,7 @@ from numpy import ndarray, array, dot, zeros
 from src.algorithms.channelling import load_crit_data, fraction
 from src.algorithms.clustering.dbscan import dbscan
 from src.data_structures.field import FieldLike, FieldType, Field
-from src.utilities.exception import FieldNullError
+from src.utilities.exception import FieldNullError, SymmetryNotImplementedError
 from src.data_structures.phase import Phase, CrystalFamily
 from src.utilities.geometry import (
     Axis,
@@ -382,7 +382,7 @@ def ipf_colours(
                     r, g, b = w - v, (v - u) * sqrt(2), u * sqrt(3)
                     value = maximise_brightness((r, g, b))
                 case _:
-                    raise NotImplementedError()
+                    raise SymmetryNotImplementedError(crystal_family)
 
             output_field.set_value_at(x, y, value)
 

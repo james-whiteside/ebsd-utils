@@ -1,4 +1,7 @@
 from enum import Enum
+from typing import Type
+
+from src.data_structures.phase import CrystalFamily, BravaisLattice
 
 
 class FieldNullError(ValueError):
@@ -68,4 +71,16 @@ class PhaseMissingError(LookupError):
         """
         self.global_id = global_id
         self.message = f"No data available for phase {global_id}."
+        super().__init__(self.message)
+
+
+class SymmetryNotImplementedError(NotImplementedError):
+    def __init__(self, symmetry_group: CrystalFamily | BravaisLattice):
+        """
+        Exception thrown when attempting to use properties of an unimplemented crystal family or Bravais lattice.
+        :param symmetry_group: The crystal family or Bravais lattice.
+        """
+        self.symmetry_type: Type = type(symmetry_group)
+        self.symmetry_group = symmetry_group
+        self.message = f"Function or method not implemented for {self.symmetry_type.__name__}: {symmetry_group.value}"
         super().__init__(self.message)

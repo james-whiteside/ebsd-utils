@@ -6,6 +6,7 @@ from copy import deepcopy
 from enum import Enum
 from typing import Self
 from numpy import ndarray, dot, array
+from src.utilities.exception import SymmetryNotImplementedError
 from src.utilities.geometry import reduce_vector
 from src.utilities.utils import tuple_radians
 
@@ -27,7 +28,7 @@ class CrystalFamily(Enum):
             case CrystalFamily.C:
                 return 2 * pi, acos(sqrt(3) / 3), 0.5 * pi
             case _:
-                raise NotImplementedError()
+                raise SymmetryNotImplementedError(self)
 
     def reduce_matrix(self, R: ndarray) -> ndarray:
         """
@@ -51,7 +52,7 @@ class CrystalFamily(Enum):
                 if reduced_R[1][2] > reduced_R[0][2]:
                     reduced_R = dot(array([[0.0, 1.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0, 1.0]]), reduced_R)
             case _:
-                raise NotImplementedError()
+                raise SymmetryNotImplementedError(self)
 
         return reduced_R
 
@@ -71,7 +72,7 @@ class CrystalFamily(Enum):
                 X = rho * cos(phi)
                 Y = rho * sin(phi)
             case _:
-                raise NotImplementedError()
+                raise SymmetryNotImplementedError(self)
 
         return X, Y
 
@@ -226,7 +227,7 @@ class Phase:
             case BravaisLattice.CF:
                 return sqrt(2) * self.lattice_constants[0] / 2
             case _:
-                raise NotImplementedError()
+                raise SymmetryNotImplementedError(self.lattice_type)
 
     @property
     def close_pack_distance_nm(self) -> float:

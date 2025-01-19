@@ -10,31 +10,36 @@ from itertools import permutations
 from random import Random
 import numpy
 from scipy import special, constants, optimize
-from src.data_structures.phase import Phase
+from src.data_structures.phase import Phase, BravaisLattice
+from src.utilities.exception import SymmetryNotImplementedError
 from src.utilities.utils import ProgressBar, delete_dir
 
 
-def get_base(lattice):
-	if lattice == 'diamond':
-		xbase = (0, 2, 2, 0, 1, 3, 3, 1)
-		ybase = (0, 2, 0, 2, 1, 3, 1, 3)
-		zbase = (0, 0, 2, 2, 1, 1, 3, 3)
-		a = 4
-	elif lattice == 'fcc':
-		xbase = (0, 1, 1, 0)
-		ybase = (0, 1, 0, 1)
-		zbase = (0, 0, 1, 1)
-		a = 2
-	elif lattice == 'bcc':
-		xbase = (0, 1)
-		ybase = (0, 1)
-		zbase = (0, 1)
-		a = 2
-	elif lattice == 'sc':
-		xbase = (0,)
-		ybase = (0,)
-		zbase = (0,)
-		a = 1
+def get_base(phase: Phase) -> tuple[list[int], list[int], list[int], int]:
+	match phase.lattice_type:
+		case BravaisLattice.CP:
+			xbase = [0]
+			ybase = [0]
+			zbase = [0]
+			a = 1
+		case BravaisLattice.CI:
+			xbase = [0, 1]
+			ybase = [0, 1]
+			zbase = [0, 1]
+			a = 2
+		case BravaisLattice.CF:
+			if phase.diamond_structure:
+				xbase = [0, 2, 2, 0, 1, 3, 3, 1]
+				ybase = [0, 2, 0, 2, 1, 3, 1, 3]
+				zbase = [0, 0, 2, 2, 1, 1, 3, 3]
+				a = 4
+			else:
+				xbase = [0, 1, 1, 0]
+				ybase = [0, 1, 0, 1]
+				zbase = [0, 0, 1, 1]
+				a = 2
+		case _:
+			raise SymmetryNotImplementedError(phase.lattice_type)
 	
 	return xbase, ybase, zbase, a
 
@@ -236,23 +241,9 @@ def gen_crit_data(
 	e = beam_energy
 	Z1 = beam_atomic_number
 	Z2 = target.atomic_number
-	lType = target.lattice_type.value
-	diamond = target.diamond_structure
-	
-	if lType == 'cP':
-		lattice = 'sc'
-	elif lType == 'cI':
-		lattice = 'bcc'
-	elif lType == 'cF' and diamond:
-		lattice = 'diamond'
-	elif lType == 'cF':
-		lattice = 'fcc'
-	else:
-		raise NotImplementedError()
-	
 	alat = 10 * target.lattice_constants_nm[0]
 	xrms = 10 * target.vibration_amplitude_nm
-	base = get_base(lattice)
+	base = get_base(target)
 	fileref = '[' + str(target.global_id) + '][' + str(beam_atomic_number) + '][' + str(beam_energy) + ']'
 	os.makedirs(cache_dir, exist_ok=True)
 	file_emin_a = open(cache_dir + "/" + fileref + 'emin-a.txt', 'w')
