@@ -32,11 +32,11 @@ class FieldSizeMismatchError(ValueError):
 
     @classmethod
     def width(cls, values: tuple[int, int]):
-        return cls(cls.Dimension.WIDTH, values)
+        return FieldSizeMismatchError(FieldSizeMismatchError.Dimension.WIDTH, values)
 
     @classmethod
     def height(cls, values: tuple[int, int]):
-        return cls(cls.Dimension.HEIGHT, values)
+        return FieldSizeMismatchError(FieldSizeMismatchError.Dimension.HEIGHT, values)
 
 
 class AggregateNullError(ValueError):

@@ -181,10 +181,10 @@ class Phase:
         diamond_structure: bool
 
     @classmethod
-    def from_parts(cls, database_entry: DatabaseEntry, supplementary_data: SupplementaryData):
+    def from_parts(cls, database_entry: DatabaseEntry, supplementary_data: SupplementaryData) -> Self:
         diamond_structure = (database_entry.lattice_type is BravaisLattice.CF) and supplementary_data.diamond_structure
 
-        return cls(
+        return Phase(
             global_id=database_entry.global_id,
             name=database_entry.name,
             atomic_number=supplementary_data.atomic_number,
