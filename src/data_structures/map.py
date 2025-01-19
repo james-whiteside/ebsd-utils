@@ -2,7 +2,7 @@
 
 from PIL.Image import Image
 from src.data_structures.field import Field, FieldType, FieldLike, MapField
-from src.utilities.exception import FieldNullError
+from src.utilities.exception import FieldNullError, FieldTypeError
 from src.utilities.utils import colour_wheel
 
 
@@ -18,7 +18,7 @@ class Map[VALUE_TYPE]:
         self.upscale_factor = upscale_factor
 
         if not value_field.field_type.mappable:
-            raise ValueError(f"Value field is not a mappable field type: {value_field.field_type.name}")
+            raise FieldTypeError.lacks_property(value_field.field_type, "mappable")
         else:
             self._values = value_field
 
@@ -33,7 +33,7 @@ class Map[VALUE_TYPE]:
 
             self._coordinates = Field.from_array(self._values.width, self._values.height, FieldType.VECTOR_2D, coordinate_values)
         elif coordinates_field.field_type is not FieldType.VECTOR_2D:
-            raise ValueError(f"Coordinate field must be {FieldType.VECTOR_2D.name}, not {coordinates_field.field_type.name}.")
+            raise FieldTypeError.wrong_type(coordinates_field.field_type, FieldType.VECTOR_2D)
         else:
             self._coordinates = coordinates_field
 
@@ -97,7 +97,7 @@ class Map[VALUE_TYPE]:
                         field.set_value_at(x, y, value)
 
             case _:
-                raise NotImplementedError()
+                raise FieldTypeError.lacks_property(self._values.field_type, "mappable")
 
         return field
 

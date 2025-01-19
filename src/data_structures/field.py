@@ -6,7 +6,7 @@ from enum import Enum
 from typing import Callable, Self
 from PIL.Image import Image, new as new_image
 from numpy import ndarray
-from src.utilities.exception import FieldNullError, FieldSizeMismatchError
+from src.utilities.exception import FieldNullError, FieldSizeMismatchError, FieldTypeError
 from src.utilities.utils import format_sig_figs
 
 
@@ -14,8 +14,8 @@ class FieldType(Enum):
     BOOLEAN = "boolean"
     DISCRETE = "discrete"
     SCALAR = "scalar"
-    VECTOR_2D = "vector 2d"
-    VECTOR_3D = "vector 3d"
+    VECTOR_2D = "2D vector"
+    VECTOR_3D = "3D vector"
     MATRIX = "matrix"
     OBJECT = "object"
 
@@ -58,8 +58,8 @@ class FieldType(Enum):
             case self.SCALAR: return 1
             case self.VECTOR_2D: return 2
             case self.VECTOR_3D: return 3
-            case self.MATRIX: raise AttributeError(f"Field type is not serializable: {self.name}")
-            case self.OBJECT: raise AttributeError(f"Field type is not serializable: {self.name}")
+            case self.MATRIX: raise FieldTypeError.lacks_property(self, "serializable")
+            case self.OBJECT: raise FieldTypeError.lacks_property(self, "serializable")
 
 
 class FieldLike[VALUE_TYPE](ABC):
@@ -111,14 +111,14 @@ class FieldLike[VALUE_TYPE](ABC):
     @property
     def max_value(self) -> VALUE_TYPE:
         if not self.field_type.comparable:
-            raise AttributeError(f"Field type is not comparable: {self.field_type.name}")
+            raise FieldTypeError.lacks_property(self.field_type, "comparable")
         else:
             return max(self.values)
 
     @property
     def min_value(self) -> VALUE_TYPE:
         if not self.field_type.comparable:
-            raise AttributeError(f"Field type is not comparable: {self.field_type.name}")
+            raise FieldTypeError.lacks_property(self.field_type, "comparable")
         else:
             return min(self.values)
 
@@ -130,7 +130,7 @@ class FieldLike[VALUE_TYPE](ABC):
                 return str(value)
 
         if not self.field_type.serializable:
-            raise AttributeError(f"Field type is not serializable: {self.field_type.name}")
+            raise FieldTypeError.lacks_property(self.field_type, "serializable")
         else:
             if self.field_type.size == 1:
                 try:

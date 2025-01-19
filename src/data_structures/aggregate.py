@@ -5,7 +5,7 @@ from collections.abc import Callable, Iterator
 from enum import Enum
 from numpy import zeros, ndarray
 from src.data_structures.field import FieldLike, FieldType
-from src.utilities.exception import FieldNullError, AggregateNullError, CheckAggregationError
+from src.utilities.exception import FieldNullError, AggregateNullError, CheckAggregationError, FieldTypeError
 from src.utilities.geometry import orthogonalise_matrix
 from src.utilities.utils import format_sig_figs
 
@@ -44,7 +44,7 @@ class AggregateLike[VALUE_TYPE](ABC):
                 return str(value)
 
         if not self.field_type.serializable:
-            raise AttributeError(f"Field type is not serializable: {self.field_type.name}")
+            raise FieldTypeError.lacks_property(self.field_type, "serializable")
         else:
             if self.field_type.size == 1:
                 try:
@@ -171,7 +171,7 @@ class AverageAggregate[VALUE_TYPE](Aggregate):
         super().__init__(AggregateType.AVERAGE, value_field.field_type, group_id_field, value_field.nullable)
 
         if not value_field.field_type.averageable:
-            raise ValueError(f"Value field is not an averageable field type: {value_field.field_type.name}")
+            raise FieldTypeError.lacks_property(value_field.field_type, "averageable")
         else:
             self._values = value_field
 

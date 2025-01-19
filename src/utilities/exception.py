@@ -1,6 +1,6 @@
 from enum import Enum
 from typing import Type
-
+from src.data_structures.field import FieldType
 from src.data_structures.phase import CrystalFamily, BravaisLattice
 
 
@@ -84,3 +84,26 @@ class SymmetryNotImplementedError(NotImplementedError):
         self.symmetry_group = symmetry_group
         self.message = f"Function or method not implemented for {self.symmetry_type.__name__}: {symmetry_group.value}"
         super().__init__(self.message)
+
+
+class FieldTypeError(TypeError):
+    def __init__(self, field_type: FieldType, reason: str):
+        """
+        Exception thrown when attempting to perform an operation on a field with an inappropriate type.
+        :param field_type: The field type.
+        :param reason: The reason the field type is inappropriate.
+        """
+        self.field_type = field_type
+        self.property = reason
+        self.message = f"{reason}: {field_type.value}."
+        super().__init__(self.message)
+
+    @classmethod
+    def wrong_type(cls, field_type: FieldType, correct_type: FieldType):
+        reason = f"{correct_type.value.capitalize()} field required but a field of the wrong type was provided"
+        return FieldTypeError(field_type, reason)
+
+    @classmethod
+    def lacks_property(cls, field_type: FieldType, property: str):
+        return FieldTypeError(field_type, f"Field type is not {property}")
+
