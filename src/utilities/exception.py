@@ -109,3 +109,46 @@ class FieldTypeError(TypeError):
         reason = f"Field type is not {property}"
         return FieldTypeError(field_type, reason)
 
+
+class FieldValueError(ValueError):
+    def __init__(self, value: Any, reason: str):
+        """
+        Exception thrown when attempting to write an inappropriate value to a field.
+        :param field_type: The field type.
+        :param reason: The reason the value is inappropriate.
+        """
+        self.value = value
+        self.reason = reason
+        self.message = f"{self.reason}: {self.value}."
+        super().__init__(self.message)
+
+    @classmethod
+    def null_value(cls) -> Self:
+        reason = "Field is not nullable but a null value was provided"
+        return FieldValueError(None, reason)
+
+    @classmethod
+    def wrong_type(cls, value: Any, field_type: FieldType) -> Self:
+        reason = f"Field is of type {field_type.type.__name__} but a value of type {type(value).__name__} was provided"
+        return FieldValueError(value, reason)
+
+    @classmethod
+    def wrong_length(cls, value: tuple, field_type: FieldType) -> Self:
+        reason = f"Tuple field has size {field_type.size} but a tuple value of length {len(value)} was provided"
+        return FieldValueError(value, reason)
+
+    @classmethod
+    def not_in_mapping(cls, value: int) -> Self:
+        reason = f"Value is not within provided mapping for discrete field mapper"
+        return FieldValueError(value, reason)
+
+    @classmethod
+    def no_reverse_mapping(cls, value: Any) -> Self:
+        reason = "Cannot set value as functional field mapper does not have reverse mapping defined"
+        return FieldValueError(value, reason)
+
+    @classmethod
+    def not_valid_map_value(cls, value: tuple[float, float, float]) -> Self:
+        reason = "Map field may only take tuples of values between 0.0 and 1.0 but an invalid value was provided"
+        return FieldValueError(value, reason)
+

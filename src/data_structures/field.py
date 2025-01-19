@@ -6,7 +6,7 @@ from enum import Enum
 from typing import Callable, Self, Type
 from PIL.Image import Image, new as new_image
 from numpy import ndarray
-from src.utilities.exception import FieldNullError, FieldSizeMismatchError, FieldTypeError
+from src.utilities.exception import FieldNullError, FieldSizeMismatchError, FieldTypeError, FieldValueError
 from src.utilities.utils import format_sig_figs
 
 
@@ -76,7 +76,7 @@ class FieldLike[VALUE_TYPE](ABC):
     @nullable.setter
     def nullable(self, value: bool) -> None:
         if not value and self.has_null_value:
-            raise ValueError("Field has at least one null value so cannot be set to non-nullable.")
+            raise FieldValueError.null_value()
         else:
             self._nullable = value
 
@@ -201,7 +201,7 @@ class Field[VALUE_TYPE](FieldLike):
                     raise IndexError(f"Coordinate ({x}, {y}) is out of bounds of provided value array.")
 
                 if not nullable and value is None:
-                    raise ValueError(f"Provided value is None but field is not nullable.")
+                    raise FieldValueError.null_value()
                 else:
                     field.set_value_at(x, y, value)
 
@@ -231,13 +231,13 @@ class Field[VALUE_TYPE](FieldLike):
             if self.nullable:
                 return
             else:
-                raise ValueError(f"Provided value is None but field is not nullable.")
+                raise FieldValueError.null_value()
 
         if type(value) is not self.field_type.type:
-            raise ValueError(f"Type of provided value {type(value)} does not match field type {self.field_type.type}.")
+            raise FieldValueError.wrong_type(value, self.field_type)
 
         if self.field_type.type is tuple and len(value) != self.field_type.size:
-            raise ValueError(f"Length of provided tuple value is {len(value)} and does not match field type size {self.field_type.size}.")
+            raise FieldValueError.wrong_length(value, self.field_type)
 
 
 class DiscreteFieldMapper[VALUE_TYPE](FieldLike):
@@ -256,7 +256,7 @@ class DiscreteFieldMapper[VALUE_TYPE](FieldLike):
                 self._field.set_value_at(x, y, key)
                 return
 
-        raise KeyError(f"Value is not within permitted values of discrete-valued field: {value}")
+        raise FieldValueError.not_in_mapping(value)
 
 
 class FunctionalFieldMapper[INPUT_TYPE, OUTPUT_TYPE](FieldLike):
@@ -277,7 +277,7 @@ class FunctionalFieldMapper[INPUT_TYPE, OUTPUT_TYPE](FieldLike):
 
     def set_value_at(self, x: int, y: int, value: OUTPUT_TYPE) -> None:
         if self._reverse_mapping is None:
-            raise AttributeError("Functional field mapper does not have a reverse mapping defined.")
+            raise FieldValueError.no_reverse_mapping(value)
         else:
             self._field.set_value_at(x, y, self._reverse_mapping(value))
 
@@ -297,7 +297,7 @@ class MapField(Field):
         super()._assert_value_permitted(value)
 
         if not all(0.0 <= item <= 1.0 for item in value):
-            raise ValueError(f"Map field may only take tuples of values between 0.0 and 1.0. Provided tuple: {value}")
+            raise FieldValueError.not_valid_map_value(value)
 
     def to_image(self) -> Image:
         size = self.upscale_factor * self.width, self.upscale_factor * self.height
