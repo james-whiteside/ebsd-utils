@@ -243,6 +243,11 @@ class Field[VALUE_TYPE](FieldLike):
 class DiscreteFieldMapper[VALUE_TYPE](FieldLike):
     def __init__(self, field_type: FieldType, discrete_field: FieldLike[int], mapping: dict[int, VALUE_TYPE]):
         super().__init__(discrete_field.width, discrete_field.height, field_type, discrete_field.nullable)
+
+        for value in discrete_field.values:
+            if value not in mapping:
+                FieldValueError.not_in_mapping(value)
+
         self._mapping = mapping
         self._field = discrete_field
 
