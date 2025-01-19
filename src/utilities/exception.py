@@ -152,3 +152,39 @@ class FieldValueError(ValueError):
         reason = "Map field may only take tuples of values between 0.0 and 1.0 but an invalid value was provided"
         return FieldValueError(value, reason)
 
+
+class InvalidEncodingError(ValueError):
+    def __init__(self, value: Any, enum: Type[Enum]):
+        """
+        Exception raised when attempting to construct an enum from an invalid encoding.
+        :param value: The encoding.
+        :param enum: The enum class.
+        """
+        self.value = value
+        self.enum = enum
+        self.message = f"Value is not a valid {self.enum.__name__} code: {self.value}"
+        super().__init__(self.message)
+
+
+class AggregateLookupError(KeyError):
+    def __init__(self, id: int):
+        """
+        Exception raised when attempting to look up an invalid group ID in an aggregate.
+        :param id: The group ID.
+        """
+        self.id = id
+        self.message = f"Aggregate does not contain a group with ID: {self.id}"
+        super().__init__(self.message)
+
+
+class FieldLookupError(IndexError):
+    def __init__(self, x: int, y: int):
+        """
+        Exception raised when attempting to access out-of-bounds coordinates of a field.
+        :param x: The x-coordinate.
+        :param y: The y-coordinate.
+        """
+        self.x = x
+        self.y = y
+        self.message = f"Coordinates are out of bound of field: ({self.x}, {self.y})"
+        super().__init__(self.message)

@@ -5,7 +5,7 @@ from collections.abc import Callable, Iterator
 from enum import Enum
 from numpy import zeros, ndarray
 from src.data_structures.field import FieldLike, FieldType
-from src.utilities.exception import FieldNullError, AggregateNullError, CheckAggregationError, FieldTypeError
+from src.utilities.exception import FieldNullError, AggregateNullError, CheckAggregationError, FieldTypeError, AggregateLookupError
 from src.utilities.geometry import orthogonalise_matrix
 from src.utilities.utils import format_sig_figs
 
@@ -90,7 +90,7 @@ class Aggregate[VALUE_TYPE](AggregateLike, ABC):
             self._init_aggregates()
 
         if id not in self._aggregates:
-            raise KeyError(f"No group with ID {id}.")
+            raise AggregateLookupError(id)
         else:
             value = self._aggregates[id]
 

@@ -6,7 +6,7 @@ from copy import deepcopy
 from enum import Enum
 from typing import Self
 from numpy import ndarray, dot, array
-from src.utilities.exception import SymmetryNotImplementedError
+from src.utilities.exception import SymmetryNotImplementedError, InvalidEncodingError
 from src.utilities.geometry import reduce_vector
 from src.utilities.utils import tuple_radians
 
@@ -125,7 +125,7 @@ class BravaisLattice(Enum):
             if lattice.code == code:
                 return lattice
 
-        raise ValueError(f"Value is not a valid Bravais lattice code: {code}")
+        raise InvalidEncodingError(code, BravaisLattice)
 
 
 class Phase:

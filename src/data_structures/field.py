@@ -210,18 +210,18 @@ class Field[VALUE_TYPE](FieldLike):
 
     def get_value_at(self, x: int, y: int) -> VALUE_TYPE:
         if not 0 <= x < self.width or not 0 <= y < self.height:
-            raise IndexError(f"Coordinate ({x}, {y}) is out of bounds of field.")
+            raise FieldLookupError(x, y)
         else:
             value = self._values[y][x]
 
             if value is None:
-                raise FieldNullError((x, y))
+                raise FieldNullError(x, y)
             else:
                 return value
 
     def set_value_at(self, x: int, y: int, value: VALUE_TYPE | None) -> None:
         if not 0 <= x < self.width or not 0 <= y < self.height:
-            raise IndexError(f"Coordinate ({x}, {y}) is out of bounds of field.")
+            raise FieldLookupError(x, y)
         else:
             self._assert_value_permitted(value)
             self._values[y][x] = value
