@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Type
+from typing import Type, Any, Self
 from src.data_structures.field import FieldType
 from src.data_structures.phase import CrystalFamily, BravaisLattice
 
@@ -26,16 +26,17 @@ class FieldSizeMismatchError(ValueError):
         :param dimension: Dimension of mismatch.
         :param values: Mismatched values.
         """
+        self.dimension = dimension
         self.values = values
-        self.message = f"{dimension.name.title()}s {self.values[0]} and {self.values[1]} of supplied fields do not match."
+        self.message = f"{self.dimension.name.title()}s {self.values[0]} and {self.values[1]} of supplied fields do not match."
         super().__init__(self.message)
 
     @classmethod
-    def width(cls, values: tuple[int, int]):
+    def width(cls, values: tuple[int, int]) -> Self:
         return FieldSizeMismatchError(FieldSizeMismatchError.Dimension.WIDTH, values)
 
     @classmethod
-    def height(cls, values: tuple[int, int]):
+    def height(cls, values: tuple[int, int]) -> Self:
         return FieldSizeMismatchError(FieldSizeMismatchError.Dimension.HEIGHT, values)
 
 
@@ -46,7 +47,7 @@ class AggregateNullError(ValueError):
         :param group_id: ID of the group containing the null value.
         """
         self.group_id = group_id
-        self.message = f"Aggregate has a null value for group {group_id}."
+        self.message = f"Aggregate has a null value for group {self.group_id}."
         super().__init__(self.message)
 
 
@@ -59,7 +60,7 @@ class CheckAggregationError(ValueError):
         """
         self.group_id = group_id
         self.values = values
-        self.message = f"Value field for check aggregate has inconsistent values {values[0]} and {values[1]} for group {group_id}."
+        self.message = f"Value field for check aggregate has inconsistent values {self.values[0]} and {self.values[1]} for group {self.group_id}."
         super().__init__(self.message)
 
 
@@ -70,7 +71,7 @@ class PhaseMissingError(LookupError):
         :param global_id: ID of the phase as per the Pathfinder database.
         """
         self.global_id = global_id
-        self.message = f"No data available for phase {global_id}."
+        self.message = f"No data available for phase {self.global_id}."
         super().__init__(self.message)
 
 
@@ -82,7 +83,7 @@ class SymmetryNotImplementedError(NotImplementedError):
         """
         self.symmetry_type: Type = type(symmetry_group)
         self.symmetry_group = symmetry_group
-        self.message = f"Function or method not implemented for {self.symmetry_type.__name__}: {symmetry_group.value}"
+        self.message = f"Function or method not implemented for {self.symmetry_type.__name__}: {self.symmetry_group.value}"
         super().__init__(self.message)
 
 
@@ -94,16 +95,17 @@ class FieldTypeError(TypeError):
         :param reason: The reason the field type is inappropriate.
         """
         self.field_type = field_type
-        self.property = reason
-        self.message = f"{reason}: {field_type.value}."
+        self.reason = reason
+        self.message = f"{self.reason}: {self.field_type.value}."
         super().__init__(self.message)
 
     @classmethod
-    def wrong_type(cls, field_type: FieldType, correct_type: FieldType):
+    def wrong_type(cls, field_type: FieldType, correct_type: FieldType) -> Self:
         reason = f"{correct_type.value.capitalize()} field required but a field of the wrong type was provided"
         return FieldTypeError(field_type, reason)
 
     @classmethod
-    def lacks_property(cls, field_type: FieldType, property: str):
-        return FieldTypeError(field_type, f"Field type is not {property}")
+    def lacks_property(cls, field_type: FieldType, property: str) -> Self:
+        reason = f"Field type is not {property}"
+        return FieldTypeError(field_type, reason)
 

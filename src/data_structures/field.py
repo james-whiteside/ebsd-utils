@@ -3,7 +3,7 @@
 from abc import ABC, abstractmethod
 from collections.abc import Iterator
 from enum import Enum
-from typing import Callable, Self
+from typing import Callable, Self, Type
 from PIL.Image import Image, new as new_image
 from numpy import ndarray
 from src.utilities.exception import FieldNullError, FieldSizeMismatchError, FieldTypeError
@@ -40,7 +40,7 @@ class FieldType(Enum):
         return self in (FieldType.SCALAR, FieldType.VECTOR_2D, FieldType.VECTOR_3D)
 
     @property
-    def type(self) -> type:
+    def type(self) -> Type:
         match self:
             case self.BOOLEAN: return bool
             case self.DISCRETE: return int
