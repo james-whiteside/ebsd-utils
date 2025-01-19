@@ -6,7 +6,7 @@ from enum import Enum
 from typing import Callable, Self, Type
 from PIL.Image import Image, new as new_image
 from numpy import ndarray
-from src.utilities.exception import FieldNullError, FieldSizeMismatchError, FieldTypeError, FieldValueError
+from src.utilities.exception import FieldNullError, FieldSizeMismatchError, FieldTypeError, FieldValueError, FieldLookupError
 from src.utilities.utils import format_sig_figs
 
 
