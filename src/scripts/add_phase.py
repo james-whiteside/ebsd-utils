@@ -19,7 +19,7 @@ def add_phase(global_id: int, config: Config) -> int:
         print("Warning: Phase database missing. Manual data entry required.")
         database_entry = _input_phase_data(global_id)
     except PhaseMissingError as error:
-        print(f"Warning: {error} Manual data entry required.")
+        print(f"Warning: No database entry found for phase {error.global_id}. Manual data entry required.")
         database_entry = _input_phase_data(global_id)
 
     supplementary_data = _input_supplementary_data(database_entry.lattice_type)
