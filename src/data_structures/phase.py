@@ -129,9 +129,6 @@ class BravaisLattice(Enum):
 
 class Phase:
     UNINDEXED_ID = 0
-    GENERIC_BCC_ID = 4294967294
-    GENERIC_FCC_ID = 4294967295
-    GENERIC_IDS = [UNINDEXED_ID, GENERIC_BCC_ID, GENERIC_FCC_ID]
 
     def __init__(
         self,
