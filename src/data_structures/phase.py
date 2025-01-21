@@ -4,11 +4,10 @@ from dataclasses import dataclass
 from math import pi, sqrt, sin, cos, tan, acos, atan2
 from copy import deepcopy
 from enum import Enum
-from typing import Self
+from typing import Self, Type
 from numpy import ndarray, dot, array
-from src.utilities.exception import SymmetryNotImplementedError, InvalidEncodingError
 from src.utilities.geometry import reduce_vector
-from src.utilities.utils import tuple_radians
+from src.utilities.utils import tuple_radians, InvalidEncodingError
 
 
 class CrystalFamily(Enum):
@@ -232,3 +231,26 @@ class Phase:
     @property
     def close_pack_distance_nm(self) -> float:
         return self.close_pack_distance * 10.0 ** 9.0
+
+
+class PhaseMissingError(LookupError):
+    def __init__(self, global_id: int):
+        """
+        Exception raised when attempting to lookup missing phase data.
+        :param global_id: ID of the phase as per the Pathfinder database.
+        """
+        self.global_id = global_id
+        self.message = f"No data available for phase {self.global_id}."
+        super().__init__(self.message)
+
+
+class SymmetryNotImplementedError(NotImplementedError):
+    def __init__(self, symmetry_group: CrystalFamily | BravaisLattice):
+        """
+        Exception raised when attempting to use properties of an unimplemented crystal family or Bravais lattice.
+        :param symmetry_group: The crystal family or Bravais lattice.
+        """
+        self.symmetry_type: Type = type(symmetry_group)
+        self.symmetry_group = symmetry_group
+        self.message = f"Function or method not implemented for {self.symmetry_type.__name__}: {self.symmetry_group.value}"
+        super().__init__(self.message)

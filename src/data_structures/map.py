@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from PIL.Image import Image
-from src.data_structures.field import Field, FieldType, FieldLike, MapField
-from src.utilities.exception import FieldNullError, FieldTypeError
+from src.data_structures.field import Field, FieldType, FieldLike, MapField, FieldNullError, FieldTypeError
 from src.utilities.utils import colour_wheel
 
 

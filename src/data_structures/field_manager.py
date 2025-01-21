@@ -14,8 +14,7 @@ from src.algorithms.field_transforms import (
     orientation_cluster,
 )
 from src.utilities.config import Config
-from src.data_structures.field import FieldType, Field, DiscreteFieldMapper, FunctionalFieldMapper
-from src.utilities.exception import FieldNullError
+from src.data_structures.field import FieldType, Field, DiscreteFieldMapper, FunctionalFieldMapper, FieldNullError
 from src.utilities.geometry import Axis
 from src.data_structures.phase import Phase
 from src.algorithms.clustering.dbscan import ClusterCategory

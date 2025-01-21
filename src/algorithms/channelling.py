@@ -10,8 +10,7 @@ from itertools import permutations
 from random import Random
 import numpy
 from scipy import special, constants, optimize
-from src.data_structures.phase import Phase, BravaisLattice
-from src.utilities.exception import SymmetryNotImplementedError
+from src.data_structures.phase import Phase, BravaisLattice, SymmetryNotImplementedError
 from src.utilities.utils import ProgressBar, delete_dir
 
 

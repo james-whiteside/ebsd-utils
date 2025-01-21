@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from datetime import datetime
+from enum import Enum
 from glob import glob
 from shutil import rmtree
 from sys import exit
@@ -9,6 +10,7 @@ from math import floor, log10, degrees, radians
 from copy import copy
 from collections.abc import Callable
 from time import sleep
+from typing import Any, Type
 
 
 class classproperty(object):
@@ -384,3 +386,16 @@ class ProgressBar:
         self.terminate()
         self.print()
         self.print_function()
+
+
+class InvalidEncodingError(ValueError):
+    def __init__(self, value: Any, enum: Type[Enum]):
+        """
+        Exception raised when attempting to construct an enum from an invalid encoding.
+        :param value: The encoding.
+        :param enum: The enum class.
+        """
+        self.value = value
+        self.enum = enum
+        self.message = f"Value is not a valid {self.enum.__name__} code: {self.value}"
+        super().__init__(self.message)

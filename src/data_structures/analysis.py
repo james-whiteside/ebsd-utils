@@ -4,7 +4,7 @@ from random import Random
 from typing import Self
 from numpy import zeros
 from src.data_structures.aggregate_manager import AggregateManager
-from src.utilities.exception import FieldNullError
+from src.data_structures.field import FieldNullError
 from src.data_structures.field_manager import FieldManager
 from src.utilities.config import Config
 from src.utilities.geometry import orthogonalise_matrix, euler_angles

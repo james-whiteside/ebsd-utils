@@ -4,8 +4,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterator
 from enum import Enum
 from numpy import zeros, ndarray
-from src.data_structures.field import FieldLike, FieldType
-from src.utilities.exception import FieldNullError, AggregateNullError, CheckAggregationError, FieldTypeError, AggregateLookupError
+from src.data_structures.field import FieldLike, FieldType, FieldNullError, FieldTypeError
 from src.utilities.geometry import orthogonalise_matrix
 from src.utilities.utils import format_sig_figs
 
@@ -301,3 +300,38 @@ class FunctionalAggregateMapper[INPUT_TYPE, OUTPUT_TYPE](AggregateLike):
 
     def get_value_for(self, id: int) -> OUTPUT_TYPE:
         return self._forward_mapping(self._aggregate.get_value_for(id))
+
+
+class AggregateLookupError(KeyError):
+    def __init__(self, id: int):
+        """
+        Exception raised when attempting to look up an invalid group ID in an aggregate.
+        :param id: The group ID.
+        """
+        self.id = id
+        self.message = f"Aggregate does not contain a group with ID: {self.id}"
+        super().__init__(self.message)
+
+
+class AggregateNullError(ValueError):
+    def __init__(self, id: int = None):
+        """
+        Exception raised when a null value in a nullable aggregate is accessed.
+        :param id: ID of the group containing the null value.
+        """
+        self.id = id
+        self.message = f"Aggregate has a null value for group {self.id}."
+        super().__init__(self.message)
+
+
+class CheckAggregationError(ValueError):
+    def __init__(self, id: int, values: tuple[int, int]):
+        """
+        Exception raised when a group of points in a check-aggregate have inconsistent values.
+        :param id: ID of the group.
+        :param values: Inconsistent values.
+        """
+        self.id = id
+        self.values = values
+        self.message = f"Value field for check aggregate has inconsistent values {self.values[0]} and {self.values[1]} for group {self.id}."
+        super().__init__(self.message)
