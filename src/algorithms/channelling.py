@@ -8,34 +8,37 @@ import copy
 import os
 from itertools import permutations
 from random import Random
-from shutil import rmtree
 import numpy
 from scipy import special, constants, optimize
-from src.data_structures.phase import Phase
-from src.utilities.utils import ProgressBar
+from src.data_structures.phase import Phase, BravaisLattice, SymmetryNotImplementedError
+from src.utilities.utils import ProgressBar, delete_dir
 
 
-def get_base(lattice):
-	if lattice == 'diamond':
-		xbase = (0, 2, 2, 0, 1, 3, 3, 1)
-		ybase = (0, 2, 0, 2, 1, 3, 1, 3)
-		zbase = (0, 0, 2, 2, 1, 1, 3, 3)
-		a = 4
-	elif lattice == 'fcc':
-		xbase = (0, 1, 1, 0)
-		ybase = (0, 1, 0, 1)
-		zbase = (0, 0, 1, 1)
-		a = 2
-	elif lattice == 'bcc':
-		xbase = (0, 1)
-		ybase = (0, 1)
-		zbase = (0, 1)
-		a = 2
-	elif lattice == 'sc':
-		xbase = (0,)
-		ybase = (0,)
-		zbase = (0,)
-		a = 1
+def get_base(phase: Phase) -> tuple[list[int], list[int], list[int], int]:
+	match phase.lattice_type:
+		case BravaisLattice.CP:
+			xbase = [0]
+			ybase = [0]
+			zbase = [0]
+			a = 1
+		case BravaisLattice.CI:
+			xbase = [0, 1]
+			ybase = [0, 1]
+			zbase = [0, 1]
+			a = 2
+		case BravaisLattice.CF:
+			if phase.diamond_structure:
+				xbase = [0, 2, 2, 0, 1, 3, 3, 1]
+				ybase = [0, 2, 0, 2, 1, 3, 1, 3]
+				zbase = [0, 0, 2, 2, 1, 1, 3, 3]
+				a = 4
+			else:
+				xbase = [0, 1, 1, 0]
+				ybase = [0, 1, 0, 1]
+				zbase = [0, 0, 1, 1]
+				a = 2
+		case _:
+			raise SymmetryNotImplementedError(phase.lattice_type)
 	
 	return xbase, ybase, zbase, a
 
@@ -227,37 +230,20 @@ def fun2(r, Z1, Z2, opposing, rch, d2, e):
 
 def gen_crit_data(
 	beam_atomic_number: int,
-	target_id: int,
+	target: Phase,
 	beam_energy: float,
 	max_range: float,
 	max_index: int,
 	random_source: Random,
 	cache_dir: str,
-	phase_dir: str,
-	phase_database_path: str,
 ):
 	e = beam_energy
-	target = Phase.load(target_id, phase_dir, phase_database_path)
 	Z1 = beam_atomic_number
 	Z2 = target.atomic_number
-	lType = target.lattice_type.value
-	diamond = target.diamond_structure
-	
-	if lType == 'cP':
-		lattice = 'sc'
-	elif lType == 'cI':
-		lattice = 'bcc'
-	elif lType == 'cF' and diamond:
-		lattice = 'diamond'
-	elif lType == 'cF':
-		lattice = 'fcc'
-	else:
-		raise NotImplementedError()
-	
 	alat = 10 * target.lattice_constants_nm[0]
 	xrms = 10 * target.vibration_amplitude_nm
-	base = get_base(lattice)
-	fileref = '[' + str(target_id) + '][' + str(beam_atomic_number) + '][' + str(beam_energy) + ']'
+	base = get_base(target)
+	fileref = '[' + str(target.global_id) + '][' + str(beam_atomic_number) + '][' + str(beam_energy) + ']'
 	os.makedirs(cache_dir, exist_ok=True)
 	file_emin_a = open(cache_dir + "/" + fileref + 'emin-a.txt', 'w')
 	file_emin_p = open(cache_dir + "/" + fileref + 'emin-p.txt', 'w')
@@ -452,19 +438,17 @@ def gen_crit_data(
 
 def load_crit_data(
 	beam_atomic_number: int,
-	target_id: int,
+	target: Phase,
 	beam_energy: float,
 	random_source: Random,
 	use_cache: bool,
 	cache_dir: str,
-	phase_dir: str,
-	phase_database_path: str,
 ) -> dict:
 	if not use_cache:
 		cache_dir = f"{cache_dir}/temp"
 
 	try:
-		fileref = '[' + str(target_id) + '][' + str(beam_atomic_number) + '][' + str(beam_energy) + ']'
+		fileref = '[' + str(target.global_id) + '][' + str(beam_atomic_number) + '][' + str(beam_energy) + ']'
 
 		try:
 			file_eperpcrit_a = open(cache_dir + "/" + fileref + 'eperpcrit-a.txt', 'r')
@@ -478,18 +462,16 @@ def load_crit_data(
 		except FileNotFoundError:
 			max_range = 10  # Maximum range from origin where rows are to be considered (Å)
 			max_index = 10  # Maximum Miller index to be considered
-			print('Generating channelling fraction data for phase ' + str(target_id) + '.')
+			print('Generating channelling fraction data for phase ' + str(target.global_id) + '.')
 
 			gen_crit_data(
 				beam_atomic_number=beam_atomic_number,
-				target_id=target_id,
+				target=target,
 				beam_energy=beam_energy,
 				max_range=max_range,
 				max_index=max_index,
 				random_source=random_source,
 				cache_dir=cache_dir,
-				phase_dir=phase_dir,
-				phase_database_path=phase_database_path,
 			)
 
 		try:
@@ -526,7 +508,7 @@ def load_crit_data(
 
 		output = dict()
 		output['beam_z'] = beam_atomic_number
-		output['target_id'] = target_id
+		output['target_id'] = target.global_id
 		output['energy'] = beam_energy
 		output['data'] = dict()
 		output['data']['axial'] = axial
@@ -544,7 +526,7 @@ def load_crit_data(
 		return output
 	finally:
 		if not use_cache:
-			rmtree(cache_dir)
+			delete_dir(cache_dir)
 
 
 def fraction(effective_beam_vector: tuple[float, float, float], crit_data: dict) -> float:

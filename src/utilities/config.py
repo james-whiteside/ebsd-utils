@@ -11,6 +11,7 @@ from src.data_structures.parameter_groups import (
     DislocationParams,
     ChannellingParams,
     ClusteringParams,
+    TestParams,
 )
 
 
@@ -65,6 +66,13 @@ class Config:
         self.clustering = ClusteringParams(
             core_point_threshold=self._int(parser["orientation_clustering"]["neighbour_threshold"]),
             neighbourhood_radius_deg=self._float(parser["orientation_clustering"]["neighbourhood_radius"]),
+        )
+
+        self.test = TestParams(
+            data_dir=self._str(parser["tests"]["ebsd_data_dir"]),
+            analysis_dir=self._str(parser["tests"]["control_analysis_dir"]),
+            map_dir=self._str(parser["tests"]["control_map_dir"]),
+            config_dir=self._str(parser["tests"]["config_dir"]),
         )
 
     @staticmethod

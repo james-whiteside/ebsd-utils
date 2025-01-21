@@ -5,8 +5,8 @@ from random import Random
 from numpy import ndarray, array, dot, zeros
 from src.algorithms.channelling import load_crit_data, fraction
 from src.algorithms.clustering.dbscan import dbscan
-from src.data_structures.field import FieldLike, FieldNullError, FieldType, Field
-from src.data_structures.phase import Phase, CrystalFamily
+from src.data_structures.field import FieldLike, FieldType, Field, FieldNullError
+from src.data_structures.phase import Phase, CrystalFamily, SymmetryNotImplementedError
 from src.utilities.geometry import (
     Axis,
     AxisSet,
@@ -24,7 +24,7 @@ def orientation_matrix(
     euler_angle_field: FieldLike[tuple[float, float, float]],
 ) -> Field[ndarray]:
     input_fields = [euler_angle_field]
-    width, height, nullable = FieldLike.get_params(input_fields)
+    width, height, nullable = FieldLike.get_combined_params(input_fields)
     output_field = Field(width, height, FieldType.MATRIX, default_value=None, nullable=True)
 
     for y in range(height):
@@ -46,7 +46,7 @@ def reduced_matrix(
     phase_field: FieldLike[Phase],
 ) -> Field[ndarray]:
     input_fields = [orientation_matrix_field, phase_field]
-    width, height, nullable = FieldLike.get_params(input_fields)
+    width, height, nullable = FieldLike.get_combined_params(input_fields)
     output_field = Field(width, height, FieldType.MATRIX, default_value=None, nullable=True)
 
     for y in range(height):
@@ -70,7 +70,7 @@ def ipf_coordinates(
     phase_field: FieldLike[Phase],
 ) -> Field[tuple[float, float]]:
     input_fields = [reduced_matrix_field, phase_field]
-    width, height, nullable = FieldLike.get_params(input_fields)
+    width, height, nullable = FieldLike.get_combined_params(input_fields)
     output_field = Field(width, height, FieldType.VECTOR_2D, default_value=None, nullable=True)
 
     for y in range(height):
@@ -94,7 +94,7 @@ def average_misorientation(
     phase_field: FieldLike[Phase],
 ) -> Field[float]:
     input_fields = [reduced_matrix_field, phase_field]
-    width, height, nullable = FieldLike.get_params(input_fields)
+    width, height, nullable = FieldLike.get_combined_params(input_fields)
     output_field = Field(width, height, FieldType.SCALAR, default_value=None, nullable=True)
 
     for y in range(height):
@@ -134,7 +134,7 @@ def misrotation_tensor(
     phase_field: FieldLike[Phase],
 ) -> Field[ndarray]:
     input_fields = [reduced_matrix_field, phase_field]
-    width, height, nullable = FieldLike.get_params(input_fields)
+    width, height, nullable = FieldLike.get_combined_params(input_fields)
     output_field = Field(width, height, FieldType.MATRIX, default_value=None, nullable=True)
 
     for y in range(height):
@@ -177,7 +177,7 @@ def nye_tensor(
     misrotation_y_tensor_field: FieldLike[ndarray],
 ) -> Field[ndarray]:
     input_fields = [misrotation_x_tensor_field, misrotation_y_tensor_field]
-    width, height, nullable = FieldLike.get_params(input_fields)
+    width, height, nullable = FieldLike.get_combined_params(input_fields)
     output_field = Field(width, height, FieldType.MATRIX, default_value=None, nullable=True)
 
     for y in range(height):
@@ -222,7 +222,7 @@ def gnd_density(
     phase_field: FieldLike[Phase],
 ) -> Field[float]:
     input_fields = [nye_tensor_field, phase_field]
-    width, height, nullable = FieldLike.get_params(input_fields)
+    width, height, nullable = FieldLike.get_combined_params(input_fields)
     output_field = Field(width, height, FieldType.SCALAR, default_value=None, nullable=True)
 
     for y in range(height):
@@ -250,24 +250,20 @@ def channelling_fraction(
     random_source: Random,
     use_cache: bool,
     cache_dir: str,
-    phase_dir: str,
-    phase_database_path: str,
 ) -> Field[float]:
     input_fields = [orientation_matrix_field, phase_field]
-    width, height, nullable = FieldLike.get_params(input_fields)
+    width, height, nullable = FieldLike.get_combined_params(input_fields)
     output_field = Field(width, height, FieldType.SCALAR, default_value=None, nullable=True)
 
     channel_data = {
         phase.global_id: load_crit_data(
             beam_atomic_number=beam_atomic_number,
-            target_id=phase.global_id,
+            target=phase,
             beam_energy=beam_energy,
             random_source=random_source,
             use_cache=use_cache,
             cache_dir=cache_dir,
-            phase_dir=phase_dir,
-            phase_database_path=phase_database_path,
-        ) for local_id, phase in phases.items() if phase.global_id != Phase.UNINDEXED_ID
+        ) for local_id, phase in phases.items()
     }
 
     for y in range(height):
@@ -294,7 +290,7 @@ def orientation_cluster(
     use_cuda: bool,
 ) -> tuple[int, Field[int], Field[int]]:
     input_fields = [phase_field, reduced_matrix_field]
-    width, height, nullable = FieldLike.get_params(input_fields)
+    width, height, nullable = FieldLike.get_combined_params(input_fields)
 
     phase = zeros((height, width))
     reduced_euler_rotation_matrix = zeros((height, width, 3, 3))
@@ -339,7 +335,7 @@ def euler_angle_colours(
     phase_field: FieldLike[Phase],
 ) -> Field[tuple[float, float, float]]:
     input_fields = [euler_angle_field, phase_field]
-    width, height, nullable = FieldLike.get_params(input_fields)
+    width, height, nullable = FieldLike.get_combined_params(input_fields)
     output_field = Field(width, height, FieldType.VECTOR_3D, default_value=(0.0, 0.0, 0.0))
 
     for y in range(height):
@@ -367,7 +363,7 @@ def ipf_colours(
     phase_field: FieldLike[Phase],
 ) -> Field[tuple[float, float, float]]:
     input_fields = [reduced_matrix_field, phase_field]
-    width, height, nullable = FieldLike.get_params(input_fields)
+    width, height, nullable = FieldLike.get_combined_params(input_fields)
     output_field = Field(width, height, FieldType.VECTOR_3D, default_value=(0.0, 0.0, 0.0))
 
     for y in range(height):
@@ -385,7 +381,7 @@ def ipf_colours(
                     r, g, b = w - v, (v - u) * sqrt(2), u * sqrt(3)
                     value = maximise_brightness((r, g, b))
                 case _:
-                    raise NotImplementedError()
+                    raise SymmetryNotImplementedError(crystal_family)
 
             output_field.set_value_at(x, y, value)
 

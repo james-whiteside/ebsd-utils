@@ -1,41 +1,23 @@
 # -*- coding: utf-8 -*-
 
-from enum import Enum
 from PIL.Image import Image
-from src.data_structures.field import Field, FieldType, FieldLike, MapField, FieldNullError
+from src.data_structures.field import Field, FieldType, FieldLike, MapField, FieldNullError, FieldTypeError
 from src.utilities.utils import colour_wheel
-
-
-class MapType(Enum):
-    P = "phase"
-    EA = "euler angle"
-    PQ = "pattern quality"
-    IQ = "index quality"
-    OX = "x-axis orientation"
-    OY = "y-axis orientation"
-    OZ = "z-axis orientation"
-    OB = "beam-axis orientation"
-    KAM = "kernel average misorientation"
-    GND = "geometrically necessary dislocation density"
-    CF = "channelling fraction"
-    OC = "orientation cluster"
 
 
 class Map[VALUE_TYPE]:
     def __init__(
         self,
-        map_type: MapType,
         value_field: FieldLike[VALUE_TYPE],
         coordinates_field: FieldLike[tuple] = None,
         max_value: VALUE_TYPE = None,
         min_value: VALUE_TYPE = None,
         upscale_factor: int = 1,
     ):
-        self.map_type = map_type
         self.upscale_factor = upscale_factor
 
         if not value_field.field_type.mappable:
-            raise ValueError(f"Value field is not a mappable field type: {value_field.field_type.name}")
+            raise FieldTypeError.lacks_property(value_field.field_type, "mappable")
         else:
             self._values = value_field
 
@@ -50,7 +32,7 @@ class Map[VALUE_TYPE]:
 
             self._coordinates = Field.from_array(self._values.width, self._values.height, FieldType.VECTOR_2D, coordinate_values)
         elif coordinates_field.field_type is not FieldType.VECTOR_2D:
-            raise ValueError(f"Coordinate field must be {FieldType.VECTOR_2D.name}, not {coordinates_field.field_type.name}.")
+            raise FieldTypeError.wrong_type(coordinates_field.field_type, FieldType.VECTOR_2D)
         else:
             self._coordinates = coordinates_field
 
@@ -114,7 +96,7 @@ class Map[VALUE_TYPE]:
                         field.set_value_at(x, y, value)
 
             case _:
-                raise NotImplementedError()
+                raise FieldTypeError.lacks_property(self._values.field_type, "mappable")
 
         return field
 

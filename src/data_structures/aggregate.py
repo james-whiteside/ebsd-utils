@@ -4,22 +4,15 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterator
 from enum import Enum
 from numpy import zeros, ndarray
-from src.data_structures.field import FieldLike, FieldType, FieldNullError
+from src.data_structures.field import FieldLike, FieldType, FieldNullError, FieldTypeError
 from src.utilities.geometry import orthogonalise_matrix
+from src.utilities.utils import format_sig_figs
 
 
 class AggregateType(Enum):
     COUNT = "count"
     CHECK = "check"
     AVERAGE = "average"
-
-
-class AggregateNullError(ValueError):
-    pass
-
-
-class AggregateInconsistentError(ValueError):
-    pass
 
 
 class AggregateLike[VALUE_TYPE](ABC):
@@ -42,18 +35,24 @@ class AggregateLike[VALUE_TYPE](ABC):
     def get_value_for(self, id: int) -> VALUE_TYPE:
         ...
 
-    def serialize_value_for(self, id: int, null_serialization: str = "") -> list[str]:
+    def serialize_value_for(self, id: int, null_serialization: str = "", sig_figs: int = None) -> list[str]:
+        def format(value: VALUE_TYPE) -> str:
+            if sig_figs is not None and self.field_type.roundable:
+                return format_sig_figs(value, sig_figs)
+            else:
+                return str(value)
+
         if not self.field_type.serializable:
-            raise AttributeError(f"Field type is not serializable: {self.field_type.name}")
+            raise FieldTypeError.lacks_property(self.field_type, "serializable")
         else:
             if self.field_type.size == 1:
                 try:
-                    return [str(self.get_value_for(id))]
+                    return [format(self.get_value_for(id))]
                 except AggregateNullError:
                     return [null_serialization]
             else:
                 try:
-                    return [str(element) for element in self.get_value_for(id)]
+                    return [format(element) for element in self.get_value_for(id)]
                 except AggregateNullError:
                     return [null_serialization for _ in range(self.field_type.size)]
 
@@ -90,12 +89,12 @@ class Aggregate[VALUE_TYPE](AggregateLike, ABC):
             self._init_aggregates()
 
         if id not in self._aggregates:
-            raise KeyError(f"No group with ID {id}.")
+            raise AggregateLookupError(id)
         else:
             value = self._aggregates[id]
 
             if value is None:
-                raise AggregateNullError(f"Aggregate is null for group with ID {id}.")
+                raise AggregateNullError(id)
             else:
                 return value
 
@@ -156,9 +155,8 @@ class CheckAggregate[VALUE_TYPE](Aggregate):
                 if values[group_id] is None:
                     values[group_id] = value
 
-                if value != values[group_id]:
-                    raise AggregateInconsistentError(
-                        f"Value field for check aggregate has inconsistent values {values[group_id]} and {value} for group with ID {group_id}.")
+                if values[group_id] != value:
+                    raise CheckAggregationError(group_id, (values[group_id], value))
                 else:
                     continue
 
@@ -172,7 +170,7 @@ class AverageAggregate[VALUE_TYPE](Aggregate):
         super().__init__(AggregateType.AVERAGE, value_field.field_type, group_id_field, value_field.nullable)
 
         if not value_field.field_type.averageable:
-            raise ValueError(f"Value field is not an averageable field type: {value_field.field_type.name}")
+            raise FieldTypeError.lacks_property(value_field.field_type, "averageable")
         else:
             self._values = value_field
 
@@ -302,3 +300,38 @@ class FunctionalAggregateMapper[INPUT_TYPE, OUTPUT_TYPE](AggregateLike):
 
     def get_value_for(self, id: int) -> OUTPUT_TYPE:
         return self._forward_mapping(self._aggregate.get_value_for(id))
+
+
+class AggregateLookupError(KeyError):
+    def __init__(self, id: int):
+        """
+        Exception raised when attempting to look up an invalid group ID in an aggregate.
+        :param id: The group ID.
+        """
+        self.id = id
+        self.message = f"Aggregate does not contain a group with ID: {self.id}"
+        super().__init__(self.message)
+
+
+class AggregateNullError(ValueError):
+    def __init__(self, id: int = None):
+        """
+        Exception raised when a null value in a nullable aggregate is accessed.
+        :param id: ID of the group containing the null value.
+        """
+        self.id = id
+        self.message = f"Aggregate has a null value for group {self.id}."
+        super().__init__(self.message)
+
+
+class CheckAggregationError(ValueError):
+    def __init__(self, id: int, values: tuple[int, int]):
+        """
+        Exception raised when a group of points in a check-aggregate have inconsistent values.
+        :param id: ID of the group.
+        :param values: Inconsistent values.
+        """
+        self.id = id
+        self.values = values
+        self.message = f"Value field for check aggregate has inconsistent values {self.values[0]} and {self.values[1]} for group {self.id}."
+        super().__init__(self.message)

@@ -1,12 +1,16 @@
 # -*- coding: utf-8 -*-
 
 from datetime import datetime
+from enum import Enum
 from glob import glob
+from shutil import rmtree
 from sys import exit
 from os.path import getsize
 from math import floor, log10, degrees, radians
 from copy import copy
 from collections.abc import Callable
+from time import sleep
+from typing import Any, Type
 
 
 class classproperty(object):
@@ -219,6 +223,22 @@ def get_file_path(directory_path: str, recursive: bool = False, extension: str =
     return _get_file_paths(directory_path, recursive, extension, exclusions, prompt, False)[0]
 
 
+def delete_dir(dir: str, retry_wait=1.0, retry_attempts=10) -> None:
+    attempts = 0
+
+    while attempts < retry_attempts:
+        attempts += 1
+
+        try:
+            rmtree(dir)
+            return
+        except Exception as error:
+            sleep(retry_wait)
+            continue
+
+    raise RuntimeError(f"Failed to delete directory \"{dir}\" due to {type(error).__name__}:\n{error}")
+
+
 def colour_wheel(i: int, n: int) -> tuple[float, float, float]:
     """
     Returns the RGB values for a colour with maximum saturation and brightness, with hue determined by input arguments.
@@ -366,3 +386,16 @@ class ProgressBar:
         self.terminate()
         self.print()
         self.print_function()
+
+
+class InvalidEncodingError(ValueError):
+    def __init__(self, value: Any, enum: Type[Enum]):
+        """
+        Exception raised when attempting to construct an enum from an invalid encoding.
+        :param value: The encoding.
+        :param enum: The enum class.
+        """
+        self.value = value
+        self.enum = enum
+        self.message = f"Value is not a valid {self.enum.__name__} code: {self.value}"
+        super().__init__(self.message)

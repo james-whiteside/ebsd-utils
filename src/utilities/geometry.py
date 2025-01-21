@@ -169,7 +169,7 @@ def euler_angles(rotation_matrix: ndarray, axis_set: AxisSet) -> tuple[float, fl
             angles.append(acos(rotation_matrix[2][2]))
             angles.append(atan2(rotation_matrix[0][2], -rotation_matrix[1][2]))
     else:
-        raise NotImplementedError()
+        raise NotImplementedError(f"Extraction of Euler angles from rotation matrix not implemented for Euler axis set: {axis_set.name.lower()}")
 
     for i, angle in enumerate(angles):
         if angle < 0:

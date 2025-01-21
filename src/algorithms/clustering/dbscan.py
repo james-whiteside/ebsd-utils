@@ -6,6 +6,7 @@ from numpy import ndarray
 from numba import cuda
 from src.algorithms.clustering.dbscan_cpu import _dbscan_cpu
 from src.algorithms.clustering.dbscan_gpu import _dbscan_gpu
+from src.utilities.utils import InvalidEncodingError
 
 
 class ClusterCategory(Enum):
@@ -23,7 +24,7 @@ class ClusterCategory(Enum):
             if category.name[0] == code:
                 return category
 
-        raise ValueError(f"Value is not a valid cluster category code: {code}")
+        raise InvalidEncodingError(code, ClusterCategory)
 
 
 def dbscan(

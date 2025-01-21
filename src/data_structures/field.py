@@ -3,17 +3,18 @@
 from abc import ABC, abstractmethod
 from collections.abc import Iterator
 from enum import Enum
-from typing import Callable, Self
+from typing import Callable, Self, Type, Any
 from PIL.Image import Image, new as new_image
 from numpy import ndarray
+from src.utilities.utils import format_sig_figs
 
 
 class FieldType(Enum):
     BOOLEAN = "boolean"
     DISCRETE = "discrete"
     SCALAR = "scalar"
-    VECTOR_2D = "vector 2d"
-    VECTOR_3D = "vector 3d"
+    VECTOR_2D = "2D vector"
+    VECTOR_3D = "3D vector"
     MATRIX = "matrix"
     OBJECT = "object"
 
@@ -34,7 +35,11 @@ class FieldType(Enum):
         return self in (FieldType.BOOLEAN, FieldType.DISCRETE, FieldType.SCALAR, FieldType.VECTOR_2D, FieldType.VECTOR_3D)
 
     @property
-    def type(self) -> type:
+    def roundable(self) -> bool:
+        return self in (FieldType.SCALAR, FieldType.VECTOR_2D, FieldType.VECTOR_3D)
+
+    @property
+    def type(self) -> Type:
         match self:
             case self.BOOLEAN: return bool
             case self.DISCRETE: return int
@@ -52,16 +57,8 @@ class FieldType(Enum):
             case self.SCALAR: return 1
             case self.VECTOR_2D: return 2
             case self.VECTOR_3D: return 3
-            case self.MATRIX: raise AttributeError(f"Field type is not serializable: {self.name}")
-            case self.OBJECT: raise AttributeError(f"Field type is not serializable: {self.name}")
-
-
-class FieldNullError(ValueError):
-    pass
-
-
-class FieldsInconsistentError(AssertionError):
-    pass
+            case self.MATRIX: raise FieldTypeError.lacks_property(self, "serializable")
+            case self.OBJECT: raise FieldTypeError.lacks_property(self, "serializable")
 
 
 class FieldLike[VALUE_TYPE](ABC):
@@ -78,7 +75,7 @@ class FieldLike[VALUE_TYPE](ABC):
     @nullable.setter
     def nullable(self, value: bool) -> None:
         if not value and self.has_null_value:
-            raise FieldNullError(f"Field has at least one null value.")
+            raise FieldValueError.null_value()
         else:
             self._nullable = value
 
@@ -113,34 +110,40 @@ class FieldLike[VALUE_TYPE](ABC):
     @property
     def max_value(self) -> VALUE_TYPE:
         if not self.field_type.comparable:
-            raise AttributeError(f"Field type is not comparable: {self.field_type.name}")
+            raise FieldTypeError.lacks_property(self.field_type, "comparable")
         else:
             return max(self.values)
 
     @property
     def min_value(self) -> VALUE_TYPE:
         if not self.field_type.comparable:
-            raise AttributeError(f"Field type is not comparable: {self.field_type.name}")
+            raise FieldTypeError.lacks_property(self.field_type, "comparable")
         else:
             return min(self.values)
 
-    def serialize_value_at(self, x: int, y: int, null_serialization: str = "") -> list[str]:
+    def serialize_value_at(self, x: int, y: int, null_serialization: str = "", sig_figs: int = None) -> list[str]:
+        def format(value: VALUE_TYPE) -> str:
+            if sig_figs is not None and self.field_type.roundable:
+                return format_sig_figs(value, sig_figs)
+            else:
+                return str(value)
+
         if not self.field_type.serializable:
-            raise AttributeError(f"Field type is not serializable: {self.field_type.name}")
+            raise FieldTypeError.lacks_property(self.field_type, "serializable")
         else:
             if self.field_type.size == 1:
                 try:
-                    return [str(self.get_value_at(x, y))]
+                    return [format(self.get_value_at(x, y))]
                 except FieldNullError:
                     return [null_serialization]
             else:
                 try:
-                    return [str(element) for element in self.get_value_at(x, y)]
+                    return [format(element) for element in self.get_value_at(x, y)]
                 except FieldNullError:
                     return [null_serialization for _ in range(self.field_type.size)]
 
     @classmethod
-    def get_params(cls, fields: list[Self]) -> tuple[int, int, bool]:
+    def get_combined_params(cls, fields: list[Self]) -> tuple[int, int, bool]:
         if len(fields) == 0:
             raise ValueError("List must contain at least one field.")
 
@@ -149,10 +152,10 @@ class FieldLike[VALUE_TYPE](ABC):
 
         for field in fields:
             if field.width != width:
-                raise FieldsInconsistentError(f"Widths {field.width} and {width} of supplied fields do not match.")
+                raise FieldSizeMismatchError.width((field.width, width))
 
             if field.height != height:
-                raise FieldsInconsistentError(f"Heights {field.height} and {height} of supplied fields do not match.")
+                raise FieldSizeMismatchError.height((field.height, height))
 
         nullable = any(field.nullable for field in fields)
         return width, height, nullable
@@ -197,7 +200,7 @@ class Field[VALUE_TYPE](FieldLike):
                     raise IndexError(f"Coordinate ({x}, {y}) is out of bounds of provided value array.")
 
                 if not nullable and value is None:
-                    raise ValueError(f"Provided value is None but field is not nullable.")
+                    raise FieldValueError.null_value()
                 else:
                     field.set_value_at(x, y, value)
 
@@ -206,18 +209,18 @@ class Field[VALUE_TYPE](FieldLike):
 
     def get_value_at(self, x: int, y: int) -> VALUE_TYPE:
         if not 0 <= x < self.width or not 0 <= y < self.height:
-            raise IndexError(f"Coordinate ({x}, {y}) is out of bounds of field.")
+            raise FieldLookupError(x, y)
         else:
             value = self._values[y][x]
 
             if value is None:
-                raise FieldNullError(f"Field is null at coordinate ({x}, {y}).")
+                raise FieldNullError(x, y)
             else:
                 return value
 
     def set_value_at(self, x: int, y: int, value: VALUE_TYPE | None) -> None:
         if not 0 <= x < self.width or not 0 <= y < self.height:
-            raise IndexError(f"Coordinate ({x}, {y}) is out of bounds of field.")
+            raise FieldLookupError(x, y)
         else:
             self._assert_value_permitted(value)
             self._values[y][x] = value
@@ -227,18 +230,23 @@ class Field[VALUE_TYPE](FieldLike):
             if self.nullable:
                 return
             else:
-                raise ValueError(f"Provided value is None but field is not nullable.")
+                raise FieldValueError.null_value()
 
         if type(value) is not self.field_type.type:
-            raise ValueError(f"Type of provided value {type(value)} does not match field type {self.field_type.type}.")
+            raise FieldValueError.wrong_type(value, self.field_type)
 
         if self.field_type.type is tuple and len(value) != self.field_type.size:
-            raise ValueError(f"Length of provided tuple value is {len(value)} and does not match field type size {self.field_type.size}.")
+            raise FieldValueError.wrong_length(value, self.field_type)
 
 
 class DiscreteFieldMapper[VALUE_TYPE](FieldLike):
     def __init__(self, field_type: FieldType, discrete_field: FieldLike[int], mapping: dict[int, VALUE_TYPE]):
         super().__init__(discrete_field.width, discrete_field.height, field_type, discrete_field.nullable)
+
+        for value in discrete_field.values:
+            if value not in mapping:
+                FieldValueError.not_in_mapping(value)
+
         self._mapping = mapping
         self._field = discrete_field
 
@@ -252,7 +260,7 @@ class DiscreteFieldMapper[VALUE_TYPE](FieldLike):
                 self._field.set_value_at(x, y, key)
                 return
 
-        raise KeyError(f"Value is not within permitted values of discrete-valued field: {value}")
+        raise FieldValueError.not_in_mapping(value)
 
 
 class FunctionalFieldMapper[INPUT_TYPE, OUTPUT_TYPE](FieldLike):
@@ -273,7 +281,7 @@ class FunctionalFieldMapper[INPUT_TYPE, OUTPUT_TYPE](FieldLike):
 
     def set_value_at(self, x: int, y: int, value: OUTPUT_TYPE) -> None:
         if self._reverse_mapping is None:
-            raise AttributeError("Functional field mapper does not have a reverse mapping defined.")
+            raise FieldValueError.no_reverse_mapping(value)
         else:
             self._field.set_value_at(x, y, self._reverse_mapping(value))
 
@@ -293,7 +301,7 @@ class MapField(Field):
         super()._assert_value_permitted(value)
 
         if not all(0.0 <= item <= 1.0 for item in value):
-            raise ValueError(f"Map field may only take tuples of values between 0.0 and 1.0. Provided tuple: {value}")
+            raise FieldValueError.not_valid_map_value(value)
 
     def to_image(self) -> Image:
         size = self.upscale_factor * self.width, self.upscale_factor * self.height
@@ -314,3 +322,120 @@ class MapField(Field):
                         image.putpixel(coordinates, pixel)
 
         return image
+
+
+class FieldLookupError(IndexError):
+    def __init__(self, x: int, y: int):
+        """
+        Exception raised when attempting to access out-of-bounds coordinates of a field.
+        :param x: The x-coordinate.
+        :param y: The y-coordinate.
+        """
+        self.x = x
+        self.y = y
+        self.message = f"Coordinates are out of bound of field: ({self.x}, {self.y})"
+        super().__init__(self.message)
+
+
+class FieldNullError(ValueError):
+    def __init__(self, x: int, y: int):
+        """
+        Exception raised when a null value in a nullable field is accessed.
+        :param x: The x-coordinate of the null value.
+        :param y: The y-coordinate of the null value.
+        """
+        self.x = x
+        self.y = y
+        self.message = f"Field has a null value at coordinate ({self.x}, {self.y})."
+        super().__init__(self.message)
+
+
+class FieldTypeError(TypeError):
+    def __init__(self, field_type: FieldType, reason: str):
+        """
+        Exception raised when attempting to perform an operation on a field with an inappropriate type.
+        :param field_type: The field type.
+        :param reason: The reason the field type is inappropriate.
+        """
+        self.field_type = field_type
+        self.reason = reason
+        self.message = f"{self.reason}: {self.field_type.value}"
+        super().__init__(self.message)
+
+    @classmethod
+    def wrong_type(cls, field_type: FieldType, correct_type: FieldType) -> Self:
+        reason = f"{correct_type.value.capitalize()} field required but a field of the wrong type was provided"
+        return FieldTypeError(field_type, reason)
+
+    @classmethod
+    def lacks_property(cls, field_type: FieldType, property: str) -> Self:
+        reason = f"Field type is not {property}"
+        return FieldTypeError(field_type, reason)
+
+
+class FieldValueError(ValueError):
+    def __init__(self, value: Any, reason: str):
+        """
+        Exception raised when attempting to write an inappropriate value to a field.
+        :param value: The value.
+        :param reason: The reason the value is inappropriate.
+        """
+        self.value = value
+        self.reason = reason
+        self.message = f"{self.reason}: {self.value}"
+        super().__init__(self.message)
+
+    @classmethod
+    def null_value(cls) -> Self:
+        reason = "Field is not nullable but a null value was provided"
+        return FieldValueError(None, reason)
+
+    @classmethod
+    def wrong_type(cls, value: Any, field_type: FieldType) -> Self:
+        reason = f"Field is of type {field_type.type.__name__} but a value of type {type(value).__name__} was provided"
+        return FieldValueError(value, reason)
+
+    @classmethod
+    def wrong_length(cls, value: tuple, field_type: FieldType) -> Self:
+        reason = f"Tuple field has size {field_type.size} but a tuple value of length {len(value)} was provided"
+        return FieldValueError(value, reason)
+
+    @classmethod
+    def not_in_mapping(cls, value: int) -> Self:
+        reason = f"Value is not within provided mapping for discrete field mapper"
+        return FieldValueError(value, reason)
+
+    @classmethod
+    def no_reverse_mapping(cls, value: Any) -> Self:
+        reason = "Cannot set value as functional field mapper does not have reverse mapping defined"
+        return FieldValueError(value, reason)
+
+    @classmethod
+    def not_valid_map_value(cls, value: tuple[float, float, float]) -> Self:
+        reason = "Map field may only take tuples of values between 0.0 and 1.0 but an invalid value was provided"
+        return FieldValueError(value, reason)
+
+
+class FieldSizeMismatchError(ValueError):
+    class Dimension(Enum):
+        WIDTH = "width"
+        HEIGHT = "height"
+
+    def __init__(self, dimension: Dimension, values: tuple[int, int]):
+        """
+        Exception raised when attempting to derive a new field from input fields with mismatched sizes.
+        :param dimension: Dimension of mismatch.
+        :param values: Mismatched values.
+        """
+        self.dimension = dimension
+        self.values = values
+        self.message = f"{self.dimension.name.title()}s {self.values[0]} and {self.values[1]} of supplied fields do not match."
+        super().__init__(self.message)
+
+    @classmethod
+    def width(cls, values: tuple[int, int]) -> Self:
+        return FieldSizeMismatchError(FieldSizeMismatchError.Dimension.WIDTH, values)
+
+    @classmethod
+    def height(cls, values: tuple[int, int]) -> Self:
+        return FieldSizeMismatchError(FieldSizeMismatchError.Dimension.HEIGHT, values)
