@@ -1,29 +1,18 @@
 # -*- coding: utf-8 -*-
 
-from os import listdir
+from datetime import datetime
 from tests.test_analysis import test_analysis
 from src.utilities.config import Config
+from src.utilities.utils import format_time_interval
 
 
-DATA_DIR = "test/data"
-ANALYSIS_DIR = "test/analyses"
-MAP_DIR = "test/maps"
-CONFIG_DIR = "test/config"
-
-
-def test() -> None:
-    data_refs = [path.split("/")[-1].split(".")[0] for path in listdir(DATA_DIR)]
-
-    for data_ref in data_refs:
-        data_path = f"{DATA_DIR}/{data_ref}.csv"
-        analysis_path = f"{ANALYSIS_DIR}/{data_ref}.csv"
-        map_dir = f"{MAP_DIR}/{data_ref}"
-        config = Config(f"{CONFIG_DIR}/{data_ref}.ini")
-        test_analysis(data_path, analysis_path, map_dir, config)
-
-    print()
-    print("All tests complete.")
-
-
-if __name__ == "__main__":
-    test()
+def test(data_ref: str, config: Config) -> None:
+    data_path = f"{config.test.data_dir}/{data_ref}.csv"
+    analysis_path = f"{config.test.analysis_dir}/{data_ref}.csv"
+    map_dir = f"{config.test.map_dir}/{data_ref}"
+    test_config = Config(f"{config.test.config_dir}/{data_ref}.ini")
+    print(f"Running analysis test for {data_ref}.")
+    start_time = datetime.now()
+    test_analysis(data_path, analysis_path, map_dir, test_config)
+    time_taken = (datetime.now() - start_time).total_seconds()
+    print(f"Test completed in: {format_time_interval(time_taken)}")

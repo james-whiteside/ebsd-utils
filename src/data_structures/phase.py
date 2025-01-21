@@ -173,7 +173,7 @@ class Phase:
 
     @dataclass
     class SupplementaryData:
-        atomic_number: int
+        atomic_number: float
         atomic_weight: float
         density_cgs: float
         vibration_amplitude_nm: float
