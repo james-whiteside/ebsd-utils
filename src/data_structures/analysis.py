@@ -28,6 +28,7 @@ class Analysis:
         config: Config,
         reduction_factor: int = 0,
         pixel_size: float = None,
+        local_unindexed_id: int = None,
     ):
         if pixel_size is None:
             pixel_size = config.data.pixel_size
@@ -35,6 +36,7 @@ class Analysis:
         self.params = ScanParams(data_ref, width, height, phases, pixel_size, reduction_factor)
         self.config = config
         self._random_source = Random(config.analysis.random_seed)
+        self.local_unindexed_id = local_unindexed_id
 
         self.field = FieldManager(
             self.params,
@@ -78,6 +80,7 @@ class Analysis:
         reduction_factor = self.params.reduction_factor + 1
         pixel_size = self.params.pixel_size * 2
         config = self.config
+        local_unindexed_id = self.local_unindexed_id
 
         phase_id_values: list[list[int | None]] = list()
         euler_angle_values: list[list[tuple[float, float, float] | None]] = list()
@@ -157,6 +160,7 @@ class Analysis:
             config=config,
             reduction_factor=reduction_factor,
             pixel_size=pixel_size,
+            local_unindexed_id=local_unindexed_id,
         )
 
         return analysis

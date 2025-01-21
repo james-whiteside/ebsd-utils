@@ -128,7 +128,7 @@ class BravaisLattice(Enum):
 
 
 class Phase:
-    UNINDEXED_ID = 0
+    GLOBAL_UNINDEXED_ID = 0
 
     def __init__(
         self,

@@ -20,6 +20,7 @@ def load_from_data(data_path: str, config: Config, data_ref: str = None) -> Anal
     with open(data_path, "r", encoding="utf-8") as file:
         phases: dict[int, Phase] = dict()
         file.readline()
+        local_unindexed_id = None
 
         while True:
             line = file.readline().rstrip("\n").split(",")
@@ -30,7 +31,7 @@ def load_from_data(data_path: str, config: Config, data_ref: str = None) -> Anal
             local_id = int(line[0])
             global_id = int(line[2])
 
-            if global_id == Phase.UNINDEXED_ID:
+            if global_id == Phase.GLOBAL_UNINDEXED_ID:
                 local_unindexed_id = local_id
                 continue
 
@@ -78,6 +79,7 @@ def load_from_data(data_path: str, config: Config, data_ref: str = None) -> Anal
         pattern_quality_values=pattern_quality_values,
         index_quality_values=index_quality_values,
         config=config,
+        local_unindexed_id=local_unindexed_id,
     )
 
 
@@ -104,6 +106,9 @@ def _analysis_rows(analysis: Analysis) -> Iterator[str]:
 
 def _analysis_metadata_rows(analysis: Analysis) -> Iterator[str]:
     yield "Phases:"
+
+    if analysis.field.phase.has_null_value:
+        yield f"{analysis.local_unindexed_id},Not indexed,{Phase.GLOBAL_UNINDEXED_ID}"
 
     for local_id, phase in analysis.params.phases.items():
         yield f"{local_id},{phase.name},{phase.global_id}"
@@ -202,7 +207,7 @@ def _analysis_data_rows(analysis: Analysis) -> Iterator[str]:
         for x in range(analysis.params.width):
             columns = list()
             columns += [str(x), str(y)]
-            columns += analysis.field._phase_id.serialize_value_at(x, y, null_serialization=str(Phase.UNINDEXED_ID))
+            columns += analysis.field._phase_id.serialize_value_at(x, y, null_serialization=str(analysis.local_unindexed_id))
             columns += analysis.field.euler_angles_deg.serialize_value_at(x, y, sig_figs=6)
             columns += analysis.field.index_quality.serialize_value_at(x, y, sig_figs=6)
             columns += analysis.field.pattern_quality.serialize_value_at(x, y, sig_figs=6)
