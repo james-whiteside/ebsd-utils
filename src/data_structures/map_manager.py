@@ -22,7 +22,7 @@ class MapManager:
     @property
     def phase(self) -> Map:
         sorted_phases = sorted(self._field_manager._scan_params.phases.items(), key=lambda item: item[1].global_id)
-        sorted_local_ids = [local_id for local_id, phase in sorted_phases if phase.global_id != Phase.UNINDEXED_ID]
+        sorted_local_ids = [local_id for local_id, phase in sorted_phases]
         mapping = {local_id: index for index, local_id in enumerate(sorted_local_ids)}
         value_field = DiscreteFieldMapper(FieldType.DISCRETE, self._field_manager._phase_id, mapping)
 
