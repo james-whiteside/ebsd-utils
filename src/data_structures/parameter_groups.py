@@ -158,3 +158,17 @@ class ClusteringParams:
     @property
     def neighbourhood_radius_rad(self) -> float:
         return radians(self.neighbourhood_radius_deg)
+
+
+class TestParams:
+    def __init__(
+        self,
+        data_dir: str,
+        analysis_dir: str,
+        map_dir: str,
+        config_dir: str,
+    ):
+        self.data_dir = data_dir
+        self.analysis_dir = analysis_dir
+        self.map_dir = map_dir
+        self.config_dir = config_dir

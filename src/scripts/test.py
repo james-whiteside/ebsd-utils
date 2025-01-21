@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from os import listdir
-from src.scripts.test_analysis import test_analysis
+from tests.test_analysis import test_analysis
 from src.utilities.config import Config
 
 
