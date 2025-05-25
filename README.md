@@ -40,7 +40,7 @@ This option adds a column of logarithmic GND densities to the analysis and gener
 
 #### Channelling fractions
 
-This option adds a column of ion channelling fractions to the analysis and generates a channelling fraction map. Channelling fractions are generated using a Monte Carlo simulation [[2]](#references). Original simulation code written by Dr G. Hobler. See the associated [config options](#channelling-fraction-options) for parameters.
+This option adds a column of ion channelling fractions to the analysis and generates a channelling fraction map. Channelling fractions are derived from a model calibrated with a Monte Carlo simulation [[2]](#references). Original simulation code written by Dr G. Hobler. See the associated [config options](#channelling-fraction-options) for parameters.
 
 #### Orientation clusters
 
