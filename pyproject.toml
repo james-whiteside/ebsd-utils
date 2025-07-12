@@ -30,6 +30,7 @@ dependencies = [
     "scipy",
     "numba",
     "pillow",
+    "pyyaml",
 ]
 
 [project.urls]
