@@ -204,17 +204,17 @@ Options specifying location of input data for tests.
 
 ## Contributors
 
-- Dr O.J. Whiteside, University of Surrey: primary author, repository owner.
+- Dr J. Whiteside, University of Surrey: primary author, repository owner.
 - Dr G. Hobler, Vienna University of Technology: author of code to calculate channelling fractions.
 
 ## Related publications
 
-- O.J. Whiteside, “Studying Induced Crystal Structure Changes by Electron Backscatter Diffraction”, PhD thesis, University of Surrey, Guildford, UK, 2024, DOI: [10.15126/thesis.901043](https://doi.org/10.15126/thesis.901043).
+- J. Whiteside, “Studying Induced Crystal Structure Changes by Electron Backscatter Diffraction”, PhD thesis, University of Surrey, Guildford, UK, 2024, DOI: [10.15126/thesis.901043](https://doi.org/10.15126/thesis.901043).
 - J. Whiteside, M.J. Whiting, D.C. Cox, G. Hobler, “On the orientation dependence of ion-induced phase transformations in austenitic stainless steel”, _Journal of Materials Science_, vol. 61, pp. 8955–8967, 2026, DOI: [10.1007/s10853-026-12313-x](https://doi.org/10.1007/s10853-026-12313-x).
 
 ## Recommended citation format
 
-- O.J. Whiteside, G. Hobler, _Utilities for processing EBSD data_, online, URI: https://github.com/james-whiteside/ebsd-utils.
+- J. Whiteside, G. Hobler, _Utilities for processing EBSD data_, online, URI: https://github.com/james-whiteside/ebsd-utils.
 
 ## References
 
