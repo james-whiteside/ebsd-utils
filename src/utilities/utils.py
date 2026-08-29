@@ -8,7 +8,7 @@ from sys import exit
 from os.path import getsize
 from math import floor, log10, degrees, radians
 from copy import copy
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from time import sleep
 from typing import Any, Type
 
@@ -41,14 +41,12 @@ def tuple_radians(angles: tuple[float, float, float]) -> tuple[float, float, flo
     return float_radians(angles[0]), float_radians(angles[1]), float_radians(angles[2])
 
 
-def highest_common_factor(numbers: list[int]) -> int:
+def highest_common_factor(numbers: Sequence[int]) -> int:
     """
     Calculates the highest common factor of a list of integers.
     :param numbers: The list of integers.
     :return: The highest common factor.
     """
-
-    numbers = copy(numbers)
 
     if len(numbers) == 2:
         x = numbers[0]
@@ -59,8 +57,7 @@ def highest_common_factor(numbers: list[int]) -> int:
 
         return x
     else:
-        z = numbers.pop()
-        return highest_common_factor(list((z, highest_common_factor(numbers))))
+        return highest_common_factor((numbers[0], highest_common_factor(numbers[1:])))
 
 
 def format_sig_figs(number: int | float, sig_figs: int) -> str:
