@@ -1,0 +1,16 @@
+Category:
+twin
+Name,Lattice type,h,k,l
+twin-001,cI,0,0,1
+twin-011,cI,0,1,1
+twin-111,cI,1,1,1
+twin-012,cI,0,1,2
+twin-112,cI,1,1,2
+twin-122,cI,1,2,2
+twin-013,cI,0,1,3
+twin-113,cI,1,1,3
+twin-023,cI,0,2,3
+twin-123,cI,1,2,3
+twin-223,cI,2,2,3
+twin-133,cI,1,3,3
+twin-233,cI,2,3,3
