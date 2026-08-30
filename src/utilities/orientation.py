@@ -2,12 +2,11 @@
 import itertools
 from itertools import permutations
 from math import sqrt
-from typing import Literal
 
 from numpy import ndarray, array, dot, cross, transpose
 from numpy.linalg import inv, norm
 
-from src.data_structures.phase import BravaisLattice
+from src.data_structures.orientation_relationship import HeterophaseOrientationRelationship
 from src.utilities.utils import highest_common_factor
 
 
@@ -20,74 +19,6 @@ def numpy_cross(a: ndarray, b: ndarray) -> ndarray:
     """
 
     return cross(a, b)
-
-
-Parity = Literal[-1, 1]
-
-
-class OrientationRelationship:
-    def __init__(
-            self,
-            lattice_type_1: BravaisLattice,
-            lattice_type_2: BravaisLattice,
-            vector_pair_1: tuple[tuple[int, int, int], tuple[int, int, int]],
-            vector_pair_2: tuple[tuple[int, int, int], tuple[int, int, int]],
-    ):
-        self.lattice_type_1 = lattice_type_1
-        self.lattice_type_2 = lattice_type_2
-        self.vector_pair_1 = vector_pair_1
-        self.vector_pair_2 = vector_pair_2
-
-
-def reflect_vectors(
-        orientation_relationship: OrientationRelationship,
-        parities: tuple[Parity, Parity, Parity, Parity]
-) -> OrientationRelationship:
-    vector_pair_1 = (
-        (
-            parities[0] * orientation_relationship.vector_pair_1[0][0],
-            parities[0] * orientation_relationship.vector_pair_1[0][1],
-            parities[0] * orientation_relationship.vector_pair_1[0][2],
-        ),
-        (
-            parities[1] * orientation_relationship.vector_pair_1[1][0],
-            parities[1] * orientation_relationship.vector_pair_1[1][1],
-            parities[1] * orientation_relationship.vector_pair_1[1][2],
-        ),
-    )
-
-    vector_pair_2 = (
-        (
-            parities[2] * orientation_relationship.vector_pair_2[0][0],
-            parities[2] * orientation_relationship.vector_pair_2[0][1],
-            parities[2] * orientation_relationship.vector_pair_2[0][2],
-        ),
-        (
-            parities[3] * orientation_relationship.vector_pair_2[1][0],
-            parities[3] * orientation_relationship.vector_pair_2[1][1],
-            parities[3] * orientation_relationship.vector_pair_2[1][2],
-        ),
-    )
-
-    return OrientationRelationship(
-        orientation_relationship.lattice_type_1,
-        orientation_relationship.lattice_type_2,
-        vector_pair_1,
-        vector_pair_2,
-    )
-
-
-def get_relationship_family(orientation_relationship: OrientationRelationship) -> list[OrientationRelationship]:
-    relationship_family: list[OrientationRelationship] = list()
-
-    parity_sets = sorted(set(itertools.permutations((1, 1, 1, 1, -1, -1, -1, -1), 4)), reverse=True)
-    assert (len(parity_sets) == 16)
-
-    for parity_set in parity_sets:
-        reflected_relationship = reflect_vectors(orientation_relationship, parity_set)
-        relationship_family.append(reflected_relationship)
-
-    return relationship_family
 
 
 def get_plane_family(indices: tuple[int, int, int]) -> list[tuple[int, int, int]]:
@@ -135,6 +66,58 @@ def get_plane_family(indices: tuple[int, int, int]) -> list[tuple[int, int, int]
         plane_family.append(plane)
 
     return plane_family
+
+
+def get_relationship_family(orientation_relationship: HeterophaseOrientationRelationship) -> list[HeterophaseOrientationRelationship]:
+    """
+    For a given orientation relationship, computes the family of equivalent orientation relationships by reflection.
+    :param orientation_relationship: The orientation relationship.
+    :return: The list of orientation relationships in the family.
+    """
+
+    relationship_family: list[HeterophaseOrientationRelationship] = list()
+
+    parity_sets = sorted(set(itertools.permutations((1, 1, 1, 1, -1, -1, -1, -1), 4)), reverse=True)
+    assert (len(parity_sets) == 16)
+
+    for parity_set in parity_sets:
+        reflected_vector_pair_1 = (
+            (
+                parity_set[0] * orientation_relationship.vector_pair_1[0][0],
+                parity_set[0] * orientation_relationship.vector_pair_1[0][1],
+                parity_set[0] * orientation_relationship.vector_pair_1[0][2],
+            ),
+            (
+                parity_set[1] * orientation_relationship.vector_pair_1[1][0],
+                parity_set[1] * orientation_relationship.vector_pair_1[1][1],
+                parity_set[1] * orientation_relationship.vector_pair_1[1][2],
+            ),
+        )
+
+        reflected_vector_pair_2 = (
+            (
+                parity_set[2] * orientation_relationship.vector_pair_2[0][0],
+                parity_set[2] * orientation_relationship.vector_pair_2[0][1],
+                parity_set[2] * orientation_relationship.vector_pair_2[0][2],
+            ),
+            (
+                parity_set[3] * orientation_relationship.vector_pair_2[1][0],
+                parity_set[3] * orientation_relationship.vector_pair_2[1][1],
+                parity_set[3] * orientation_relationship.vector_pair_2[1][2],
+            ),
+        )
+
+        reflected_relationship = HeterophaseOrientationRelationship(
+            orientation_relationship.id,
+            orientation_relationship.lattice_type_1,
+            orientation_relationship.lattice_type_2,
+            reflected_vector_pair_1,
+            reflected_vector_pair_2,
+        )
+
+        relationship_family.append(reflected_relationship)
+
+    return relationship_family
 
 
 def get_twin_matrix(indices: tuple[int, int, int]) -> ndarray:
