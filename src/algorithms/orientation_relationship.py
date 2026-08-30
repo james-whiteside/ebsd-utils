@@ -5,10 +5,14 @@ import numpy
 from numpy import ndarray
 
 from src.data_structures.analysis import Analysis
-from src.data_structures.orientation_relationship import OrientationRelationshipMatch, OrientationRelationshipCategory, \
-    HeterophaseOrientationRelationship, TwinOrientationRelationship, OrientationRelationship
+from src.data_structures.orientation_relationship import (
+    OrientationRelationshipCategory,
+    OrientationRelationship,
+    TwinOrientationRelationship,
+    HeterophaseOrientationRelationship,
+    OrientationRelationshipMatch,
+)
 from src.utilities.geometry import rotation_angle, misrotation_matrix
-from src.utilities.orientation import get_relationship_matrix, get_plane_family, get_twin_matrix, get_relationship_family
 
 
 def get_matches(analysis: Analysis, orientation_relationships: list[OrientationRelationship]) -> list[OrientationRelationshipMatch]:
@@ -32,32 +36,22 @@ def get_matches(analysis: Analysis, orientation_relationships: list[OrientationR
                 match variant:
                     case TwinOrientationRelationship():
                         if cluster_1_lattice_type == variant.lattice_type and cluster_2_lattice_type == variant.lattice_type and cluster_1_id < cluster_2_id:
-                            family = get_plane_family(variant.reflection_plane)
                             theta = 2 * pi
 
-                            for plane in family:
-                                orientation_relationship = get_twin_matrix(plane)
-                                misrotation = misrotation_matrix(numpy.dot(orientation_relationship, cluster_1_orientation), cluster_2_orientation)
+                            for relationship in variant.family:
+                                relationship_matrix = relationship.get_matrix()
+                                misrotation = misrotation_matrix(numpy.dot(relationship_matrix, cluster_1_orientation), cluster_2_orientation)
                                 theta = min(rotation_angle(misrotation), theta)
 
                             match = OrientationRelationshipMatch(variant.id, OrientationRelationshipCategory.TWIN, cluster_1_id, cluster_2_id, theta)
                             matches.append(match)
                     case HeterophaseOrientationRelationship():
                         if cluster_1_lattice_type == variant.lattice_type_1 and cluster_2_lattice_type == variant.lattice_type_2:
-                            family = get_relationship_family(variant)
                             theta = 2 * pi
 
-                            for relationship in family:
-                                orientation_relationship = get_relationship_matrix(
-                                    relationship.vector_pair_1[0],
-                                    relationship.vector_pair_1[1],
-                                    relationship.vector_pair_2[0],
-                                    relationship.vector_pair_2[1],
-                                    cluster_1_lattice_constants,
-                                    cluster_2_lattice_constants
-                                )
-
-                                misrotation = misrotation_matrix(numpy.dot(orientation_relationship, cluster_1_orientation), cluster_2_orientation)
+                            for relationship in variant.family:
+                                relationship_matrix = relationship.get_matrix(cluster_1_lattice_constants, cluster_2_lattice_constants)
+                                misrotation = misrotation_matrix(numpy.dot(relationship_matrix, cluster_1_orientation), cluster_2_orientation)
                                 theta = min(rotation_angle(misrotation), theta)
 
                             match = OrientationRelationshipMatch(variant.id, OrientationRelationshipCategory.HETEROPHASE, cluster_1_id, cluster_2_id, theta)

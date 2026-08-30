@@ -1,12 +1,18 @@
 # -*- coding: utf-8 -*-
 
 from collections.abc import Iterator
-from os import makedirs
+from os import makedirs, listdir
 from typing import Any
 from json import dump as dump_json, load as load_json
 from xml.etree import ElementTree
 from src.data_structures.field import FieldNullError
 from src.data_structures.map import Map
+from src.data_structures.orientation_relationship import (
+    OrientationRelationshipCategory,
+    OrientationRelationship,
+    TwinOrientationRelationship,
+    HeterophaseOrientationRelationship,
+)
 from src.data_structures.phase import Phase, BravaisLattice, PhaseMissingError
 from src.data_structures.analysis import Analysis
 from src.utilities.config import Config
@@ -329,3 +335,36 @@ def load_phase_database_entry(global_id: int, path: str) -> Phase.DatabaseEntry:
             )
 
     raise PhaseMissingError(global_id)
+
+
+def load_orientation_relationships(dir: str) -> list[OrientationRelationship]:
+    makedirs(dir, exist_ok=True)
+    relationships: list[OrientationRelationship] = list()
+
+    for path in listdir(dir):
+        with open(path, "r") as file:
+            file.readline()
+            category = OrientationRelationshipCategory(file.readline())
+            file.readline()
+
+            match category:
+                case OrientationRelationshipCategory.TWIN:
+                    for line in file:
+                        data = line.split(",")
+                        id = data[0]
+                        lattice_type = BravaisLattice(data[1])
+                        plane = int(data[2]), int(data[3]), int(data[4])
+                        relationship = TwinOrientationRelationship(id, lattice_type, plane)
+                        relationships.append(relationship)
+                case OrientationRelationshipCategory.HETEROPHASE:
+                    for line in file:
+                        data = line.split(",")
+                        id = data[0]
+                        lattice_type_1 = BravaisLattice(data[1])
+                        lattice_type_2 = BravaisLattice(data[2])
+                        vector_pair_1 = (int(data[3]), int(data[4]), int(data[5])), (int(data[6]), int(data[7]), int(data[8]))
+                        vector_pair_2 = (int(data[9]), int(data[10]), int(data[11])), (int(data[12]), int(data[13]), int(data[14]))
+                        relationship = HeterophaseOrientationRelationship(id, lattice_type_1, lattice_type_2, vector_pair_1, vector_pair_2)
+                        relationships.append(relationship)
+
+    return relationships

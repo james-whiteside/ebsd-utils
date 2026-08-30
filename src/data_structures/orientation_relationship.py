@@ -1,9 +1,14 @@
 # -*- coding: utf-8 -*-
-from abc import ABC
+from abc import ABC, abstractmethod
 from enum import Enum
+from itertools import permutations
 from math import cos
+from typing import Self
 
-from src.data_structures.phase import BravaisLattice
+from numpy import ndarray
+
+from src.data_structures.phase import BravaisLattice, CrystalFamily, SymmetryNotImplementedError
+from src.utilities.orientation import get_plane_family, get_cubic_twin_relationship_matrix, get_heterophase_relationship_matrix
 
 
 class OrientationRelationshipCategory(Enum):
@@ -16,6 +21,11 @@ class OrientationRelationship(ABC):
         self.id = id
         self.category = category
 
+    @property
+    @abstractmethod
+    def family(self) -> list[Self]:
+        ...
+
 
 class TwinOrientationRelationship(OrientationRelationship):
     def __init__(
@@ -27,6 +37,17 @@ class TwinOrientationRelationship(OrientationRelationship):
         super().__init__(id, OrientationRelationshipCategory.TWIN)
         self.lattice_type = lattice_type
         self.reflection_plane = reflection_plane
+
+    @property
+    def family(self) -> list[Self]:
+        plane_family = get_plane_family(self.reflection_plane)
+        return [TwinOrientationRelationship(self.id, self.lattice_type, plane) for plane in plane_family]
+
+    def get_matrix(self) -> ndarray:
+        match self.lattice_type.family:
+            case CrystalFamily.C: return get_cubic_twin_relationship_matrix(self.reflection_plane)
+            case _: raise SymmetryNotImplementedError(self.lattice_type.family)
+
 
 
 class HeterophaseOrientationRelationship(OrientationRelationship):
@@ -43,6 +64,62 @@ class HeterophaseOrientationRelationship(OrientationRelationship):
         self.lattice_type_2 = lattice_type_2
         self.vector_pair_1 = vector_pair_1
         self.vector_pair_2 = vector_pair_2
+
+    @property
+    def family(self) -> list[Self]:
+        family: list[HeterophaseOrientationRelationship] = list()
+
+        parity_sets = sorted(set(permutations((1, 1, 1, 1, -1, -1, -1, -1), 4)), reverse=True)
+        assert (len(parity_sets) == 16)
+
+        for parity_set in parity_sets:
+            reflected_vector_pair_1 = (
+                (
+                    parity_set[0] * self.vector_pair_1[0][0],
+                    parity_set[0] * self.vector_pair_1[0][1],
+                    parity_set[0] * self.vector_pair_1[0][2],
+                ),
+                (
+                    parity_set[1] * self.vector_pair_1[1][0],
+                    parity_set[1] * self.vector_pair_1[1][1],
+                    parity_set[1] * self.vector_pair_1[1][2],
+                ),
+            )
+
+            reflected_vector_pair_2 = (
+                (
+                    parity_set[2] * self.vector_pair_2[0][0],
+                    parity_set[2] * self.vector_pair_2[0][1],
+                    parity_set[2] * self.vector_pair_2[0][2],
+                ),
+                (
+                    parity_set[3] * self.vector_pair_2[1][0],
+                    parity_set[3] * self.vector_pair_2[1][1],
+                    parity_set[3] * self.vector_pair_2[1][2],
+                ),
+            )
+
+            reflected_relationship = HeterophaseOrientationRelationship(
+                self.id,
+                self.lattice_type_1,
+                self.lattice_type_2,
+                reflected_vector_pair_1,
+                reflected_vector_pair_2,
+            )
+
+            family.append(reflected_relationship)
+
+        return family
+
+    def get_matrix(self, lattice_constants_1: tuple[float, float, float], lattice_constants_2: tuple[float, float, float]) -> ndarray:
+        return get_heterophase_relationship_matrix(
+            self.vector_pair_1[0],
+            self.vector_pair_1[1],
+            self.vector_pair_2[0],
+            self.vector_pair_2[1],
+            lattice_constants_1,
+            lattice_constants_2,
+        )
 
 
 class OrientationRelationshipMatch:

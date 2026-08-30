@@ -1,24 +1,11 @@
 # -*- coding: utf-8 -*-
-import itertools
 from itertools import permutations
 from math import sqrt
 
 from numpy import ndarray, array, dot, cross, transpose
 from numpy.linalg import inv, norm
 
-from src.data_structures.orientation_relationship import HeterophaseOrientationRelationship
 from src.utilities.utils import highest_common_factor
-
-
-def numpy_cross(a: ndarray, b: ndarray) -> ndarray:
-    """
-    Wrapper to work around return type mislabeling bug in NumPy causing IDE errors.
-    :param a: First array.
-    :param b: Second array.
-    :return: Cross product of arrays.
-    """
-
-    return cross(a, b)
 
 
 def get_plane_family(indices: tuple[int, int, int]) -> list[tuple[int, int, int]]:
@@ -30,14 +17,10 @@ def get_plane_family(indices: tuple[int, int, int]) -> list[tuple[int, int, int]
 
     hcf = highest_common_factor(indices)
 
-    if hcf != 0:
-        reduced_indices = tuple(index // hcf for index in indices)
-    else:
-        reduced_indices = indices
-
+    if hcf != 0: reduced_indices = tuple(index // hcf for index in indices)
+    else: reduced_indices = indices
     index_permutations = sorted(list(set(permutations(reduced_indices))))
     index_parities = sorted(list(set(permutations((1, 1, 1, -1, -1, -1), 3))))
-
     planes = set()
 
     for permutation in index_permutations:
@@ -47,80 +30,21 @@ def get_plane_family(indices: tuple[int, int, int]) -> list[tuple[int, int, int]
     plane_family = list()
 
     for plane in sorted(list(planes)):
-        if plane in plane_family or -1 * plane in plane_family:
-            continue
-
+        if plane in plane_family or -1 * plane in plane_family: continue
         plane_parity = 0
 
         for i in range(3):
-            if plane[i] == 0:
-                continue
-            elif plane[i] > 0:
-                plane_parity += 1
-            elif plane[i] < 0:
-                plane_parity -= 1
+            if plane[i] == 0: continue
+            elif plane[i] > 0: plane_parity += 1
+            elif plane[i] < 0: plane_parity -= 1
 
-        if plane_parity < 0:
-            continue
-
+        if plane_parity < 0: continue
         plane_family.append(plane)
 
     return plane_family
 
 
-def get_relationship_family(orientation_relationship: HeterophaseOrientationRelationship) -> list[HeterophaseOrientationRelationship]:
-    """
-    For a given orientation relationship, computes the family of equivalent orientation relationships by reflection.
-    :param orientation_relationship: The orientation relationship.
-    :return: The list of orientation relationships in the family.
-    """
-
-    relationship_family: list[HeterophaseOrientationRelationship] = list()
-
-    parity_sets = sorted(set(itertools.permutations((1, 1, 1, 1, -1, -1, -1, -1), 4)), reverse=True)
-    assert (len(parity_sets) == 16)
-
-    for parity_set in parity_sets:
-        reflected_vector_pair_1 = (
-            (
-                parity_set[0] * orientation_relationship.vector_pair_1[0][0],
-                parity_set[0] * orientation_relationship.vector_pair_1[0][1],
-                parity_set[0] * orientation_relationship.vector_pair_1[0][2],
-            ),
-            (
-                parity_set[1] * orientation_relationship.vector_pair_1[1][0],
-                parity_set[1] * orientation_relationship.vector_pair_1[1][1],
-                parity_set[1] * orientation_relationship.vector_pair_1[1][2],
-            ),
-        )
-
-        reflected_vector_pair_2 = (
-            (
-                parity_set[2] * orientation_relationship.vector_pair_2[0][0],
-                parity_set[2] * orientation_relationship.vector_pair_2[0][1],
-                parity_set[2] * orientation_relationship.vector_pair_2[0][2],
-            ),
-            (
-                parity_set[3] * orientation_relationship.vector_pair_2[1][0],
-                parity_set[3] * orientation_relationship.vector_pair_2[1][1],
-                parity_set[3] * orientation_relationship.vector_pair_2[1][2],
-            ),
-        )
-
-        reflected_relationship = HeterophaseOrientationRelationship(
-            orientation_relationship.id,
-            orientation_relationship.lattice_type_1,
-            orientation_relationship.lattice_type_2,
-            reflected_vector_pair_1,
-            reflected_vector_pair_2,
-        )
-
-        relationship_family.append(reflected_relationship)
-
-    return relationship_family
-
-
-def get_twin_matrix(indices: tuple[int, int, int]) -> ndarray:
+def get_cubic_twin_relationship_matrix(indices: tuple[int, int, int]) -> ndarray:
     """
     Computes the rotation matrix for the homophase cubic orientation relationship described by a reflection in a plane.
     Solves Eqn. 4.30.
@@ -140,7 +64,7 @@ def get_twin_matrix(indices: tuple[int, int, int]) -> ndarray:
     return J
 
 
-def get_relationship_matrix(
+def get_heterophase_relationship_matrix(
         u1A: tuple[int, int, int],
         u1B: tuple[int, int, int],
         u2A: tuple[int, int, int],
@@ -165,8 +89,8 @@ def get_relationship_matrix(
     u1B = array(u1B)
     u2A = array(u2A)
     u2B = array(u2B)
-    u3A = array(int(element) for element in numpy_cross(array(u1A), array(u2A)))
-    u3B = array(int(element) for element in numpy_cross(array(u1B), array(u2B)))
+    u3A = array(int(element) for element in cross(array(u1A), array(u2A)))
+    u3B = array(int(element) for element in cross(array(u1B), array(u2B)))
 
     x = array([
         (a[0] * norm(u1A)) / (b[0] * norm(u1B)),
