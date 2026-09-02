@@ -89,8 +89,8 @@ def get_heterophase_relationship_matrix(
     u1B = array(u1B)
     u2A = array(u2A)
     u2B = array(u2B)
-    u3A = array(int(element) for element in cross(array(u1A), array(u2A)))
-    u3B = array(int(element) for element in cross(array(u1B), array(u2B)))
+    u3A = cross(array(u1A), array(u2A))
+    u3B = cross(array(u1B), array(u2B))
 
     x = array([
         (a[0] * norm(u1A)) / (b[0] * norm(u1B)),
