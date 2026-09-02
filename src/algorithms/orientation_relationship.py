@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from math import pi, degrees
+from math import pi
 
 import numpy
 from numpy import ndarray
