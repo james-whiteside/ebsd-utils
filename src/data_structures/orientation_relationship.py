@@ -2,7 +2,7 @@
 from abc import ABC, abstractmethod
 from enum import Enum
 from itertools import permutations
-from math import cos
+from math import cos, degrees
 from typing import Self
 
 from numpy import ndarray
@@ -150,6 +150,10 @@ class OrientationRelationshipMatch:
         self.misrotation = misrotation
 
     @property
+    def misrotation_deg(self) -> float:
+        return degrees(self.misrotation)
+
+    @property
     def alignment(self) -> float:
         return cos(self.misrotation)
 
@@ -160,7 +164,7 @@ class OrientationRelationshipMatch:
             else:
                 return str(value)
 
-        return [self.relationship_id, str(self.cluster_1_id), str(self.cluster_2_id), format(self.misrotation), format(self.alignment)]
+        return [self.relationship_id, str(self.cluster_1_id), str(self.cluster_2_id), format(self.misrotation_deg), format(self.alignment)]
 
 
 class OrientationRelationshipSummary:
@@ -188,5 +192,5 @@ class OrientationRelationshipSummary:
             else:
                 return str(value)
 
-        return [match.relationship_id, str(other_id), format(match.misrotation), format(match.alignment)]
+        return [match.relationship_id, str(other_id), format(match.misrotation_deg), format(match.alignment)]
 
