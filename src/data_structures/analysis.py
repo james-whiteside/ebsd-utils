@@ -4,11 +4,11 @@ from random import Random
 from typing import Self
 from numpy import zeros
 
-from src.algorithms.orientation_relationship import orientation_relationship_matches
 from src.data_structures.aggregate_manager import AggregateManager
 from src.data_structures.field import FieldNullError
 from src.data_structures.field_manager import FieldManager
-from src.data_structures.orientation_relationship import OrientationRelationship, OrientationRelationshipSummary
+from src.data_structures.orientation_relationship import OrientationRelationship
+from src.data_structures.orientation_relationship_summary import OrientationRelationshipSummary
 from src.utilities.config import Config
 from src.utilities.geometry import orthogonalise_matrix, euler_angles
 from src.data_structures.map_manager import MapManager
@@ -78,7 +78,7 @@ class Analysis:
     @property
     def orientation_relationships(self) -> OrientationRelationshipSummary:
         if self._orientation_relationships is None:
-            self._orientation_relationships = orientation_relationship_matches(self.cluster_aggregate, self._orientation_relationship_data)
+            self._orientation_relationships = OrientationRelationshipSummary(self.cluster_aggregate, self._orientation_relationship_data)
 
         return self._orientation_relationships
 

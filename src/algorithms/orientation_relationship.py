@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+
 from math import pi
 
 import numpy
@@ -11,12 +12,11 @@ from src.data_structures.orientation_relationship import (
     TwinOrientationRelationship,
     HeterophaseOrientationRelationship,
     OrientationRelationshipMatch,
-    OrientationRelationshipSummary,
 )
 from src.utilities.geometry import rotation_angle, misrotation_matrix
 
 
-def orientation_relationship_matches(cluster_aggregate: AggregateManager, orientation_relationships: list[OrientationRelationship]) -> OrientationRelationshipSummary:
+def orientation_relationship_matches(cluster_aggregate: AggregateManager, orientation_relationships: list[OrientationRelationship]) -> list[OrientationRelationshipMatch]:
     matches: list[OrientationRelationshipMatch] = list()
 
     for cluster_1_id in cluster_aggregate.group_ids:
@@ -58,4 +58,4 @@ def orientation_relationship_matches(cluster_aggregate: AggregateManager, orient
                             match = OrientationRelationshipMatch(variant.id, OrientationRelationshipCategory.HETEROPHASE, cluster_1_id, cluster_2_id, theta)
                             matches.append(match)
 
-    return OrientationRelationshipSummary(matches)
+    return matches
