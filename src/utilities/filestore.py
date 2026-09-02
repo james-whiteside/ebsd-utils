@@ -75,6 +75,13 @@ def load_from_data(data_path: str, config: Config, data_ref: str = None) -> Anal
                 index_quality_values[y].append(float(line[6]))
                 pattern_quality_values[y].append(float(line[7]))
 
+    lattice_types = [phase.lattice_type for phase in phases.values()]
+
+    orientation_relationships = [
+        relationship for relationship in load_orientation_relationships(config.project.orientation_relationship_dir)
+        if any(relationship.uses_lattice_type(lattice_type) for lattice_type in lattice_types)
+    ]
+
     return Analysis(
         data_ref=data_ref,
         width=width,
@@ -86,6 +93,7 @@ def load_from_data(data_path: str, config: Config, data_ref: str = None) -> Anal
         index_quality_values=index_quality_values,
         config=config,
         local_unindexed_id=local_unindexed_id,
+        orientation_relationship_data=orientation_relationships,
     )
 
 
@@ -108,6 +116,10 @@ def _analysis_rows(analysis: Analysis) -> Iterator[str]:
 
     for row in _analysis_data_rows(analysis):
         yield row
+
+    if analysis.config.analysis.compute_orientation_relationships:
+        for row in _analysis_orientation_relationship_rows(analysis):
+            yield row
 
 
 def _analysis_metadata_rows(analysis: Analysis) -> Iterator[str]:
@@ -159,6 +171,9 @@ def _analysis_cluster_aggregate_rows(analysis: Analysis) -> Iterator[str]:
     if analysis.config.analysis.compute_channelling:
         columns += ["Channelling Fraction"]
 
+    if analysis.config.analysis.compute_orientation_relationships:
+        columns += ["Closest relationship", "Other cluster", "Misrotation", "Alignment"]
+
     yield ",".join(columns)
 
     for id in analysis.cluster_aggregate.group_ids:
@@ -180,6 +195,9 @@ def _analysis_cluster_aggregate_rows(analysis: Analysis) -> Iterator[str]:
 
         if analysis.config.analysis.compute_channelling:
             columns += analysis.cluster_aggregate.channelling_fraction.serialize_value_for(id, sig_figs=6)
+
+        if analysis.config.analysis.compute_orientation_relationships:
+            columns += analysis.orientation_relationships.serialize_closest_match_for(id, sig_figs=6)
 
         yield ",".join(columns)
 
@@ -238,6 +256,18 @@ def _analysis_data_rows(analysis: Analysis) -> Iterator[str]:
                 columns += analysis.field.orientation_cluster_id.serialize_value_at(x, y)
 
             yield ",".join(columns)
+
+
+def _analysis_orientation_relationship_rows(analysis: Analysis) -> Iterator[str]:
+    yield "Orientation Relationships:"
+    columns: list[str] = list()
+    columns += ["Relationship", "Cluster 1", "Cluster 2", "Misrotation", "Alignment"]
+    yield ",".join(columns)
+
+    for relationship in analysis.orientation_relationships.matches:
+        columns = list()
+        columns += relationship.serialize_value(sig_figs=6)
+        yield ",".join(columns)
 
 
 def dump_maps(analysis: Analysis, dir: str):

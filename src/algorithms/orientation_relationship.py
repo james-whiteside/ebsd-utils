@@ -4,33 +4,34 @@ from math import pi, degrees
 import numpy
 from numpy import ndarray
 
-from src.data_structures.analysis import Analysis
+from src.data_structures.aggregate_manager import AggregateManager
 from src.data_structures.orientation_relationship import (
     OrientationRelationshipCategory,
     OrientationRelationship,
     TwinOrientationRelationship,
     HeterophaseOrientationRelationship,
     OrientationRelationshipMatch,
+    OrientationRelationshipSummary,
 )
 from src.utilities.geometry import rotation_angle, misrotation_matrix
 
 
-def get_matches(analysis: Analysis, orientation_relationships: list[OrientationRelationship]) -> list[OrientationRelationshipMatch]:
+def orientation_relationship_matches(cluster_aggregate: AggregateManager, orientation_relationships: list[OrientationRelationship]) -> OrientationRelationshipSummary:
     matches: list[OrientationRelationshipMatch] = list()
 
-    for cluster_1_id in analysis.cluster_aggregate.group_ids:
-        for cluster_2_id in analysis.cluster_aggregate.group_ids:
+    for cluster_1_id in cluster_aggregate.group_ids:
+        for cluster_2_id in cluster_aggregate.group_ids:
             if cluster_1_id == cluster_2_id:
                 continue
 
-            cluster_1_phase = analysis.cluster_aggregate.phase.get_value_for(cluster_1_id)
-            cluster_2_phase = analysis.cluster_aggregate.phase.get_value_for(cluster_2_id)
+            cluster_1_phase = cluster_aggregate.phase.get_value_for(cluster_1_id)
+            cluster_2_phase = cluster_aggregate.phase.get_value_for(cluster_2_id)
             cluster_1_lattice_type = cluster_1_phase.lattice_type
             cluster_2_lattice_type = cluster_2_phase.lattice_type
             cluster_1_lattice_constants = cluster_1_phase.lattice_constants
             cluster_2_lattice_constants = cluster_2_phase.lattice_constants
-            cluster_1_orientation: ndarray = analysis.cluster_aggregate.reduced_matrix.get_value_for(cluster_1_id)
-            cluster_2_orientation: ndarray = analysis.cluster_aggregate.reduced_matrix.get_value_for(cluster_2_id)
+            cluster_1_orientation: ndarray = cluster_aggregate.reduced_matrix.get_value_for(cluster_1_id)
+            cluster_2_orientation: ndarray = cluster_aggregate.reduced_matrix.get_value_for(cluster_2_id)
 
             for variant in orientation_relationships:
                 match variant:
@@ -57,4 +58,4 @@ def get_matches(analysis: Analysis, orientation_relationships: list[OrientationR
                             match = OrientationRelationshipMatch(variant.id, OrientationRelationshipCategory.HETEROPHASE, cluster_1_id, cluster_2_id, theta)
                             matches.append(match)
 
-    return sorted(matches, key=lambda match: degrees(match.misrotation))
+    return OrientationRelationshipSummary(matches)

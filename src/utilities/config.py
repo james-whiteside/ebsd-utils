@@ -23,6 +23,7 @@ class Config:
         self.project = ProjectParams(
             data_dir=self._str(parser["project"]["ebsd_data_dir"]),
             phase_dir=self._str(parser["project"]["phase_data_dir"]),
+            orientation_relationship_dir=self._str(parser["project"]["orientation_relationship_data_dir"]),
             analysis_dir=self._str(parser["project"]["analysis_output_dir"]),
             map_dir=self._str(parser["project"]["map_output_dir"]),
             cache_dir=self._str(parser["project"]["cache_dir"]),
@@ -39,6 +40,7 @@ class Config:
             compute_dislocation=self._bool(parser["analysis"]["compute_dislocation_densities"]),
             compute_channelling=self._bool(parser["analysis"]["compute_channelling_fractions"]),
             compute_clustering=self._bool(parser["analysis"]["compute_orientation_clusters"]),
+            compute_orientation_relationships=self._bool(parser["analysis"]["compute_orientation_relationships"]),
             use_cache=self._bool(parser["analysis"]["use_cache"]),
             use_cuda=self._bool(parser["analysis"]["use_cuda"]),
             random_seed=self._int(parser["analysis"]["random_seed"]),

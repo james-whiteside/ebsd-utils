@@ -40,6 +40,7 @@ class ProjectParams:
         self,
         data_dir: str,
         phase_dir: str,
+        orientation_relationship_dir: str,
         analysis_dir: str,
         map_dir: str,
         cache_dir: str,
@@ -47,6 +48,7 @@ class ProjectParams:
     ):
         self.data_dir = data_dir
         self.phase_dir = phase_dir
+        self.orientation_relationship_dir = orientation_relationship_dir
         self.analysis_dir = analysis_dir
         self.map_dir = map_dir
         self.cache_dir = cache_dir
@@ -82,6 +84,7 @@ class AnalysisParams:
         compute_dislocation: bool,
         compute_channelling: bool,
         compute_clustering: bool,
+        compute_orientation_relationships: bool,
         use_cache: bool,
         use_cuda: bool,
         random_seed: int,
@@ -90,6 +93,7 @@ class AnalysisParams:
         self.compute_dislocation = compute_dislocation
         self.compute_channelling = compute_channelling
         self.compute_clustering = compute_clustering
+        self.compute_orientation_relationships = compute_orientation_relationships
         self.use_cache = use_cache
         self.use_cuda = use_cuda
         self.random_seed = random_seed

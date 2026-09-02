@@ -3,9 +3,12 @@
 from random import Random
 from typing import Self
 from numpy import zeros
+
+from src.algorithms.orientation_relationship import orientation_relationship_matches
 from src.data_structures.aggregate_manager import AggregateManager
 from src.data_structures.field import FieldNullError
 from src.data_structures.field_manager import FieldManager
+from src.data_structures.orientation_relationship import OrientationRelationship, OrientationRelationshipSummary
 from src.utilities.config import Config
 from src.utilities.geometry import orthogonalise_matrix, euler_angles
 from src.data_structures.map_manager import MapManager
@@ -29,6 +32,7 @@ class Analysis:
         reduction_factor: int = 0,
         pixel_size: float = None,
         local_unindexed_id: int = None,
+        orientation_relationship_data: list[OrientationRelationship] = None,
     ):
         if pixel_size is None:
             pixel_size = config.data.pixel_size
@@ -37,6 +41,7 @@ class Analysis:
         self.config = config
         self._random_source = Random(config.analysis.random_seed)
         self.local_unindexed_id = local_unindexed_id
+        self._orientation_relationship_data = orientation_relationship_data if orientation_relationship_data else list()
 
         self.field = FieldManager(
             self.params,
@@ -50,6 +55,7 @@ class Analysis:
 
         self._map = None
         self._cluster_aggregate = None
+        self._orientation_relationships = None
 
     @property
     def map(self) -> MapManager:
@@ -69,6 +75,13 @@ class Analysis:
     def cluster_count(self) -> int:
         return self.field._cluster_count
 
+    @property
+    def orientation_relationships(self) -> OrientationRelationshipSummary:
+        if self._orientation_relationships is None:
+            self._orientation_relationships = orientation_relationship_matches(self.cluster_aggregate, self._orientation_relationship_data)
+
+        return self._orientation_relationships
+
     def _reduce_resolution(self) -> Self:
         if self.params.width % 2 != 0 or self.params.height % 2 != 0:
             raise ArithmeticError("Can only reduce resolution of scan with even width and height.")
@@ -81,6 +94,7 @@ class Analysis:
         pixel_size = self.params.pixel_size * 2
         config = self.config
         local_unindexed_id = self.local_unindexed_id
+        orientation_relationship_data = self._orientation_relationship_data
 
         phase_id_values: list[list[int | None]] = list()
         euler_angle_values: list[list[tuple[float, float, float] | None]] = list()
@@ -161,6 +175,7 @@ class Analysis:
             reduction_factor=reduction_factor,
             pixel_size=pixel_size,
             local_unindexed_id=local_unindexed_id,
+            orientation_relationship_data=orientation_relationship_data,
         )
 
         return analysis
