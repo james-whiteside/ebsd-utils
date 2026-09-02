@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+from math import pi
+
 from src.algorithms.orientation_relationship import orientation_relationship_matches
 from src.data_structures.aggregate_manager import AggregateManager
 from src.data_structures.orientation_relationship import OrientationRelationship, OrientationRelationshipMatch
@@ -7,18 +9,25 @@ from src.utilities.utils import debug_print, format_sig_figs
 
 
 class OrientationRelationshipSummary:
-    def __init__(self, cluster_aggregate: AggregateManager, orientation_relationships: list[OrientationRelationship]):
+    def __init__(
+            self,
+            cluster_aggregate: AggregateManager,
+            orientation_relationships: list[OrientationRelationship],
+            maximum_misrotation_rad: float = pi,
+    ):
         self._cluster_aggregate = cluster_aggregate
         self._orientation_relationships = orientation_relationships
         self._matches = None
         self._matches_by_cluster = None
+        self.maximum_misrotation_rad = maximum_misrotation_rad
 
     @property
     def matches(self) -> list[OrientationRelationshipMatch]:
         if self._matches is None:
             debug_print("Generating orientation relationship matches...", debug=self._cluster_aggregate._field_manager._config.debug.debug_print)
             matches = orientation_relationship_matches(self._cluster_aggregate, self._orientation_relationships)
-            self._matches = sorted(matches, key=lambda match: match.misrotation)
+            filtered_matches = [match for match in matches if match.misrotation <= self.maximum_misrotation_rad]
+            self._matches = sorted(filtered_matches, key=lambda match: match.misrotation)
 
         return self._matches
 

@@ -163,6 +163,25 @@ class ClusteringParams:
     def neighbourhood_radius_rad(self) -> float:
         return radians(self.neighbourhood_radius_deg)
 
+class OrientationRelationshipParams:
+    def __init__(
+            self,
+            maximum_misorientation_deg: float,
+    ):
+        self.maximum_misorientation_deg = maximum_misorientation_deg
+
+    @property
+    def maximum_misorientation_rad(self):
+        return radians(self.maximum_misorientation_deg)
+
+
+class DebugParams:
+    def __init__(
+        self,
+        debug_print: bool,
+    ):
+        self.debug_print = debug_print
+
 
 class TestParams:
     def __init__(

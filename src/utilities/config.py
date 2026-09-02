@@ -11,6 +11,7 @@ from src.data_structures.parameter_groups import (
     DislocationParams,
     ChannellingParams,
     ClusteringParams,
+    OrientationRelationshipParams,
     TestParams,
 )
 
@@ -68,6 +69,10 @@ class Config:
         self.clustering = ClusteringParams(
             core_point_threshold=self._int(parser["orientation_clustering"]["neighbour_threshold"]),
             neighbourhood_radius_deg=self._float(parser["orientation_clustering"]["neighbourhood_radius"]),
+        )
+
+        self.orientation_relationship = OrientationRelationshipParams(
+            maximum_misorientation_deg=self._float(parser["orientation_relationships"]["maximum_misorientation_deg"]),
         )
 
         self.test = TestParams(

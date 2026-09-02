@@ -78,7 +78,11 @@ class Analysis:
     @property
     def orientation_relationships(self) -> OrientationRelationshipSummary:
         if self._orientation_relationships is None:
-            self._orientation_relationships = OrientationRelationshipSummary(self.cluster_aggregate, self._orientation_relationship_data)
+            self._orientation_relationships = OrientationRelationshipSummary(
+                self.cluster_aggregate,
+                self._orientation_relationship_data,
+                self.config.orientation_relationship.maximum_misorientation_deg,
+            )
 
         return self._orientation_relationships
 
