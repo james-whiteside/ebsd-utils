@@ -279,7 +279,7 @@ def dump_maps(analysis: Analysis, dir: str):
         map.image.save(path)
 
 
-def _analysis_maps(analysis: Analysis) -> Iterator[str, Map]:
+def _analysis_maps(analysis: Analysis) -> Iterator[tuple[str, Map]]:
     yield "phase", analysis.map.phase
     yield "euler_angle", analysis.map.euler_angle
     yield "pattern_quality", analysis.map.pattern_quality
