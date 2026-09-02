@@ -7,7 +7,6 @@ from shutil import rmtree
 from sys import exit
 from os.path import getsize
 from math import floor, log10, degrees, radians
-from copy import copy
 from collections.abc import Callable, Sequence
 from time import sleep
 from typing import Any, Type
