@@ -36,7 +36,7 @@ class FieldManager:
         self._scan_params = scan_params
         self._config = config
         self._random_source = random_source
-        self._phase_id: Field[int] = Field.from_array(self._scan_params.width, self._scan_params.height, FieldType.DISCRETE, phase_id_values, nullable=True)
+        self.phase_id: Field[int] = Field.from_array(self._scan_params.width, self._scan_params.height, FieldType.DISCRETE, phase_id_values, nullable=True)
         self.euler_angles_rad: Field[tuple[float, float, float]] = None
         self.euler_angles_deg: Field[tuple[float, float, float]] = Field.from_array(self._scan_params.width, self._scan_params.height, FieldType.VECTOR_3D, euler_angle_values, nullable=True)
         self.pattern_quality: Field[float] = Field.from_array(self._scan_params.width, self._scan_params.height, FieldType.SCALAR, pattern_quality_values)
@@ -55,7 +55,7 @@ class FieldManager:
 
     @property
     def phase(self) -> DiscreteFieldMapper[Phase]:
-        return DiscreteFieldMapper(FieldType.OBJECT, self._phase_id, self._scan_params.phases)
+        return DiscreteFieldMapper(FieldType.OBJECT, self.phase_id, self._scan_params.phases)
 
     @property
     def euler_angles_deg(self) -> FunctionalFieldMapper[tuple[float, float, float], tuple[float, float, float]]:

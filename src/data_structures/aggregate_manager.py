@@ -24,6 +24,14 @@ class AggregateManager:
     def __init__(self, field_manager: FieldManager, group_id_field: FieldLike[int]):
         self._field_manager = field_manager
         self._group_id_field = group_id_field
+        self._phase_id = None
+        self._reduced_matrix = None
+        self._ipf_coordinates = None
+        self._pattern_quality = None
+        self._index_quality = None
+        self._average_misorientation_rad = None
+        self._gnd_density_lin = None
+        self._channelling_fraction = None
 
     @property
     def group_ids(self) -> Iterator[int]:
@@ -36,22 +44,28 @@ class AggregateManager:
         )
 
     @property
-    def _phase_id(self) -> CheckAggregate[int]:
-        return CheckAggregate(
-            value_field=self._field_manager._phase_id,
-            group_id_field=self._group_id_field,
-        )
+    def phase_id(self) -> CheckAggregate[int]:
+        if self._phase_id is None:
+            self._phase_id = CheckAggregate(
+                value_field=self._field_manager.phase_id,
+                group_id_field=self._group_id_field,
+            )
+
+        return self._phase_id
 
     @property
     def phase(self) -> DiscreteAggregateMapper[Phase]:
-        return DiscreteAggregateMapper(FieldType.OBJECT, self._phase_id, self._field_manager._scan_params.phases)
+        return DiscreteAggregateMapper(FieldType.OBJECT, self.phase_id, self._field_manager._scan_params.phases)
 
     @property
     def reduced_matrix(self) -> AverageAggregate[ndarray]:
-        return AverageAggregate(
-            value_field=self._field_manager.reduced_matrix,
-            group_id_field=self._group_id_field,
-        )
+        if self._reduced_matrix is None:
+            self._reduced_matrix = AverageAggregate(
+                value_field=self._field_manager.reduced_matrix,
+                group_id_field=self._group_id_field,
+            )
+
+        return self._reduced_matrix
 
     @property
     def euler_angles_rad(self) -> FunctionalAggregateMapper[ndarray, tuple[float, float, float]]:
@@ -64,48 +78,60 @@ class AggregateManager:
         return FunctionalAggregateMapper(FieldType.VECTOR_3D, self.euler_angles_rad, tuple_degrees)
 
     def ipf_coordinates(self, axis: Axis) -> CustomAggregate[tuple[float, float]]:
-        values: dict[int, tuple[float, float] | None] = dict()
+        if self._ipf_coordinates is None:
+            values: dict[int, tuple[float, float] | None] = dict()
 
-        for id in self.group_ids:
-            try:
-                rotation_matrix = self.reduced_matrix.get_value_for(id)
-                crystal_family = self.phase.get_value_for(id).lattice_type.family
-            except AggregateNullError:
-                values[id] = None
-                continue
+            for id in self.group_ids:
+                try:
+                    rotation_matrix = self.reduced_matrix.get_value_for(id)
+                    crystal_family = self.phase.get_value_for(id).lattice_type.family
+                except AggregateNullError:
+                    values[id] = None
+                    continue
 
-            vector = dot(rotation_matrix, array(axis.vector)).tolist()
-            value = crystal_family.ipf_coordinates(vector)
-            values[id] = value
+                vector = dot(rotation_matrix, array(axis.vector)).tolist()
+                value = crystal_family.ipf_coordinates(vector)
+                values[id] = value
 
-        return CustomAggregate(
-            aggregate_type=AggregateType.AVERAGE,
-            values=values,
-            field_type=FieldType.VECTOR_2D,
-            group_id_field=self._group_id_field,
-            nullable=True,
-        )
+            self._ipf_coordinates = CustomAggregate(
+                aggregate_type=AggregateType.AVERAGE,
+                values=values,
+                field_type=FieldType.VECTOR_2D,
+                group_id_field=self._group_id_field,
+                nullable=True,
+            )
+
+        return self._ipf_coordinates
 
     @property
     def pattern_quality(self) -> AverageAggregate[float]:
-        return AverageAggregate(
-            value_field=self._field_manager.pattern_quality,
-            group_id_field=self._group_id_field,
-        )
+        if self._pattern_quality is None:
+            self._pattern_quality = AverageAggregate(
+                value_field=self._field_manager.pattern_quality,
+                group_id_field=self._group_id_field,
+            )
+
+        return self._pattern_quality
 
     @property
     def index_quality(self) -> AverageAggregate[float]:
-        return AverageAggregate(
-            value_field=self._field_manager.index_quality,
-            group_id_field=self._group_id_field,
-        )
+        if self._index_quality is None:
+            self._index_quality = AverageAggregate(
+                value_field=self._field_manager.index_quality,
+                group_id_field=self._group_id_field,
+            )
+
+        return self._index_quality
 
     @property
     def average_misorientation_rad(self) -> AverageAggregate[float]:
-        return AverageAggregate(
-            value_field=self._field_manager.average_misorientation_rad,
-            group_id_field=self._group_id_field,
-        )
+        if self._average_misorientation_rad is None:
+            self._average_misorientation_rad = AverageAggregate(
+                value_field=self._field_manager.average_misorientation_rad,
+                group_id_field=self._group_id_field,
+            )
+
+        return self._average_misorientation_rad
 
     @property
     def average_misorientation_deg(self) -> FunctionalAggregateMapper[float, float]:
@@ -113,10 +139,13 @@ class AggregateManager:
 
     @property
     def gnd_density_lin(self) -> AverageAggregate[float]:
-        return AverageAggregate(
-            value_field=self._field_manager.gnd_density_lin,
-            group_id_field=self._group_id_field,
-        )
+        if self._gnd_density_lin is None:
+            self._gnd_density_lin = AverageAggregate(
+                value_field=self._field_manager.gnd_density_lin,
+                group_id_field=self._group_id_field,
+            )
+
+        return self._gnd_density_lin
 
     @property
     def gnd_density_log(self) -> FunctionalAggregateMapper[float, float]:
@@ -124,7 +153,10 @@ class AggregateManager:
 
     @property
     def channelling_fraction(self) -> AverageAggregate[float]:
-        return AverageAggregate(
-            value_field=self._field_manager.channelling_fraction,
-            group_id_field=self._group_id_field,
-        )
+        if self._channelling_fraction is None:
+            self._channelling_fraction = AverageAggregate(
+                value_field=self._field_manager.channelling_fraction,
+                group_id_field=self._group_id_field,
+            )
+
+        return self._channelling_fraction

@@ -118,7 +118,7 @@ class Analysis:
 
                 for dx, dy in kernel:
                     try:
-                        phase = self.field._phase_id.get_value_at(2 * x + dx, 2 * y + dy)
+                        phase = self.field.phase_id.get_value_at(2 * x + dx, 2 * y + dy)
                     except FieldNullError:
                         continue
 
@@ -138,7 +138,7 @@ class Analysis:
 
                     for dx, dy in kernel:
                         try:
-                            self.field._phase_id.get_value_at(2 * x + dx, 2 * y + dy)
+                            self.field.phase_id.get_value_at(2 * x + dx, 2 * y + dy)
                             orientation_matrix = self.field.orientation_matrix.get_value_at(2 * x + dx, 2 * y + dy)
                             index_quality = self.field.index_quality.get_value_at(2 * x + dx, 2 * y + dy)
                             pattern_quality = self.field.pattern_quality.get_value_at(2 * x + dx, 2 * y + dy)

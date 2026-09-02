@@ -180,7 +180,7 @@ def _analysis_cluster_aggregate_rows(analysis: Analysis) -> Iterator[str]:
         columns: list[str] = list()
         columns += [str(id)]
         columns += analysis.cluster_aggregate.count.serialize_value_for(id)
-        columns += analysis.cluster_aggregate._phase_id.serialize_value_for(id)
+        columns += analysis.cluster_aggregate.phase_id.serialize_value_for(id)
         columns += analysis.cluster_aggregate.euler_angles_deg.serialize_value_for(id, sig_figs=6)
         columns += analysis.cluster_aggregate.index_quality.serialize_value_for(id, sig_figs=6)
         columns += analysis.cluster_aggregate.pattern_quality.serialize_value_for(id, sig_figs=6)
@@ -231,7 +231,7 @@ def _analysis_data_rows(analysis: Analysis) -> Iterator[str]:
         for x in range(analysis.params.width):
             columns = list()
             columns += [str(x), str(y)]
-            columns += analysis.field._phase_id.serialize_value_at(x, y, null_serialization=str(analysis.local_unindexed_id))
+            columns += analysis.field.phase_id.serialize_value_at(x, y, null_serialization=str(analysis.local_unindexed_id))
             columns += analysis.field.euler_angles_deg.serialize_value_at(x, y, sig_figs=6)
             columns += analysis.field.index_quality.serialize_value_at(x, y, sig_figs=6)
             columns += analysis.field.pattern_quality.serialize_value_at(x, y, sig_figs=6)
