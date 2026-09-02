@@ -371,16 +371,16 @@ def load_orientation_relationships(dir: str) -> list[OrientationRelationship]:
     makedirs(dir, exist_ok=True)
     relationships: list[OrientationRelationship] = list()
 
-    for path in listdir(dir):
-        with open(path, "r") as file:
+    for name in listdir(dir):
+        with open(f"{dir}/{name}", "r") as file:
             file.readline()
-            category = OrientationRelationshipCategory(file.readline())
+            category = OrientationRelationshipCategory(file.readline().rstrip("\n"))
             file.readline()
 
             match category:
                 case OrientationRelationshipCategory.TWIN:
                     for line in file:
-                        data = line.split(",")
+                        data = line.rstrip("\n").split(",")
                         id = data[0]
                         lattice_type = BravaisLattice(data[1])
                         plane = int(data[2]), int(data[3]), int(data[4])
@@ -388,7 +388,7 @@ def load_orientation_relationships(dir: str) -> list[OrientationRelationship]:
                         relationships.append(relationship)
                 case OrientationRelationshipCategory.HETEROPHASE:
                     for line in file:
-                        data = line.split(",")
+                        data = line.rstrip("\n").split(",")
                         id = data[0]
                         lattice_type_1 = BravaisLattice(data[1])
                         lattice_type_2 = BravaisLattice(data[2])
