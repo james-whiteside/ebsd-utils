@@ -272,10 +272,11 @@ def _analysis_orientation_relationship_rows(analysis: Analysis) -> Iterator[str]
 
 def dump_maps(analysis: Analysis, dir: str):
     dir = f"{dir}/{analysis.params.analysis_ref}"
-    makedirs(dir, exist_ok=True)
 
     for name, map in _analysis_maps(analysis):
         path = f"{dir}/{name}.png"
+        parent_dir = path.rsplit("/", maxsplit=1)[0]
+        makedirs(parent_dir, exist_ok=True)
         map.image.save(path)
 
 
@@ -298,6 +299,9 @@ def _analysis_maps(analysis: Analysis) -> Iterator[tuple[str, Map]]:
 
     if analysis.config.analysis.compute_clustering:
         yield "orientation_cluster", analysis.map.orientation_cluster
+
+        for cluster_id in analysis.cluster_aggregate.group_ids:
+            yield f"orientation_cluster/{cluster_id}", analysis.map.single_orientation_cluster(cluster_id)
 
 
 def load_phase(global_id: int, dir: str) -> Phase:

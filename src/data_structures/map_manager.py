@@ -119,3 +119,12 @@ class MapManager:
             min_value=0,
             upscale_factor=self._field_manager._config.maps.upscale_factor,
         )
+
+    def single_orientation_cluster(self, cluster_id: int) -> Map:
+        self._logger.debug(f"Generating single orientation cluster map for cluster {cluster_id}...")
+        value_field = FunctionalFieldMapper(FieldType.BOOLEAN, self._field_manager.orientation_cluster_id, lambda id: id == cluster_id)
+
+        return Map(
+            value_field=value_field,
+            upscale_factor=self._field_manager._config.maps.upscale_factor,
+        )

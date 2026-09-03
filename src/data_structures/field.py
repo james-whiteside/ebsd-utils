@@ -28,7 +28,7 @@ class FieldType(Enum):
 
     @property
     def mappable(self) -> bool:
-        return self in (FieldType.DISCRETE, FieldType.SCALAR, FieldType.VECTOR_3D)
+        return self in (FieldType.BOOLEAN, FieldType.DISCRETE, FieldType.SCALAR, FieldType.VECTOR_3D)
 
     @property
     def serializable(self) -> bool:

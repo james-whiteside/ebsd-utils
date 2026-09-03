@@ -36,12 +36,12 @@ class Map[VALUE_TYPE]:
         else:
             self._coordinates = coordinates_field
 
-        if max_value is None:
+        if self._values.field_type.comparable and max_value is None:
             self._max_value = self._values.max_value
         else:
             self._max_value = max_value
 
-        if min_value is None:
+        if self._values.field_type.comparable and min_value is None:
             self._min_value = self._values.min_value
         else:
             self._min_value = min_value
@@ -52,6 +52,20 @@ class Map[VALUE_TYPE]:
     @property
     def field(self) -> MapField:
         match self._values.field_type:
+            case FieldType.BOOLEAN:
+                default_value = (0.0, 0.0, 0.0)
+                field = MapField(self._width, self._height, default_value, self.upscale_factor)
+
+                for y in range(self._height):
+                    for x in range(self._width):
+                        try:
+                            rgb_intensity = 1.0 if self._values.get_value_at(x, y) else 0.0
+                        except FieldNullError:
+                            continue
+
+                        value = (rgb_intensity, rgb_intensity, rgb_intensity)
+                        field.set_value_at(x, y, value)
+
             case FieldType.DISCRETE:
                 default_value = (0.0, 0.0, 0.0)
                 field = MapField(self._width, self._height, default_value, self.upscale_factor)
