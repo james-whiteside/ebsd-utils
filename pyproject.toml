@@ -28,11 +28,12 @@ classifiers = [
 dependencies = [
     "numpy",
     "scipy",
-    "numba",
+    "numba[cuda]",
     "pillow",
     "pyyaml",
 ]
 
 [project.urls]
 "Repository" = "https://github.com/james-whiteside/ebsd-utils"
+"Paper" = "https://doi.org/10.1007/s10853-026-12313-x"
 "Thesis" = "https://doi.org/10.15126/thesis.901043"
