@@ -84,8 +84,8 @@ class Analysis:
             self._orientation_relationships = OrientationRelationshipSummary(
                 self.cluster_aggregate,
                 self._orientation_relationship_data,
-                self.config.orientation_relationship.maximum_misorientation_deg,
                 self._logger,
+                self.config.orientation_relationship.maximum_misorientation_rad,
             )
 
         return self._orientation_relationships
