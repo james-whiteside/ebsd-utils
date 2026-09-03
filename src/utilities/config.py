@@ -12,8 +12,10 @@ from src.data_structures.parameter_groups import (
     ChannellingParams,
     ClusteringParams,
     OrientationRelationshipParams,
+    DebugParams,
     TestParams,
 )
+from src.utilities.logging import LogLevel
 
 
 class Config:
@@ -75,6 +77,10 @@ class Config:
             maximum_misorientation_deg=self._float(parser["orientation_relationships"]["maximum_misorientation_deg"]),
         )
 
+        self.debug = DebugParams(
+            log_level=self._log_level(parser["debug"]["log_level"]),
+        )
+
         self.test = TestParams(
             data_dir=self._str(parser["tests"]["ebsd_data_dir"]),
             analysis_dir=self._str(parser["tests"]["control_analysis_dir"]),
@@ -112,3 +118,7 @@ class Config:
     @staticmethod
     def _axis_set(value: str) -> AxisSet:
         return AxisSet[Config._str(value).upper()]
+
+    @staticmethod
+    def _log_level(value: str) -> LogLevel:
+        return LogLevel[Config._str(value).upper()]

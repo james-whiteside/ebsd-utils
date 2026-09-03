@@ -20,6 +20,10 @@ class classproperty(object):
         return self.f(owner)
 
 
+def timestamp():
+  return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+
 def log_or_zero(value: float) -> float:
     return 0.0 if value == 0.0 else log10(value)
 

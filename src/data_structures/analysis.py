@@ -14,6 +14,7 @@ from src.utilities.geometry import orthogonalise_matrix, euler_angles
 from src.data_structures.map_manager import MapManager
 from src.data_structures.parameter_groups import ScanParams
 from src.data_structures.phase import Phase
+from src.utilities.logging import PrintLogger
 from src.utilities.utils import tuple_degrees
 
 
@@ -39,6 +40,7 @@ class Analysis:
 
         self.params = ScanParams(data_ref, width, height, phases, pixel_size, reduction_factor)
         self.config = config
+        self._logger = PrintLogger(config.debug.log_level)
         self._random_source = Random(config.analysis.random_seed)
         self.local_unindexed_id = local_unindexed_id
         self._orientation_relationship_data = orientation_relationship_data if orientation_relationship_data else list()
@@ -50,6 +52,7 @@ class Analysis:
             pattern_quality_values,
             index_quality_values,
             self.config,
+            self._logger,
             self._random_source,
         )
 
@@ -60,14 +63,14 @@ class Analysis:
     @property
     def map(self) -> MapManager:
         if self._map is None:
-            self._map = MapManager(self.field)
+            self._map = MapManager(self.field, self._logger)
 
         return self._map
 
     @property
     def cluster_aggregate(self) -> AggregateManager:
         if self._cluster_aggregate is None:
-            self._cluster_aggregate = AggregateManager(self.field, self.field.orientation_cluster_id)
+            self._cluster_aggregate = AggregateManager(self.field, self.field.orientation_cluster_id, self._logger)
 
         return self._cluster_aggregate
 
@@ -82,11 +85,14 @@ class Analysis:
                 self.cluster_aggregate,
                 self._orientation_relationship_data,
                 self.config.orientation_relationship.maximum_misorientation_deg,
+                self._logger,
             )
 
         return self._orientation_relationships
 
     def _reduce_resolution(self) -> Self:
+        self._logger.debug("Reducing scan resolution...")
+
         if self.params.width % 2 != 0 or self.params.height % 2 != 0:
             raise ArithmeticError("Can only reduce resolution of scan with even width and height.")
 

@@ -17,13 +17,15 @@ from src.data_structures.field import FieldType, FieldLike
 from src.data_structures.field_manager import FieldManager
 from src.utilities.geometry import euler_angles, Axis
 from src.data_structures.phase import Phase
+from src.utilities.logging import Logger
 from src.utilities.utils import float_degrees, tuple_degrees, log_or_zero
 
 
 class AggregateManager:
-    def __init__(self, field_manager: FieldManager, group_id_field: FieldLike[int]):
+    def __init__(self, field_manager: FieldManager, group_id_field: FieldLike[int], logger: Logger):
         self._field_manager = field_manager
         self._group_id_field = group_id_field
+        self._logger = logger
         self._phase_id = None
         self._reduced_matrix = None
         self._ipf_coordinates = None
@@ -46,6 +48,8 @@ class AggregateManager:
     @property
     def phase_id(self) -> CheckAggregate[int]:
         if self._phase_id is None:
+            self._logger.debug("Generating phase ID aggregate...")
+
             self._phase_id = CheckAggregate(
                 value_field=self._field_manager.phase_id,
                 group_id_field=self._group_id_field,
@@ -60,6 +64,8 @@ class AggregateManager:
     @property
     def reduced_matrix(self) -> AverageAggregate[ndarray]:
         if self._reduced_matrix is None:
+            self._logger.debug("Generating reduced matrix aggregate...")
+
             self._reduced_matrix = AverageAggregate(
                 value_field=self._field_manager.reduced_matrix,
                 group_id_field=self._group_id_field,
@@ -79,6 +85,7 @@ class AggregateManager:
 
     def ipf_coordinates(self, axis: Axis) -> CustomAggregate[tuple[float, float]]:
         if self._ipf_coordinates is None:
+            self._logger.debug("Generating IPF coordinate aggregate...")
             values: dict[int, tuple[float, float] | None] = dict()
 
             for id in self.group_ids:
@@ -106,6 +113,8 @@ class AggregateManager:
     @property
     def pattern_quality(self) -> AverageAggregate[float]:
         if self._pattern_quality is None:
+            self._logger.debug("Generating pattern quality aggregate...")
+
             self._pattern_quality = AverageAggregate(
                 value_field=self._field_manager.pattern_quality,
                 group_id_field=self._group_id_field,
@@ -116,6 +125,8 @@ class AggregateManager:
     @property
     def index_quality(self) -> AverageAggregate[float]:
         if self._index_quality is None:
+            self._logger.debug("Generating index quality aggregate...")
+
             self._index_quality = AverageAggregate(
                 value_field=self._field_manager.index_quality,
                 group_id_field=self._group_id_field,
@@ -126,6 +137,8 @@ class AggregateManager:
     @property
     def average_misorientation_rad(self) -> AverageAggregate[float]:
         if self._average_misorientation_rad is None:
+            self._logger.debug("Generating average misorientation aggregate...")
+
             self._average_misorientation_rad = AverageAggregate(
                 value_field=self._field_manager.average_misorientation_rad,
                 group_id_field=self._group_id_field,
@@ -140,6 +153,8 @@ class AggregateManager:
     @property
     def gnd_density_lin(self) -> AverageAggregate[float]:
         if self._gnd_density_lin is None:
+            self._logger.debug("Generating GND density aggregate...")
+
             self._gnd_density_lin = AverageAggregate(
                 value_field=self._field_manager.gnd_density_lin,
                 group_id_field=self._group_id_field,
@@ -154,6 +169,8 @@ class AggregateManager:
     @property
     def channelling_fraction(self) -> AverageAggregate[float]:
         if self._channelling_fraction is None:
+            self._logger.debug("Generating channelling fraction aggregate...")
+
             self._channelling_fraction = AverageAggregate(
                 value_field=self._field_manager.channelling_fraction,
                 group_id_field=self._group_id_field,

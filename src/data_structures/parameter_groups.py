@@ -3,6 +3,7 @@
 from math import radians, sin, cos
 from src.utilities.geometry import Axis, AxisSet
 from src.data_structures.phase import Phase
+from src.utilities.logging import LogLevel
 
 
 class ScanParams:
@@ -178,9 +179,9 @@ class OrientationRelationshipParams:
 class DebugParams:
     def __init__(
         self,
-        debug_print: bool,
+        log_level: LogLevel,
     ):
-        self.debug_print = debug_print
+        self.log_level = log_level
 
 
 class TestParams:
