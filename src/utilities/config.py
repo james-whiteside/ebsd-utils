@@ -73,7 +73,7 @@ class Config:
         )
 
         self.orientation_relationship = OrientationRelationshipParams(
-            maximum_misorientation_deg=self._float(parser["orientation_relationships"]["maximum_misorientation_deg"]),
+            maximum_misorientation_deg=self._float(parser["orientation_relationships"]["maximum_misorientation"]),
         )
 
         self.debug = DebugParams(
