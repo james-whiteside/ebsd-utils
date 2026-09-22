@@ -11,8 +11,11 @@ from src.data_structures.parameter_groups import (
     DislocationParams,
     ChannellingParams,
     ClusteringParams,
+    OrientationRelationshipParams,
+    DebugParams,
     TestParams,
 )
+from src.utilities.logging import LogLevel
 
 
 class Config:
@@ -23,6 +26,7 @@ class Config:
         self.project = ProjectParams(
             data_dir=self._str(parser["project"]["ebsd_data_dir"]),
             phase_dir=self._str(parser["project"]["phase_data_dir"]),
+            orientation_relationship_dir=self._str(parser["project"]["orientation_relationship_data_dir"]),
             analysis_dir=self._str(parser["project"]["analysis_output_dir"]),
             map_dir=self._str(parser["project"]["map_output_dir"]),
             cache_dir=self._str(parser["project"]["cache_dir"]),
@@ -39,9 +43,9 @@ class Config:
             compute_dislocation=self._bool(parser["analysis"]["compute_dislocation_densities"]),
             compute_channelling=self._bool(parser["analysis"]["compute_channelling_fractions"]),
             compute_clustering=self._bool(parser["analysis"]["compute_orientation_clusters"]),
+            compute_orientation_relationships=self._bool(parser["analysis"]["compute_orientation_relationships"]),
             use_cache=self._bool(parser["analysis"]["use_cache"]),
             use_cuda=self._bool(parser["analysis"]["use_cuda"]),
-            random_seed=self._int(parser["analysis"]["random_seed"]),
         )
 
         self.maps = MapParams(
@@ -66,6 +70,15 @@ class Config:
         self.clustering = ClusteringParams(
             core_point_threshold=self._int(parser["orientation_clustering"]["neighbour_threshold"]),
             neighbourhood_radius_deg=self._float(parser["orientation_clustering"]["neighbourhood_radius"]),
+        )
+
+        self.orientation_relationship = OrientationRelationshipParams(
+            maximum_misorientation_deg=self._float(parser["orientation_relationships"]["maximum_misorientation"]),
+        )
+
+        self.debug = DebugParams(
+            log_level=self._log_level(parser["debug"]["log_level"]),
+            random_seed=self._int(parser["debug"]["random_seed"]),
         )
 
         self.test = TestParams(
@@ -105,3 +118,7 @@ class Config:
     @staticmethod
     def _axis_set(value: str) -> AxisSet:
         return AxisSet[Config._str(value).upper()]
+
+    @staticmethod
+    def _log_level(value: str) -> LogLevel:
+        return LogLevel[Config._str(value).upper()]

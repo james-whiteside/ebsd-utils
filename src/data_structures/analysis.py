@@ -3,14 +3,18 @@
 from random import Random
 from typing import Self
 from numpy import zeros
+
 from src.data_structures.aggregate_manager import AggregateManager
 from src.data_structures.field import FieldNullError
 from src.data_structures.field_manager import FieldManager
+from src.data_structures.orientation_relationship import OrientationRelationship
+from src.data_structures.orientation_relationship_summary import OrientationRelationshipSummary
 from src.utilities.config import Config
 from src.utilities.geometry import orthogonalise_matrix, euler_angles
 from src.data_structures.map_manager import MapManager
 from src.data_structures.parameter_groups import ScanParams
 from src.data_structures.phase import Phase
+from src.utilities.logging import Logger
 from src.utilities.utils import tuple_degrees
 
 
@@ -26,17 +30,21 @@ class Analysis:
         pattern_quality_values: list[list[float]],
         index_quality_values: list[list[float]],
         config: Config,
+        logger: Logger,
         reduction_factor: int = 0,
         pixel_size: float = None,
         local_unindexed_id: int = None,
+        orientation_relationship_data: list[OrientationRelationship] = None,
     ):
         if pixel_size is None:
             pixel_size = config.data.pixel_size
 
         self.params = ScanParams(data_ref, width, height, phases, pixel_size, reduction_factor)
         self.config = config
-        self._random_source = Random(config.analysis.random_seed)
+        self._logger = logger
+        self._random_source = Random(config.debug.random_seed)
         self.local_unindexed_id = local_unindexed_id
+        self._orientation_relationship_data = orientation_relationship_data if orientation_relationship_data else list()
 
         self.field = FieldManager(
             self.params,
@@ -45,23 +53,25 @@ class Analysis:
             pattern_quality_values,
             index_quality_values,
             self.config,
+            self._logger,
             self._random_source,
         )
 
         self._map = None
         self._cluster_aggregate = None
+        self._orientation_relationships = None
 
     @property
     def map(self) -> MapManager:
         if self._map is None:
-            self._map = MapManager(self.field)
+            self._map = MapManager(self.field, self._logger)
 
         return self._map
 
     @property
     def cluster_aggregate(self) -> AggregateManager:
         if self._cluster_aggregate is None:
-            self._cluster_aggregate = AggregateManager(self.field, self.field.orientation_cluster_id)
+            self._cluster_aggregate = AggregateManager(self.field, self.field.orientation_cluster_id, self._logger)
 
         return self._cluster_aggregate
 
@@ -69,7 +79,21 @@ class Analysis:
     def cluster_count(self) -> int:
         return self.field._cluster_count
 
+    @property
+    def orientation_relationships(self) -> OrientationRelationshipSummary:
+        if self._orientation_relationships is None:
+            self._orientation_relationships = OrientationRelationshipSummary(
+                self.cluster_aggregate,
+                self._orientation_relationship_data,
+                self._logger,
+                self.config.orientation_relationship.maximum_misorientation_rad,
+            )
+
+        return self._orientation_relationships
+
     def _reduce_resolution(self) -> Self:
+        self._logger.debug("Reducing scan resolution...")
+
         if self.params.width % 2 != 0 or self.params.height % 2 != 0:
             raise ArithmeticError("Can only reduce resolution of scan with even width and height.")
 
@@ -80,7 +104,9 @@ class Analysis:
         reduction_factor = self.params.reduction_factor + 1
         pixel_size = self.params.pixel_size * 2
         config = self.config
+        logger = self._logger
         local_unindexed_id = self.local_unindexed_id
+        orientation_relationship_data = self._orientation_relationship_data
 
         phase_id_values: list[list[int | None]] = list()
         euler_angle_values: list[list[tuple[float, float, float] | None]] = list()
@@ -100,7 +126,7 @@ class Analysis:
 
                 for dx, dy in kernel:
                     try:
-                        phase = self.field._phase_id.get_value_at(2 * x + dx, 2 * y + dy)
+                        phase = self.field.phase_id.get_value_at(2 * x + dx, 2 * y + dy)
                     except FieldNullError:
                         continue
 
@@ -120,7 +146,7 @@ class Analysis:
 
                     for dx, dy in kernel:
                         try:
-                            self.field._phase_id.get_value_at(2 * x + dx, 2 * y + dy)
+                            self.field.phase_id.get_value_at(2 * x + dx, 2 * y + dy)
                             orientation_matrix = self.field.orientation_matrix.get_value_at(2 * x + dx, 2 * y + dy)
                             index_quality = self.field.index_quality.get_value_at(2 * x + dx, 2 * y + dy)
                             pattern_quality = self.field.pattern_quality.get_value_at(2 * x + dx, 2 * y + dy)
@@ -158,9 +184,11 @@ class Analysis:
             pattern_quality_values=pattern_quality_values,
             index_quality_values=index_quality_values,
             config=config,
+            logger=logger,
             reduction_factor=reduction_factor,
             pixel_size=pixel_size,
             local_unindexed_id=local_unindexed_id,
+            orientation_relationship_data=orientation_relationship_data,
         )
 
         return analysis

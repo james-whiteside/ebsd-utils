@@ -1,19 +1,26 @@
 # -*- coding: utf-8 -*-
 
 from collections.abc import Iterator
-from os import makedirs
+from os import makedirs, listdir
 from typing import Any
 from json import dump as dump_json, load as load_json
 from xml.etree import ElementTree
 from src.data_structures.field import FieldNullError
 from src.data_structures.map import Map
+from src.data_structures.orientation_relationship import (
+    OrientationRelationshipCategory,
+    OrientationRelationship,
+    TwinOrientationRelationship,
+    HeterophaseOrientationRelationship,
+)
 from src.data_structures.phase import Phase, BravaisLattice, PhaseMissingError
 from src.data_structures.analysis import Analysis
 from src.utilities.config import Config
 from src.utilities.geometry import Axis
+from src.utilities.logging import Logger
 
 
-def load_from_data(data_path: str, config: Config, data_ref: str = None) -> Analysis:
+def load_from_data(data_path: str, config: Config, logger: Logger, data_ref: str = None) -> Analysis:
     if data_ref is None:
         data_ref = data_path.split("/")[-1].split(".")[0]
 
@@ -69,6 +76,13 @@ def load_from_data(data_path: str, config: Config, data_ref: str = None) -> Anal
                 index_quality_values[y].append(float(line[6]))
                 pattern_quality_values[y].append(float(line[7]))
 
+    lattice_types = [phase.lattice_type for phase in phases.values()]
+
+    orientation_relationships = [
+        relationship for relationship in load_orientation_relationships(config.project.orientation_relationship_dir)
+        if any(relationship.uses_lattice_type(lattice_type) for lattice_type in lattice_types)
+    ]
+
     return Analysis(
         data_ref=data_ref,
         width=width,
@@ -79,7 +93,9 @@ def load_from_data(data_path: str, config: Config, data_ref: str = None) -> Anal
         pattern_quality_values=pattern_quality_values,
         index_quality_values=index_quality_values,
         config=config,
+        logger=logger,
         local_unindexed_id=local_unindexed_id,
+        orientation_relationship_data=orientation_relationships,
     )
 
 
@@ -102,6 +118,10 @@ def _analysis_rows(analysis: Analysis) -> Iterator[str]:
 
     for row in _analysis_data_rows(analysis):
         yield row
+
+    if analysis.config.analysis.compute_orientation_relationships:
+        for row in _analysis_orientation_relationship_rows(analysis):
+            yield row
 
 
 def _analysis_metadata_rows(analysis: Analysis) -> Iterator[str]:
@@ -153,13 +173,16 @@ def _analysis_cluster_aggregate_rows(analysis: Analysis) -> Iterator[str]:
     if analysis.config.analysis.compute_channelling:
         columns += ["Channelling Fraction"]
 
+    if analysis.config.analysis.compute_orientation_relationships:
+        columns += ["Closest relationship", "Other cluster", "Misrotation", "Alignment"]
+
     yield ",".join(columns)
 
     for id in analysis.cluster_aggregate.group_ids:
         columns: list[str] = list()
         columns += [str(id)]
         columns += analysis.cluster_aggregate.count.serialize_value_for(id)
-        columns += analysis.cluster_aggregate._phase_id.serialize_value_for(id)
+        columns += analysis.cluster_aggregate.phase_id.serialize_value_for(id)
         columns += analysis.cluster_aggregate.euler_angles_deg.serialize_value_for(id, sig_figs=6)
         columns += analysis.cluster_aggregate.index_quality.serialize_value_for(id, sig_figs=6)
         columns += analysis.cluster_aggregate.pattern_quality.serialize_value_for(id, sig_figs=6)
@@ -174,6 +197,9 @@ def _analysis_cluster_aggregate_rows(analysis: Analysis) -> Iterator[str]:
 
         if analysis.config.analysis.compute_channelling:
             columns += analysis.cluster_aggregate.channelling_fraction.serialize_value_for(id, sig_figs=6)
+
+        if analysis.config.analysis.compute_orientation_relationships:
+            columns += analysis.orientation_relationships.serialize_closest_match_for(id, sig_figs=6)
 
         yield ",".join(columns)
 
@@ -207,7 +233,7 @@ def _analysis_data_rows(analysis: Analysis) -> Iterator[str]:
         for x in range(analysis.params.width):
             columns = list()
             columns += [str(x), str(y)]
-            columns += analysis.field._phase_id.serialize_value_at(x, y, null_serialization=str(analysis.local_unindexed_id))
+            columns += analysis.field.phase_id.serialize_value_at(x, y, null_serialization=str(analysis.local_unindexed_id))
             columns += analysis.field.euler_angles_deg.serialize_value_at(x, y, sig_figs=6)
             columns += analysis.field.index_quality.serialize_value_at(x, y, sig_figs=6)
             columns += analysis.field.pattern_quality.serialize_value_at(x, y, sig_figs=6)
@@ -234,16 +260,29 @@ def _analysis_data_rows(analysis: Analysis) -> Iterator[str]:
             yield ",".join(columns)
 
 
+def _analysis_orientation_relationship_rows(analysis: Analysis) -> Iterator[str]:
+    yield "Orientation Relationships:"
+    columns: list[str] = list()
+    columns += ["Relationship", "Cluster 1", "Cluster 2", "Misrotation", "Alignment"]
+    yield ",".join(columns)
+
+    for relationship in analysis.orientation_relationships.matches:
+        columns = list()
+        columns += relationship.serialize_value(sig_figs=6)
+        yield ",".join(columns)
+
+
 def dump_maps(analysis: Analysis, dir: str):
     dir = f"{dir}/{analysis.params.analysis_ref}"
-    makedirs(dir, exist_ok=True)
 
     for name, map in _analysis_maps(analysis):
         path = f"{dir}/{name}.png"
+        parent_dir = path.rsplit("/", maxsplit=1)[0]
+        makedirs(parent_dir, exist_ok=True)
         map.image.save(path)
 
 
-def _analysis_maps(analysis: Analysis) -> Iterator[str, Map]:
+def _analysis_maps(analysis: Analysis) -> Iterator[tuple[str, Map]]:
     yield "phase", analysis.map.phase
     yield "euler_angle", analysis.map.euler_angle
     yield "pattern_quality", analysis.map.pattern_quality
@@ -262,6 +301,9 @@ def _analysis_maps(analysis: Analysis) -> Iterator[str, Map]:
 
     if analysis.config.analysis.compute_clustering:
         yield "orientation_cluster", analysis.map.orientation_cluster
+
+        for cluster_id in analysis.cluster_aggregate.group_ids:
+            yield f"orientation_cluster/{cluster_id}", analysis.map.single_orientation_cluster(cluster_id)
 
 
 def load_phase(global_id: int, dir: str) -> Phase:
@@ -329,3 +371,36 @@ def load_phase_database_entry(global_id: int, path: str) -> Phase.DatabaseEntry:
             )
 
     raise PhaseMissingError(global_id)
+
+
+def load_orientation_relationships(dir: str) -> list[OrientationRelationship]:
+    makedirs(dir, exist_ok=True)
+    relationships: list[OrientationRelationship] = list()
+
+    for name in listdir(dir):
+        with open(f"{dir}/{name}", "r") as file:
+            file.readline()
+            category = OrientationRelationshipCategory(file.readline().rstrip("\n"))
+            file.readline()
+
+            match category:
+                case OrientationRelationshipCategory.TWIN:
+                    for line in file:
+                        data = line.rstrip("\n").split(",")
+                        id = data[0]
+                        lattice_type = BravaisLattice(data[1])
+                        plane = int(data[2]), int(data[3]), int(data[4])
+                        relationship = TwinOrientationRelationship(id, lattice_type, plane)
+                        relationships.append(relationship)
+                case OrientationRelationshipCategory.HETEROPHASE:
+                    for line in file:
+                        data = line.rstrip("\n").split(",")
+                        id = data[0]
+                        lattice_type_1 = BravaisLattice(data[1])
+                        lattice_type_2 = BravaisLattice(data[2])
+                        vector_pair_1 = (int(data[3]), int(data[4]), int(data[5])), (int(data[6]), int(data[7]), int(data[8]))
+                        vector_pair_2 = (int(data[9]), int(data[10]), int(data[11])), (int(data[12]), int(data[13]), int(data[14]))
+                        relationship = HeterophaseOrientationRelationship(id, lattice_type_1, lattice_type_2, vector_pair_1, vector_pair_2)
+                        relationships.append(relationship)
+
+    return relationships

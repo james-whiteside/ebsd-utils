@@ -7,6 +7,7 @@ from src.scripts.add_phase import add_phase
 from src.scripts.analyse import analyse
 from src.scripts.test import test
 from src.utilities.config import Config
+from src.utilities.logging import PrintLogger
 from src.utilities.utils import get_file_paths, parse_ids
 
 
@@ -15,27 +16,34 @@ PYPROJECT_PATH = "pyproject.toml"
 
 
 def main(args: Namespace, config: Config) -> None:
+    logger = PrintLogger(config.debug.log_level)
+
     match args.mode:
         case "analyse":
             if "path" in vars(args):
                 data_paths = [args.path]
             else:
-                data_paths = get_file_paths(directory_path=config.project.data_dir, recursive=True, extension="csv", prompt="Data files found:")
+                data_paths = get_file_paths(
+                    directory_path=config.project.data_dir,
+                    recursive=True,
+                    extension="csv",
+                    prompt="Data files found:",
+                    print_function=logger.info,
+                    input_function=logger.input,
+                )
 
             for data_path in data_paths:
-                analyse(data_path, config)
+                analyse(data_path, config, logger)
 
-            print()
-            print("All analyses complete.")
+            logger.info("All analyses complete.")
 
         case "add_phase":
-            global_ids = parse_ids(input("Enter Pathfinder database IDs of phases to add separated by commas/hyphens: "))
+            global_ids = parse_ids(logger.input("Enter Pathfinder database IDs of phases to add separated by commas/hyphens: "))
 
             for global_id in global_ids:
-                add_phase(global_id, config)
+                add_phase(global_id, config, logger)
 
-            print()
-            print("All phases added.")
+            logger.info("All phases added.")
 
         case "test":
             if "path" in vars(args):
@@ -44,10 +52,9 @@ def main(args: Namespace, config: Config) -> None:
                 data_refs = [path.split("/")[-1].split(".")[0] for path in listdir(config.test.data_dir)]
 
             for data_ref in data_refs:
-                test(data_ref, config)
+                test(data_ref, config, logger)
 
-            print()
-            print("All tests complete.")
+            logger.info("All tests complete.")
 
 
 if __name__ == "__main__":

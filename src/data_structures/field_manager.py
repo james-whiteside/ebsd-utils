@@ -19,6 +19,7 @@ from src.utilities.geometry import Axis
 from src.data_structures.phase import Phase
 from src.algorithms.clustering.dbscan import ClusterCategory
 from src.data_structures.parameter_groups import ScanParams
+from src.utilities.logging import Logger
 from src.utilities.utils import tuple_degrees, tuple_radians, float_degrees, float_radians, log_or_zero
 
 
@@ -31,12 +32,14 @@ class FieldManager:
         pattern_quality_values: list[list[float]],
         index_quality_values: list[list[float]],
         config: Config,
+        logger: Logger,
         random_source: Random,
     ):
         self._scan_params = scan_params
         self._config = config
+        self._logger = logger
         self._random_source = random_source
-        self._phase_id: Field[int] = Field.from_array(self._scan_params.width, self._scan_params.height, FieldType.DISCRETE, phase_id_values, nullable=True)
+        self.phase_id: Field[int] = Field.from_array(self._scan_params.width, self._scan_params.height, FieldType.DISCRETE, phase_id_values, nullable=True)
         self.euler_angles_rad: Field[tuple[float, float, float]] = None
         self.euler_angles_deg: Field[tuple[float, float, float]] = Field.from_array(self._scan_params.width, self._scan_params.height, FieldType.VECTOR_3D, euler_angle_values, nullable=True)
         self.pattern_quality: Field[float] = Field.from_array(self._scan_params.width, self._scan_params.height, FieldType.SCALAR, pattern_quality_values)
@@ -55,7 +58,7 @@ class FieldManager:
 
     @property
     def phase(self) -> DiscreteFieldMapper[Phase]:
-        return DiscreteFieldMapper(FieldType.OBJECT, self._phase_id, self._scan_params.phases)
+        return DiscreteFieldMapper(FieldType.OBJECT, self.phase_id, self._scan_params.phases)
 
     @property
     def euler_angles_deg(self) -> FunctionalFieldMapper[tuple[float, float, float], tuple[float, float, float]]:
@@ -75,6 +78,7 @@ class FieldManager:
     @property
     def orientation_matrix(self) -> Field[ndarray]:
         if self._orientation_matrix is None:
+            self._logger.debug("Generating orientation matrix field...")
             self._orientation_matrix = orientation_matrix(self._config.data.euler_axis_set, self.euler_angles_rad)
 
         return self._orientation_matrix
@@ -82,12 +86,14 @@ class FieldManager:
     @property
     def reduced_matrix(self) -> Field[ndarray]:
         if self._reduced_matrix is None:
+            self._logger.debug("Generating reduced matrix field...")
             self._reduced_matrix = reduced_matrix(self.orientation_matrix, self.phase)
 
         return self._reduced_matrix
 
     def ipf_coordinates(self, axis: Axis) -> Field[tuple[float, float]]:
         if axis not in self._ipf_coordinates:
+            self._logger.debug("Generating IPF coordinate field...")
             self._ipf_coordinates[axis] = ipf_coordinates(axis, self.reduced_matrix, self.phase)
 
         return self._ipf_coordinates[axis]
@@ -95,6 +101,7 @@ class FieldManager:
     @property
     def average_misorientation_rad(self) -> Field[float]:
         if self._average_misorientation_rad is None:
+            self._logger.debug("Generating average misorientation field...")
             self._average_misorientation_rad = average_misorientation(self.reduced_matrix, self.phase)
 
         return self._average_misorientation_rad
@@ -105,6 +112,7 @@ class FieldManager:
 
     def misrotation_tensor(self, axis: Axis) -> Field[ndarray]:
         if axis not in self._misrotation_tensor:
+            self._logger.debug(f"Generating misrotation tensor field for {axis.name} axis...")
             self._misrotation_tensor[axis] = misrotation_tensor(axis, self._scan_params.pixel_size, self.reduced_matrix, self.phase)
 
         return self._misrotation_tensor[axis]
@@ -112,6 +120,7 @@ class FieldManager:
     @property
     def nye_tensor(self) -> Field[ndarray]:
         if self._nye_tensor is None:
+            self._logger.debug("Generating Nye tensor field...")
             self._nye_tensor = nye_tensor(self.misrotation_tensor(Axis.X), self.misrotation_tensor(Axis.Y))
 
         return self._nye_tensor
@@ -119,6 +128,7 @@ class FieldManager:
     @property
     def gnd_density_lin(self) -> Field[float]:
         if self._gnd_density_lin is None:
+            self._logger.debug("Generating GND density field...")
             self._gnd_density_lin = gnd_density(self._config.dislocation.corrective_factor, self.nye_tensor, self.phase)
 
         return self._gnd_density_lin
@@ -130,6 +140,7 @@ class FieldManager:
     @property
     def channelling_fraction(self) -> Field[float]:
         if self._channelling_fraction is None:
+            self._logger.debug("Generating channelling fraction field...")
             random_source = Random(self._random_source.random())
 
             self._channelling_fraction = channelling_fraction(
@@ -142,6 +153,7 @@ class FieldManager:
                 random_source,
                 self._config.analysis.use_cache,
                 self._config.project.channelling_cache_dir,
+                self._logger,
             )
 
         return self._channelling_fraction
@@ -169,10 +181,13 @@ class FieldManager:
         return self._orientation_cluster_id
 
     def _init_orientation_cluster(self) -> None:
+        self._logger.debug("Generating orientation cluster field...")
+
         self._cluster_count_result, self._clustering_category_id, self._orientation_cluster_id = orientation_cluster(
             self._config.clustering.core_point_threshold,
             self._config.clustering.neighbourhood_radius_rad,
             self.phase,
             self.reduced_matrix,
             self._config.analysis.use_cuda,
+            self._logger,
         )

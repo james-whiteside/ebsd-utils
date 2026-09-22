@@ -7,8 +7,7 @@ from shutil import rmtree
 from sys import exit
 from os.path import getsize
 from math import floor, log10, degrees, radians
-from copy import copy
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from time import sleep
 from typing import Any, Type
 
@@ -19,6 +18,10 @@ class classproperty(object):
 
     def __get__(self, obj, owner):
         return self.f(owner)
+
+
+def timestamp():
+  return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 
 def log_or_zero(value: float) -> float:
@@ -41,14 +44,12 @@ def tuple_radians(angles: tuple[float, float, float]) -> tuple[float, float, flo
     return float_radians(angles[0]), float_radians(angles[1]), float_radians(angles[2])
 
 
-def highest_common_factor(numbers: list[int]) -> int:
+def highest_common_factor(numbers: Sequence[int]) -> int:
     """
     Calculates the highest common factor of a list of integers.
     :param numbers: The list of integers.
     :return: The highest common factor.
     """
-
-    numbers = copy(numbers)
 
     if len(numbers) == 2:
         x = numbers[0]
@@ -59,8 +60,7 @@ def highest_common_factor(numbers: list[int]) -> int:
 
         return x
     else:
-        z = numbers.pop()
-        return highest_common_factor(list((z, highest_common_factor(numbers))))
+        return highest_common_factor((numbers[0], highest_common_factor(numbers[1:])))
 
 
 def format_sig_figs(number: int | float, sig_figs: int) -> str:
@@ -163,11 +163,33 @@ def parse_ids(id_string: str) -> list[int]:
     return sorted(list(ids))
 
 
-def _get_file_paths(directory_path: str, recursive: bool, extension: str | None, exclusions: list[str] | None, prompt: str, get_many: bool) -> list[str]:
+def get_file_paths(
+        directory_path: str,
+        recursive: bool = False,
+        extension: str = None,
+        exclusions: list[str] = None,
+        prompt: str = "Files found:",
+        get_many: bool = True,
+        print_function: Callable = print,
+        input_function: Callable[..., str] = input,
+) -> list[str]:
+    """
+    Returns a list of absolute paths to files chosen by the user via an interactive CLI from a selection matched.
+    :param directory_path: The absolute path of the directory to match files from.
+    :param recursive: Match files in subdirectories.
+    :param extension: Extension to match files on. If none specified, all extensions will be matched.
+    :param exclusions: Paths of files to exclude from those matched.
+    :param prompt: Prompt to display to user.
+    :param get_many: Matches multiple files.
+    :param print_function: Function for user outputs.
+    :param input_function: Function for user inputs.
+    :return: The list of absolute file paths.
+    """
+
     directory_path += "/**"
     files = list()
     sub_dirs = list(sub_dir.replace("\\", "/") for sub_dir in glob(f"{directory_path}/", recursive=recursive))
-    print(prompt)
+    print_function(prompt)
 
     for file in list(file.replace("\\", "/") for file in sorted(glob(directory_path, recursive=recursive))):
         if file[-1] == "/":
@@ -182,45 +204,17 @@ def _get_file_paths(directory_path: str, recursive: bool, extension: str | None,
             files.append(file)
 
     if not files:
-        print(" None")
-        input("Press ENTER to exit program: ")
+        print_function(" None")
+        input_function("Press ENTER to exit program: ")
         exit()
     else:
         for id_, file in enumerate(files):
-            print(f" - ID: {id_}, Name: '{file.split("/")[-1]}', Size: {format_file_size(getsize(file))}")
+            print_function(f" - ID: {id_}, Name: '{file.split("/")[-1]}', Size: {format_file_size(getsize(file))}")
 
         if get_many:
-            return list(files[fileID] for fileID in parse_ids(input("Enter file IDs to read from separated by commas/hyphens: ")))
+            return list(files[fileID] for fileID in parse_ids(input_function("Enter file IDs to read from separated by commas/hyphens: ")))
         else:
-            return [files[int(input("Enter file ID to read from: "))]]
-
-
-def get_file_paths(directory_path: str, recursive: bool = False, extension: str = None, exclusions: list[str] = None, prompt: str = "Files found:") -> list[str]:
-    """
-    Returns a list of absolute paths to files chosen by the user via an interactive CLI from a selection matched.
-    :param directory_path: The absolute path of the directory to match files from.
-    :param recursive: Match files in subdirectories.
-    :param extension: Extension to match files on. If none specified, all extensions will be matched.
-    :param exclusions: Paths of files to exclude from those matched.
-    :param prompt: Prompt to display to user.
-    :return: The list of absolute file paths.
-    """
-
-    return _get_file_paths(directory_path, recursive, extension, exclusions, prompt, True)
-
-
-def get_file_path(directory_path: str, recursive: bool = False, extension: str = None, exclusions: list[str] = None, prompt: str = "Files found:") -> str:
-    """
-    Returns the absolute path to a file chosen by the user via an interactive CLI from a selection matched.
-    :param directory_path: The absolute path of the directory to match files from.
-    :param recursive: Match files in subdirectories.
-    :param extension: Extension to match files on. If none specified, all extensions will be matched.
-    :param exclusions: Paths of files to exclude from those matched.
-    :param prompt: Prompt to display to user.
-    :return: The absolute file path.
-    """
-
-    return _get_file_paths(directory_path, recursive, extension, exclusions, prompt, False)[0]
+            return [files[int(input_function("Enter file ID to read from: "))]]
 
 
 def delete_dir(dir: str, retry_wait=1.0, retry_attempts=10) -> None:

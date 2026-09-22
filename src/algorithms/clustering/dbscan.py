@@ -6,6 +6,7 @@ from numpy import ndarray
 from numba import cuda
 from src.algorithms.clustering.dbscan_cpu import _dbscan_cpu
 from src.algorithms.clustering.dbscan_gpu import _dbscan_gpu
+from src.utilities.logging import Logger
 from src.utilities.utils import InvalidEncodingError
 
 
@@ -35,6 +36,7 @@ def dbscan(
     core_point_neighbour_threshold: int,
     neighbourhood_radius: float,
     use_cuda: bool,
+    logger: Logger,
 ) -> tuple[int, ndarray, ndarray]:
     if use_cuda:
         if cuda.is_available():
@@ -47,7 +49,7 @@ def dbscan(
                 neighbourhood_radius
             )
         else:
-            print(f"Warning: Config specifies to use CUDA but no compatible CUDA device was detected. Using non-CUDA mode.")
+            logger.warn(f"Config specifies to use CUDA but no compatible CUDA device was detected. Using non-CUDA mode.")
 
     return _dbscan_cpu(
         width,
