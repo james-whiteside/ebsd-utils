@@ -41,7 +41,7 @@ class Analysis:
         self.params = ScanParams(data_ref, width, height, phases, pixel_size, reduction_factor)
         self.config = config
         self._logger = PrintLogger(config.debug.log_level)
-        self._random_source = Random(config.analysis.random_seed)
+        self._random_source = Random(config.debug.random_seed)
         self.local_unindexed_id = local_unindexed_id
         self._orientation_relationship_data = orientation_relationship_data if orientation_relationship_data else list()
 

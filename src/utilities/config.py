@@ -46,7 +46,6 @@ class Config:
             compute_orientation_relationships=self._bool(parser["analysis"]["compute_orientation_relationships"]),
             use_cache=self._bool(parser["analysis"]["use_cache"]),
             use_cuda=self._bool(parser["analysis"]["use_cuda"]),
-            random_seed=self._int(parser["analysis"]["random_seed"]),
         )
 
         self.maps = MapParams(
@@ -79,6 +78,7 @@ class Config:
 
         self.debug = DebugParams(
             log_level=self._log_level(parser["debug"]["log_level"]),
+            random_seed=self._int(parser["debug"]["random_seed"]),
         )
 
         self.test = TestParams(

@@ -88,7 +88,6 @@ class AnalysisParams:
         compute_orientation_relationships: bool,
         use_cache: bool,
         use_cuda: bool,
-        random_seed: int,
     ):
         self.reduce_resolution = reduce_resolution
         self.compute_dislocation = compute_dislocation
@@ -97,7 +96,6 @@ class AnalysisParams:
         self.compute_orientation_relationships = compute_orientation_relationships
         self.use_cache = use_cache
         self.use_cuda = use_cuda
-        self.random_seed = random_seed
 
 
 class MapParams:
@@ -180,8 +178,10 @@ class DebugParams:
     def __init__(
         self,
         log_level: LogLevel,
+        random_seed: int,
     ):
         self.log_level = log_level
+        self.random_seed = random_seed
 
 
 class TestParams:
