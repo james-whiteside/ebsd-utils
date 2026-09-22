@@ -163,11 +163,33 @@ def parse_ids(id_string: str) -> list[int]:
     return sorted(list(ids))
 
 
-def _get_file_paths(directory_path: str, recursive: bool, extension: str | None, exclusions: list[str] | None, prompt: str, get_many: bool) -> list[str]:
+def get_file_paths(
+        directory_path: str,
+        recursive: bool = False,
+        extension: str = None,
+        exclusions: list[str] = None,
+        prompt: str = "Files found:",
+        get_many: bool = True,
+        print_function: Callable = print,
+        input_function: Callable[..., str] = input,
+) -> list[str]:
+    """
+    Returns a list of absolute paths to files chosen by the user via an interactive CLI from a selection matched.
+    :param directory_path: The absolute path of the directory to match files from.
+    :param recursive: Match files in subdirectories.
+    :param extension: Extension to match files on. If none specified, all extensions will be matched.
+    :param exclusions: Paths of files to exclude from those matched.
+    :param prompt: Prompt to display to user.
+    :param get_many: Matches multiple files.
+    :param print_function: Function for user outputs.
+    :param input_function: Function for user inputs.
+    :return: The list of absolute file paths.
+    """
+
     directory_path += "/**"
     files = list()
     sub_dirs = list(sub_dir.replace("\\", "/") for sub_dir in glob(f"{directory_path}/", recursive=recursive))
-    print(prompt)
+    print_function(prompt)
 
     for file in list(file.replace("\\", "/") for file in sorted(glob(directory_path, recursive=recursive))):
         if file[-1] == "/":
@@ -182,45 +204,17 @@ def _get_file_paths(directory_path: str, recursive: bool, extension: str | None,
             files.append(file)
 
     if not files:
-        print(" None")
-        input("Press ENTER to exit program: ")
+        print_function(" None")
+        input_function("Press ENTER to exit program: ")
         exit()
     else:
         for id_, file in enumerate(files):
-            print(f" - ID: {id_}, Name: '{file.split("/")[-1]}', Size: {format_file_size(getsize(file))}")
+            print_function(f" - ID: {id_}, Name: '{file.split("/")[-1]}', Size: {format_file_size(getsize(file))}")
 
         if get_many:
-            return list(files[fileID] for fileID in parse_ids(input("Enter file IDs to read from separated by commas/hyphens: ")))
+            return list(files[fileID] for fileID in parse_ids(input_function("Enter file IDs to read from separated by commas/hyphens: ")))
         else:
-            return [files[int(input("Enter file ID to read from: "))]]
-
-
-def get_file_paths(directory_path: str, recursive: bool = False, extension: str = None, exclusions: list[str] = None, prompt: str = "Files found:") -> list[str]:
-    """
-    Returns a list of absolute paths to files chosen by the user via an interactive CLI from a selection matched.
-    :param directory_path: The absolute path of the directory to match files from.
-    :param recursive: Match files in subdirectories.
-    :param extension: Extension to match files on. If none specified, all extensions will be matched.
-    :param exclusions: Paths of files to exclude from those matched.
-    :param prompt: Prompt to display to user.
-    :return: The list of absolute file paths.
-    """
-
-    return _get_file_paths(directory_path, recursive, extension, exclusions, prompt, True)
-
-
-def get_file_path(directory_path: str, recursive: bool = False, extension: str = None, exclusions: list[str] = None, prompt: str = "Files found:") -> str:
-    """
-    Returns the absolute path to a file chosen by the user via an interactive CLI from a selection matched.
-    :param directory_path: The absolute path of the directory to match files from.
-    :param recursive: Match files in subdirectories.
-    :param extension: Extension to match files on. If none specified, all extensions will be matched.
-    :param exclusions: Paths of files to exclude from those matched.
-    :param prompt: Prompt to display to user.
-    :return: The absolute file path.
-    """
-
-    return _get_file_paths(directory_path, recursive, extension, exclusions, prompt, False)[0]
+            return [files[int(input_function("Enter file ID to read from: "))]]
 
 
 def delete_dir(dir: str, retry_wait=1.0, retry_attempts=10) -> None:

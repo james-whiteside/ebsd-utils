@@ -11,6 +11,7 @@ from random import Random
 import numpy
 from scipy import special, constants, optimize
 from src.data_structures.phase import Phase, BravaisLattice, SymmetryNotImplementedError
+from src.utilities.logging import Logger
 from src.utilities.utils import ProgressBar, delete_dir
 
 
@@ -236,6 +237,7 @@ def gen_crit_data(
 	max_index: int,
 	random_source: Random,
 	cache_dir: str,
+	logger: Logger,
 ):
 	e = beam_energy
 	Z1 = beam_atomic_number
@@ -273,7 +275,7 @@ def gen_crit_data(
 			for k in range(j + 1):
 				total += 1
 
-	progress_bar = ProgressBar(total)
+	progress_bar = ProgressBar(total, print_function=logger.info)
 	progress_bar.print()
 	
 	for i in range(max_index + 1):
@@ -443,6 +445,7 @@ def load_crit_data(
 	random_source: Random,
 	use_cache: bool,
 	cache_dir: str,
+	logger: Logger,
 ) -> dict:
 	if not use_cache:
 		cache_dir = f"{cache_dir}/temp"
@@ -462,7 +465,7 @@ def load_crit_data(
 		except FileNotFoundError:
 			max_range = 10  # Maximum range from origin where rows are to be considered (Å)
 			max_index = 10  # Maximum Miller index to be considered
-			print('Generating channelling fraction data for phase ' + str(target.global_id) + '.')
+			logger.info('Generating channelling fraction data for phase ' + str(target.global_id) + '.')
 
 			gen_crit_data(
 				beam_atomic_number=beam_atomic_number,
@@ -472,6 +475,7 @@ def load_crit_data(
 				max_index=max_index,
 				random_source=random_source,
 				cache_dir=cache_dir,
+				logger=logger,
 			)
 
 		try:

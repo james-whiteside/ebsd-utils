@@ -14,7 +14,7 @@ from src.utilities.geometry import orthogonalise_matrix, euler_angles
 from src.data_structures.map_manager import MapManager
 from src.data_structures.parameter_groups import ScanParams
 from src.data_structures.phase import Phase
-from src.utilities.logging import PrintLogger
+from src.utilities.logging import Logger
 from src.utilities.utils import tuple_degrees
 
 
@@ -30,6 +30,7 @@ class Analysis:
         pattern_quality_values: list[list[float]],
         index_quality_values: list[list[float]],
         config: Config,
+        logger: Logger,
         reduction_factor: int = 0,
         pixel_size: float = None,
         local_unindexed_id: int = None,
@@ -40,7 +41,7 @@ class Analysis:
 
         self.params = ScanParams(data_ref, width, height, phases, pixel_size, reduction_factor)
         self.config = config
-        self._logger = PrintLogger(config.debug.log_level)
+        self._logger = logger
         self._random_source = Random(config.debug.random_seed)
         self.local_unindexed_id = local_unindexed_id
         self._orientation_relationship_data = orientation_relationship_data if orientation_relationship_data else list()
@@ -103,6 +104,7 @@ class Analysis:
         reduction_factor = self.params.reduction_factor + 1
         pixel_size = self.params.pixel_size * 2
         config = self.config
+        logger = self._logger
         local_unindexed_id = self.local_unindexed_id
         orientation_relationship_data = self._orientation_relationship_data
 
@@ -182,6 +184,7 @@ class Analysis:
             pattern_quality_values=pattern_quality_values,
             index_quality_values=index_quality_values,
             config=config,
+            logger=logger,
             reduction_factor=reduction_factor,
             pixel_size=pixel_size,
             local_unindexed_id=local_unindexed_id,

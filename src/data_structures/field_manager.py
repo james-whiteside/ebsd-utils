@@ -153,6 +153,7 @@ class FieldManager:
                 random_source,
                 self._config.analysis.use_cache,
                 self._config.project.channelling_cache_dir,
+                self._logger,
             )
 
         return self._channelling_fraction
@@ -188,4 +189,5 @@ class FieldManager:
             self.phase,
             self.reduced_matrix,
             self._config.analysis.use_cuda,
+            self._logger,
         )

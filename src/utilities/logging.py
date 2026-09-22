@@ -23,30 +23,38 @@ class Logger(ABC):
         ...
 
     @abstractmethod
-    def warning(self, *args, **kwargs) -> None:
+    def warn(self, *args, **kwargs) -> None:
         ...
 
     @abstractmethod
     def error(self, *args, **kwargs) -> None:
         ...
 
+    @abstractmethod
+    def input(self, prompt: object = "") -> str:
+        ...
+
 
 class PrintLogger(Logger):
     def __init__(self, level: LogLevel):
-        self._level = level
+        self.level = level
 
     def debug(self, *args, **kwargs) -> None:
-        if self._level.value <= LogLevel.DEBUG.value:
+        if self.level.value <= LogLevel.DEBUG.value:
             print(timestamp(), "DEBUG", *args, **kwargs)
 
     def info(self, *args, **kwargs) -> None:
-        if self._level.value <= LogLevel.INFO.value:
+        if self.level.value <= LogLevel.INFO.value:
             print(timestamp(), "INFO ", *args, **kwargs)
 
-    def warning(self, *args, **kwargs) -> None:
-        if self._level.value <= LogLevel.WARNING.value:
+    def warn(self, *args, **kwargs) -> None:
+        if self.level.value <= LogLevel.WARNING.value:
             print(timestamp(), "WARN ", *args, **kwargs)
 
     def error(self, *args, **kwargs) -> None:
-        if self._level.value <= LogLevel.ERROR.value:
+        if self.level.value <= LogLevel.ERROR.value:
             print(timestamp(), "ERROR", *args, **kwargs)
+
+    def input(self, prompt: object = "") -> str:
+        return input(timestamp() + "INPUT" + str(prompt) + ": ")
+

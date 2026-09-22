@@ -17,9 +17,10 @@ from src.data_structures.phase import Phase, BravaisLattice, PhaseMissingError
 from src.data_structures.analysis import Analysis
 from src.utilities.config import Config
 from src.utilities.geometry import Axis
+from src.utilities.logging import Logger
 
 
-def load_from_data(data_path: str, config: Config, data_ref: str = None) -> Analysis:
+def load_from_data(data_path: str, config: Config, logger: Logger, data_ref: str = None) -> Analysis:
     if data_ref is None:
         data_ref = data_path.split("/")[-1].split(".")[0]
 
@@ -92,6 +93,7 @@ def load_from_data(data_path: str, config: Config, data_ref: str = None) -> Anal
         pattern_quality_values=pattern_quality_values,
         index_quality_values=index_quality_values,
         config=config,
+        logger=logger,
         local_unindexed_id=local_unindexed_id,
         orientation_relationship_data=orientation_relationships,
     )

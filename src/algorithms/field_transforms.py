@@ -16,6 +16,7 @@ from src.utilities.geometry import (
     misrotation_tensor as misrotation_tensor_,
     reduce_vector,
 )
+from src.utilities.logging import Logger
 from src.utilities.utils import maximise_brightness
 
 
@@ -250,6 +251,7 @@ def channelling_fraction(
     random_source: Random,
     use_cache: bool,
     cache_dir: str,
+    logger: Logger,
 ) -> Field[float]:
     input_fields = [orientation_matrix_field, phase_field]
     width, height, nullable = FieldLike.get_combined_params(input_fields)
@@ -263,6 +265,7 @@ def channelling_fraction(
             random_source=random_source,
             use_cache=use_cache,
             cache_dir=cache_dir,
+            logger=logger,
         ) for local_id, phase in phases.items()
     }
 
@@ -288,6 +291,7 @@ def orientation_cluster(
     phase_field: FieldLike[Phase],
     reduced_matrix_field: FieldLike[ndarray],
     use_cuda: bool,
+    logger: Logger,
 ) -> tuple[int, Field[int], Field[int]]:
     input_fields = [phase_field, reduced_matrix_field]
     width, height, nullable = FieldLike.get_combined_params(input_fields)
@@ -311,6 +315,7 @@ def orientation_cluster(
         core_point_threshold,
         neighbourhood_radius,
         use_cuda,
+        logger,
     )
 
     category_id_values = category_id_array.astype(int).tolist()
