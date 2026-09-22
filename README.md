@@ -36,15 +36,19 @@ The content of the generated outputs depends on the analysis modes specified in 
 
 #### GND densities
 
-This option adds a column of logarithmic GND densities to the analysis and generates a GND density map. Densities are calculated using the entrywise one-norm of the Nye tensor [[1]](#references). This is not physically accurate for systems other than primitive cubic, but serves as a lower bound approximation for others, and is directly proportional to the correct value in face-centred cubic systems. See the associated [config options](#dislocation-density-options) for parameters.
+This option computes GND densities for the EBSD data. It adds a column of logarithmic GND densities to the analysis and generates a GND density map. Densities are calculated using the entrywise one-norm of the Nye tensor [[1]](#references). This is not physically accurate for systems other than primitive cubic, but serves as a lower bound approximation for others, and is directly proportional to the correct value in face-centred cubic systems. See the associated [config options](#dislocation-density-options) for parameters.
 
 #### Channelling fractions
 
-This option adds a column of ion channelling fractions to the analysis and generates a channelling fraction map. Channelling fractions are derived from a model calibrated with a Monte Carlo simulation [[2]](#references). Original simulation code written by Dr G. Hobler. See the associated [config options](#channelling-fraction-options) for parameters.
+This option computes channelling fractions for the EBSD data. It adds a column of ion channelling fractions to the analysis and generates a channelling fraction map. Channelling fractions are derived from a model calibrated with a Monte Carlo simulation [[2]](#references). Original simulation code written by Dr G. Hobler. See the associated [config options](#channelling-fraction-options) for parameters.
 
 #### Orientation clusters
 
-This option adds two columns for clustering categories and cluster numbers to the analysis and generates an orientation cluster map. Clusters are determined using an implementation of the DBSCAN clustering algorithm [[3]](#references). Where available, this code is run on a CUDA-compatible GPU. Additionally, a cluster summary section is added to the analysis which lists the average values per cluster for Euler angles (using rotation matrix averaging), pattern qualities, index qualities, GND densities (if enabled), and channelling fractions (if enabled). See the associated [config options](#orientation-clustering-options) for parameters.
+This option clusters the EBSD data based on orientation. It adds two columns for clustering categories and cluster numbers to the analysis and generates an orientation cluster map. Clusters are determined using an implementation of the DBSCAN clustering algorithm [[3]](#references). Where available, this code is run on a CUDA-compatible GPU. Additionally, a cluster summary section is added to the analysis which lists the average values per cluster for Euler angles (using rotation matrix averaging), pattern qualities, index qualities, GND densities (if enabled), and channelling fractions (if enabled). See the associated [config options](#orientation-clustering-options) for parameters.
+
+#### Orientation relationships
+
+This option requires [orientation clustering](#orientation-clusters) to be run, and identifies orientation relationships between clusters. It adds an orientation relationship summary to the analysis which lists the relationship name, cluster IDs, misrotation, and cosine alignment for each detected relationship. Additionally, the details of each cluster's closest relationship is added to the cluster summary section. See the associated [config options](#orientation-relationship-options) for parameters.
 
 #### Resolution reduction
 
@@ -114,14 +118,15 @@ This codebase is open to pull requests that add new or improved functionality, s
 
 Options controlling filesystem structure.
 
-| Option                | Description                             |
-|-----------------------|-----------------------------------------|
-| `ebsd_data_dir`       | Directory for EBSD data files.          |
-| `phase_data_dir`      | Directory for phase data files.         |
-| `analysis_output_dir` | Directory for generated analysis files. |
-| `map_output_dir`      | Directory for generated maps.           |
-| `cache_dir`           | Directory for caching reused data.      |
-| `phase_database_path` | Path of Pathfinder database file.       |
+| Option                              | Description                                             |
+|-------------------------------------|---------------------------------------------------------|
+| `ebsd_data_dir`                     | Directory for EBSD data files.                          |
+| `phase_data_dir`                    | Directory for phase data files.                         |
+| `analysis_output_dir`               | Directory for generated analysis files.                 |
+| `orientation_relationship_data_dir` | Directory for orientation relationship parameter files. |
+| `map_output_dir`                    | Directory for generated maps.                           |
+| `cache_dir`                         | Directory for caching reused data.                      |
+| `phase_database_path`               | Path of Pathfinder database file.                       |
 
 ### Data options
 
@@ -136,15 +141,15 @@ Options specifying additional necessary data not provided in Pathfinder data fil
 
 Options controlling which analyses to perform, in addition to some common settings.
 
-| Option                          | Description                                                          |
-|---------------------------------|----------------------------------------------------------------------|
-| `reduce_resolution`             | Perform resolution reduction prior to analysis.                      |
-| `compute_dislocation_densities` | Perform GND density analysis.                                        |
-| `compute_channelling_fractions` | Perform channelling fraction analysis.                               |
-| `compute_orientation_clusters`  | Perform orientation clustering analysis.                             |
-| `use_cache`                     | Improves performance by caching reused data.                         |
-| `use_cuda`                      | Improves performance by using a CUDA-compatible GPU where available. |
-| `random_seed`                   | Seed for random number generation.                                   |
+| Option                              | Description                                                          |
+|-------------------------------------|----------------------------------------------------------------------|
+| `reduce_resolution`                 | Perform resolution reduction prior to analysis.                      |
+| `compute_dislocation_densities`     | Perform GND density analysis.                                        |
+| `compute_channelling_fractions`     | Perform channelling fraction analysis.                               |
+| `compute_orientation_clusters`      | Perform orientation clustering analysis.                             |
+| `compute_orientation_relationships` | Perform orientation relationship analysis.                           |
+| `use_cache`                         | Improves performance by caching reused data.                         |
+| `use_cuda`                          | Improves performance by using a CUDA-compatible GPU where available. |
 
 ### Map options
 
@@ -190,6 +195,23 @@ Options for orientation clustering analysis.
 |------------------------|----------------------------------------------------------------------|
 | `neighbour_threshold`  | Number of closely oriented neighbours required to form a cluster.    |
 | `neighbourhood_radius` | Angular distance for points to be considered closely oriented (deg). |
+
+### Orientation relationship options
+
+Options for orientation relationship analysis.
+
+| Option                   | Description                                                         |
+|--------------------------|---------------------------------------------------------------------|
+| `maximum_misorientation` | Tolerance for deviation from ideal orientation relationships (deg). |
+
+### Debug options
+
+Options for debugging.
+
+| Option        | Description                                                       |
+|---------------|-------------------------------------------------------------------|
+| `log_level`   | Controls the logging level (`error`, `warn`, `info`, or `debug`). |
+| `random_seed` | Seed for random number generation.                                |
 
 ### Test options
 
