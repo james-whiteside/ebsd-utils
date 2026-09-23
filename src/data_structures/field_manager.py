@@ -13,6 +13,7 @@ from src.algorithms.field_transforms import (
     channelling_fraction,
     orientation_cluster,
 )
+from src.data_structures.fields.vector_3d_field import Vector3DField
 from src.utilities.config import Config
 from src.data_structures.field import FieldType, Field, DiscreteFieldMapper, FunctionalFieldMapper, FieldNullError
 from src.utilities.geometry import Axis
@@ -66,7 +67,7 @@ class FieldManager:
 
     @euler_angles_deg.setter
     def euler_angles_deg(self, value: Field[tuple[float, float, float]]) -> None:
-        self.euler_angles_rad = Field(self._scan_params.width, self._scan_params.height, FieldType.VECTOR_3D, default_value=None, nullable=True)
+        self.euler_angles_rad = Vector3DField(self._scan_params.width, self._scan_params.height, default_value=None, nullable=True)
 
         for y in range(self._scan_params.height):
             for x in range(self._scan_params.width):
