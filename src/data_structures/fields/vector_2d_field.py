@@ -15,7 +15,7 @@ class Vector2DField(ArrayBackedField[tuple[float, float], float]):
             default_value: tuple[float, float] | None,
             nullable: bool = False,
     ):
-        super().__init__(width, height, FieldType.VECTOR_2D, default_value, nullable)
+        super().__init__(width, height, FieldType.VECTOR_2D, default_value, nullable, value_shape=(2,))
 
     @classproperty
     def _array_type(cls) -> dtype:

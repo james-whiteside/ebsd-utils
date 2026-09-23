@@ -14,10 +14,9 @@ class MatrixField(ArrayBackedField[ndarray, float]):
             height: int,
             default_value: ndarray | None,
             nullable: bool = False,
-            matrix_dimensions: tuple[int, int] = (3, 3),
+            matrix_shape: tuple[int, int] = (3, 3),
     ):
-        super().__init__(width, height, FieldType.MATRIX, default_value, nullable)
-        self._matrix_dimensions = matrix_dimensions
+        super().__init__(width, height, FieldType.MATRIX, default_value, nullable, matrix_shape)
 
     @classproperty
     def _array_type(cls) -> dtype:
@@ -36,7 +35,7 @@ class MatrixField(ArrayBackedField[ndarray, float]):
         return isnan(array).any()
 
     def _cast_value(self, value: ndarray | None) -> ndarray:
-        return value if value is not None else full(self._matrix_dimensions, nan, dtype=float64)
+        return value if value is not None else full(self._value_shape, nan, dtype=float64)
 
     @classmethod
     def _cast_array(cls, value: ndarray) -> ndarray | None:

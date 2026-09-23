@@ -15,7 +15,7 @@ class Vector3DField(ArrayBackedField[tuple[float, float, float], float]):
             default_value: tuple[float, float, float] | None,
             nullable: bool = False,
     ):
-        super().__init__(width, height, FieldType.VECTOR_3D, default_value, nullable)
+        super().__init__(width, height, FieldType.VECTOR_3D, default_value, nullable, value_shape=(3,))
 
     @classproperty
     def _array_type(cls) -> dtype:

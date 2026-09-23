@@ -16,11 +16,13 @@ class ArrayBackedField[VALUE_TYPE, ARRAY_TYPE](FieldLike[VALUE_TYPE]):
             field_type: FieldType,
             default_value: VALUE_TYPE | None,
             nullable: bool = False,
+            value_shape: tuple[int, ...] = (),
     ):
         super().__init__(width, height, field_type, nullable)
+        self._value_shape = value_shape
         self._assert_value_permitted(default_value)
         self.default_value = self._cast_value(default_value)
-        self._values = full((width, height), default_value, dtype=self._array_type)
+        self._values = full((width, height) + self._value_shape, default_value, dtype=self._array_type)
 
     @property
     def array(self):
@@ -42,7 +44,7 @@ class ArrayBackedField[VALUE_TYPE, ARRAY_TYPE](FieldLike[VALUE_TYPE]):
             raise FieldLookupError(x, y)
         else:
             self._assert_value_permitted(value)
-            self._values[y][x] = self._cast_value(value)
+            self._values[x][y] = self._cast_value(value)
 
     @classmethod
     def _assert_valid_array(cls, array: ndarray, width: int, height: int, nullable: bool) -> None:
