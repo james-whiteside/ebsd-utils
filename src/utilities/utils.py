@@ -3,6 +3,7 @@
 from datetime import datetime
 from enum import Enum
 from glob import glob
+from os import path
 from shutil import rmtree
 from sys import exit
 from os.path import getsize
@@ -218,7 +219,11 @@ def get_file_paths(
 
 
 def delete_dir(dir: str, retry_wait=1.0, retry_attempts=10) -> None:
+    if not path.exists(dir):
+        return
+
     attempts = 0
+    error: Exception | None = None
 
     while attempts < retry_attempts:
         attempts += 1
@@ -226,11 +231,15 @@ def delete_dir(dir: str, retry_wait=1.0, retry_attempts=10) -> None:
         try:
             rmtree(dir)
             return
-        except Exception as error:
+        except Exception as e:
+            error = e
             sleep(retry_wait)
             continue
 
-    raise RuntimeError(f"Failed to delete directory \"{dir}\" due to {type(error).__name__}:\n{error}")
+    if error is not None:
+        raise RuntimeError(f"Failed to delete directory \"{dir}\" due to {type(error).__name__}:\n{error}")
+    else:
+        raise RuntimeError(f"Failed to delete directory \"{dir}\"")
 
 
 def colour_wheel(i: int, n: int) -> tuple[float, float, float]:
