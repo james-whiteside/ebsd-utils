@@ -401,6 +401,16 @@ class FieldValueError(ValueError):
         return FieldValueError(value, reason)
 
     @classmethod
+    def out_of_range(cls, value: Any, field_type: FieldType) -> Self:
+        reason = f"Field is of type {field_type.type.__name__} but a value outside the permitted range was provided"
+        return FieldValueError(value, reason)
+
+    @classmethod
+    def wrong_array_type(cls, array: ndarray, field_type: FieldType) -> Self:
+        reason = f"Field is of type {field_type.type.__name__} but an array of type {array.dtype} was provided"
+        return FieldValueError(array, reason)
+
+    @classmethod
     def not_in_mapping(cls, value: int) -> Self:
         reason = f"Value is not within provided mapping for discrete field mapper"
         return FieldValueError(value, reason)
@@ -418,12 +428,13 @@ class FieldValueError(ValueError):
 
 class FieldSizeMismatchError(ValueError):
     class Dimension(Enum):
+        DIMENSIONS = "dimensions"
         WIDTH = "width"
         HEIGHT = "height"
 
     def __init__(self, dimension: Dimension, values: tuple[int, int]):
         """
-        Exception raised when attempting to derive a new field from input fields with mismatched sizes.
+        Exception raised when attempting to construct a field from a badly shaped array or derive a new field from input fields with mismatched sizes.
         :param dimension: Dimension of mismatch.
         :param values: Mismatched values.
         """
@@ -431,6 +442,10 @@ class FieldSizeMismatchError(ValueError):
         self.values = values
         self.message = f"{self.dimension.name.title()}s {self.values[0]} and {self.values[1]} of supplied fields do not match."
         super().__init__(self.message)
+
+    @classmethod
+    def dimensions(cls, values: tuple[int, int]) -> Self:
+        return FieldSizeMismatchError(FieldSizeMismatchError.Dimension.DIMENSIONS, values)
 
     @classmethod
     def width(cls, values: tuple[int, int]) -> Self:
