@@ -1,7 +1,7 @@
 from abc import abstractmethod
 from typing import Self
 
-from numpy import full, ndarray, dtype
+from numpy import full, ndarray, dtype, isnan, any as array_any, array
 
 from src.data_structures.field import FieldLike, FieldType, FieldValueError, FieldLookupError, FieldNullError, \
     FieldSizeMismatchError
@@ -22,7 +22,7 @@ class ArrayBackedField[VALUE_TYPE, ARRAY_TYPE](FieldLike[VALUE_TYPE]):
         self._value_shape = value_shape
         self._assert_value_permitted(default_value)
         self.default_value = self._cast_value(default_value)
-        self._values = full((width, height) + self._value_shape, default_value, dtype=self._array_type)
+        self._values = full((width, height) + self._value_shape, self.default_value, dtype=self._array_type)
 
     @property
     def array(self):
@@ -45,6 +45,13 @@ class ArrayBackedField[VALUE_TYPE, ARRAY_TYPE](FieldLike[VALUE_TYPE]):
         else:
             self._assert_value_permitted(value)
             self._values[x][y] = self._cast_value(value)
+
+    @classmethod
+    def _has_null_value(cls, array: ndarray) -> bool:
+        if isnan(cls._null_value):
+            return isnan(array).any()
+        else:
+            return array_any((array == cls._null_value))
 
     @classmethod
     def _assert_valid_array(cls, array: ndarray, width: int, height: int, nullable: bool) -> None:
@@ -86,14 +93,14 @@ class ArrayBackedField[VALUE_TYPE, ARRAY_TYPE](FieldLike[VALUE_TYPE]):
     def _value_dimensions(cls) -> int:
         ...
 
-    @classmethod
+    @classproperty
     @abstractmethod
-    def _is_valid_type(cls, array: ndarray) -> bool:
+    def _null_value(cls) -> ARRAY_TYPE:
         ...
 
     @classmethod
     @abstractmethod
-    def _has_null_value(cls, array: ndarray) -> bool:
+    def _is_valid_type(cls, array: ndarray) -> bool:
         ...
 
     @abstractmethod
@@ -107,5 +114,27 @@ class ArrayBackedField[VALUE_TYPE, ARRAY_TYPE](FieldLike[VALUE_TYPE]):
 
     @classmethod
     @abstractmethod
-    def from_array(cls, width: int, height: int, values: ndarray, nullable: bool = False) -> Self:
+    def from_array(cls, width: int, height: int, values: ndarray, nullable: bool = False, **kwargs) -> Self:
         ...
+
+    @classmethod
+    @abstractmethod
+    def from_list(cls, width: int, height: int, values: ndarray, nullable: bool = False, **kwargs) -> Self:
+        ...
+
+    @classmethod
+    def _list_to_array(
+            cls,
+            width: int,
+            height: int,
+            values: list[list[VALUE_TYPE | None]],
+            value_shape: tuple[int, ...] = (),
+    ) -> ndarray:
+        array_values = full((width, height) + value_shape, cls._null_value, dtype=cls._array_type)
+
+        for y in range(height):
+            for x in range(width):
+                if values[y][x] is not None:
+                    array_values[x][y] = array(values[y][x])
+
+        return array_values

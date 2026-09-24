@@ -1,6 +1,6 @@
 from typing import Self
 
-from numpy import ndarray, dtype, issubdtype, floating, all as array_all, any as array_any, int8
+from numpy import ndarray, dtype, issubdtype, floating, all as array_all, int8
 
 from src.data_structures.field import FieldType
 from src.data_structures.fields.array_backed_field import ArrayBackedField
@@ -25,13 +25,13 @@ class BooleanField(ArrayBackedField[bool, int]):
     def _value_dimensions(cls) -> int:
         return 0
 
+    @classproperty
+    def _null_value(cls) -> int:
+        return -1
+
     @classmethod
     def _is_valid_type(cls, array: ndarray) -> bool:
         return not issubdtype(array.dtype, floating) and array_all((array >= -1) & (array <= 1))
-
-    @classmethod
-    def _has_null_value(cls, array: ndarray) -> bool:
-        return array_any((array == -1))
 
     def _cast_value(self, value: bool | None) -> int:
         return 1 if value else 0 if value is not None else -1
@@ -42,13 +42,27 @@ class BooleanField(ArrayBackedField[bool, int]):
 
     @classmethod
     def from_array(
-        cls,
-        width: int,
-        height: int,
-        values: ndarray,
-        nullable: bool = False,
+            cls,
+            width: int,
+            height: int,
+            values: ndarray,
+            nullable: bool = False,
+            **kwargs,
     ) -> Self:
         cls._assert_valid_array(values, width, height, nullable)
-        field = BooleanField(width, height, default_value=None, nullable=nullable)
+        field = BooleanField(width, height, default_value=None, nullable=True)
         field._values = values
+        field.nullable = nullable
         return field
+
+    @classmethod
+    def from_list(
+            cls,
+            width: int,
+            height: int,
+            values: list[list[bool | None]],
+            nullable: bool = False,
+            **kwargs,
+    ) -> Self:
+        array_values = cls._list_to_array(width, height, values)
+        return cls.from_array(width, height, array_values, nullable=nullable, **kwargs)

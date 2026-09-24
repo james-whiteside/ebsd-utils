@@ -25,13 +25,13 @@ class DiscreteField(ArrayBackedField[int, int]):
     def _value_dimensions(cls) -> int:
         return 0
 
+    @classproperty
+    def _null_value(cls) -> int:
+        return -1
+
     @classmethod
     def _is_valid_type(cls, array: ndarray) -> bool:
         return not issubdtype(array.dtype, floating) and array_all((array >= -1) & (array <= iinfo(int32).max))
-
-    @classmethod
-    def _has_null_value(cls, array: ndarray) -> bool:
-        return array_any((array == -1))
 
     def _cast_value(self, value: bool | None) -> int:
         return value if value is not None else -1
@@ -44,18 +44,32 @@ class DiscreteField(ArrayBackedField[int, int]):
     def _assert_value_permitted(self, value: int | None) -> None:
         super()._assert_value_permitted(value)
 
-        if value < 0 or value > iinfo(int32).max:
+        if value is not None and (value < 0 or value > iinfo(int32).max):
             raise FieldValueError.out_of_range(value, self.field_type)
 
     @classmethod
     def from_array(
-        cls,
-        width: int,
-        height: int,
-        values: ndarray,
-        nullable: bool = False,
+            cls,
+            width: int,
+            height: int,
+            values: ndarray,
+            nullable: bool = False,
+            **kwargs,
     ) -> Self:
         cls._assert_valid_array(values, width, height, nullable)
-        field = DiscreteField(width, height, default_value=None, nullable=nullable)
+        field = DiscreteField(width, height, default_value=None, nullable=True)
         field._values = values
+        field.nullable = nullable
         return field
+
+    @classmethod
+    def from_list(
+            cls,
+            width: int,
+            height: int,
+            values: list[list[int | None]],
+            nullable: bool = False,
+            **kwargs,
+    ) -> Self:
+        array_values = cls._list_to_array(width, height, values)
+        return cls.from_array(width, height, array_values, nullable=nullable, **kwargs)

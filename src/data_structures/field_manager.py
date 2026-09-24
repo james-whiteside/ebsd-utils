@@ -13,6 +13,10 @@ from src.algorithms.field_transforms import (
     channelling_fraction,
     orientation_cluster,
 )
+from src.data_structures.fields.discrete_field import DiscreteField
+from src.data_structures.fields.matrix_field import MatrixField
+from src.data_structures.fields.scalar_field import ScalarField
+from src.data_structures.fields.vector_2d_field import Vector2DField
 from src.data_structures.fields.vector_3d_field import Vector3DField
 from src.utilities.config import Config
 from src.data_structures.field import FieldType, Field, DiscreteFieldMapper, FunctionalFieldMapper, FieldNullError
@@ -40,22 +44,22 @@ class FieldManager:
         self._config = config
         self._logger = logger
         self._random_source = random_source
-        self.phase_id: Field[int] = Field.from_array(self._scan_params.width, self._scan_params.height, FieldType.DISCRETE, phase_id_values, nullable=True)
-        self.euler_angles_rad: Field[tuple[float, float, float]] = None
-        self.euler_angles_deg: Field[tuple[float, float, float]] = Field.from_array(self._scan_params.width, self._scan_params.height, FieldType.VECTOR_3D, euler_angle_values, nullable=True)
-        self.pattern_quality: Field[float] = Field.from_array(self._scan_params.width, self._scan_params.height, FieldType.SCALAR, pattern_quality_values)
-        self.index_quality: Field[float] = Field.from_array(self._scan_params.width, self._scan_params.height, FieldType.SCALAR, index_quality_values)
-        self._orientation_matrix: Field[ndarray] = None
-        self._reduced_matrix: Field[ndarray] = None
-        self._ipf_coordinates: dict[Axis, Field[tuple[float, float]]] = dict()
-        self._average_misorientation_rad: Field[float] = None
-        self._misrotation_tensor: dict[Axis, Field[ndarray]] = dict()
-        self._nye_tensor: Field[ndarray] = None
-        self._gnd_density_lin: Field[float] = None
-        self._channelling_fraction: Field[float] = None
-        self._cluster_count_result: int = None
-        self._clustering_category_id: Field[int] = None
-        self._orientation_cluster_id: Field[int] = None
+        self.phase_id: DiscreteField = DiscreteField.from_list(self._scan_params.width, self._scan_params.height, phase_id_values, nullable=True)
+        self.euler_angles_rad: Vector3DField | None = None
+        self.euler_angles_deg: Vector3DField = Vector3DField.from_list(self._scan_params.width, self._scan_params.height, euler_angle_values, nullable=True)
+        self.pattern_quality: ScalarField = ScalarField.from_list(self._scan_params.width, self._scan_params.height, pattern_quality_values)
+        self.index_quality: ScalarField = ScalarField.from_list(self._scan_params.width, self._scan_params.height, index_quality_values)
+        self._orientation_matrix: MatrixField | None = None
+        self._reduced_matrix: MatrixField | None = None
+        self._ipf_coordinates: dict[Axis, Vector2DField] = dict()
+        self._average_misorientation_rad: ScalarField  | None = None
+        self._misrotation_tensor: dict[Axis, MatrixField] = dict()
+        self._nye_tensor: MatrixField | None = None
+        self._gnd_density_lin: ScalarField | None = None
+        self._channelling_fraction: ScalarField | None = None
+        self._cluster_count_result: int | None = None
+        self._clustering_category_id: DiscreteField | None = None
+        self._orientation_cluster_id: DiscreteField | None = None
 
     @property
     def phase(self) -> DiscreteFieldMapper[Phase]:

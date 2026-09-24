@@ -25,13 +25,13 @@ class Vector2DField(ArrayBackedField[tuple[float, float], float]):
     def _value_dimensions(cls) -> int:
         return 1
 
+    @classproperty
+    def _null_value(cls) -> float:
+        return nan
+
     @classmethod
     def _is_valid_type(cls, array: ndarray) -> bool:
         return True
-
-    @classmethod
-    def _has_null_value(cls, array: ndarray) -> bool:
-        return isnan(array).any()
 
     def _cast_value(self, value: tuple[float, float] | None) -> ndarray:
         return array(value) if value is not None else array((nan, nan))
@@ -42,13 +42,27 @@ class Vector2DField(ArrayBackedField[tuple[float, float], float]):
 
     @classmethod
     def from_array(
-        cls,
-        width: int,
-        height: int,
-        values: ndarray,
-        nullable: bool = False,
+            cls,
+            width: int,
+            height: int,
+            values: ndarray,
+            nullable: bool = False,
+            **kwargs,
     ) -> Self:
         cls._assert_valid_array(values, width, height, nullable)
-        field = Vector2DField(width, height, default_value=None, nullable=nullable)
+        field = Vector2DField(width, height, default_value=None, nullable=True)
         field._values = values
+        field.nullable = nullable
         return field
+
+    @classmethod
+    def from_list(
+            cls,
+            width: int,
+            height: int,
+            values: list[list[tuple[float, float] | None]],
+            nullable: bool = False,
+            **kwargs,
+    ) -> Self:
+        array_values = cls._list_to_array(width, height, values, value_shape=(2,))
+        return cls.from_array(width, height, array_values, nullable=nullable, **kwargs)

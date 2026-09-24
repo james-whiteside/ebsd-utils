@@ -25,13 +25,13 @@ class ScalarField(ArrayBackedField[float, float]):
     def _value_dimensions(cls) -> int:
         return 0
 
+    @classproperty
+    def _null_value(cls) -> float:
+        return nan
+
     @classmethod
     def _is_valid_type(cls, array: ndarray) -> bool:
         return True
-
-    @classmethod
-    def _has_null_value(cls, array: ndarray) -> bool:
-        return isnan(array).any()
 
     def _cast_value(self, value: float | None) -> float:
         return value if value is not None else nan
@@ -42,13 +42,27 @@ class ScalarField(ArrayBackedField[float, float]):
 
     @classmethod
     def from_array(
-        cls,
-        width: int,
-        height: int,
-        values: ndarray,
-        nullable: bool = False,
+            cls,
+            width: int,
+            height: int,
+            values: ndarray,
+            nullable: bool = False,
+            **kwargs,
     ) -> Self:
         cls._assert_valid_array(values, width, height, nullable)
-        field = ScalarField(width, height, default_value=None, nullable=nullable)
+        field = ScalarField(width, height, default_value=None, nullable=True)
         field._values = values
+        field.nullable = nullable
         return field
+
+    @classmethod
+    def from_list(
+            cls,
+            width: int,
+            height: int,
+            values: list[list[float | None]],
+            nullable: bool = False,
+            **kwargs,
+    ) -> Self:
+        array_values = cls._list_to_array(width, height, values)
+        return cls.from_array(width, height, array_values, nullable=nullable, **kwargs)
