@@ -3,7 +3,6 @@
 from random import Random
 from numpy import ndarray
 from src.algorithms.field_transforms import (
-    orientation_matrix,
     reduced_matrix,
     ipf_coordinates,
     average_misorientation,
@@ -13,6 +12,7 @@ from src.algorithms.field_transforms import (
     channelling_fraction,
     orientation_cluster,
 )
+from src.algorithms.new_field_transforms.orientation_matrix import orientation_matrix
 from src.data_structures.fields.discrete_field import DiscreteField
 from src.data_structures.fields.matrix_field import MatrixField
 from src.data_structures.fields.scalar_field import ScalarField
@@ -81,7 +81,7 @@ class FieldManager:
                     continue
 
     @property
-    def orientation_matrix(self) -> Field[ndarray]:
+    def orientation_matrix(self) -> MatrixField:
         if self._orientation_matrix is None:
             self._logger.debug("Generating orientation matrix field...")
             self._orientation_matrix = orientation_matrix(self._config.data.euler_axis_set, self.euler_angles_rad)
@@ -151,7 +151,7 @@ class FieldManager:
             self._channelling_fraction = channelling_fraction(
                 self._config.channelling.beam_atomic_number,
                 self._config.channelling.beam_energy,
-                self._config.channelling.beam_vector,
+                self._config.channelling.beam_axis,
                 self._scan_params.phases,
                 self.orientation_matrix,
                 self.phase,

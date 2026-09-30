@@ -533,10 +533,10 @@ def load_crit_data(
 			delete_dir(cache_dir)
 
 
-def fraction(effective_beam_vector: tuple[float, float, float], crit_data: dict) -> float:
+def fraction(effective_beam_vector: numpy.ndarray, crit_data: dict) -> float:
 	vx, vy, vz = -effective_beam_vector[0], -effective_beam_vector[1], effective_beam_vector[2]
-	theta = -math.atan(math.sqrt(vx ** 2 + vy ** 2) / vz)
-	phi = (math.pi / 2) - math.atan2(vy, vx)
+	theta = -numpy.atan(numpy.sqrt(vx ** 2 + vy ** 2) / vz)
+	phi = (numpy.pi / 2) - numpy.atan2(vy, vx)
 	e = crit_data['energy']
 	axial = crit_data['data']['axial']
 	has = crit_data['data']['has']

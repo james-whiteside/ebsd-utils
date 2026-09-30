@@ -13,8 +13,6 @@ from src.data_structures.fields.vector_3d_field import Vector3DField
 from src.data_structures.phase import Phase, CrystalFamily, SymmetryNotImplementedError
 from src.utilities.geometry import (
     Axis,
-    AxisSet,
-    euler_rotation_matrix,
     misrotation_matrix,
     rotation_angle,
     misrotation_tensor as misrotation_tensor_,
@@ -22,28 +20,6 @@ from src.utilities.geometry import (
 )
 from src.utilities.logging import Logger
 from src.utilities.utils import maximise_brightness
-
-
-def orientation_matrix(
-    axis_set: AxisSet,
-    euler_angle_field: FieldLike[tuple[float, float, float]],
-) -> Field[ndarray]:
-    input_fields = [euler_angle_field]
-    width, height, nullable = FieldLike.get_combined_params(input_fields)
-    output_field = MatrixField(width, height, default_value=None, nullable=True)
-
-    for y in range(height):
-        for x in range(width):
-            try:
-                euler_angles = euler_angle_field.get_value_at(x, y)
-            except FieldNullError:
-                continue
-
-            value = euler_rotation_matrix(axis_set, euler_angles)
-            output_field.set_value_at(x, y, value)
-
-    output_field.nullable = nullable
-    return output_field
 
 
 def reduced_matrix(
@@ -248,7 +224,7 @@ def gnd_density(
 def channelling_fraction(
     beam_atomic_number: int,
     beam_energy: float,
-    beam_vector: tuple[float, float, float],
+    beam_axis: Axis,
     phases: dict[int, Phase],
     orientation_matrix_field: FieldLike[ndarray],
     phase_field: FieldLike[Phase],
@@ -281,7 +257,7 @@ def channelling_fraction(
             except FieldNullError:
                 continue
 
-            effective_beam_vector = dot(rotation_matrix, beam_vector).tolist()
+            effective_beam_vector = dot(rotation_matrix, beam_axis.vector).tolist()
             value = fraction(effective_beam_vector, phase_data)
             output_field.set_value_at(x, y, value)
 
