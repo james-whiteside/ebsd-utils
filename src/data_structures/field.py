@@ -2,7 +2,7 @@
 
 from abc import ABC, abstractmethod
 from collections.abc import Iterator
-from enum import Enum
+from enum import Enum, IntEnum
 from typing import Callable, Self, Type, Any
 from PIL.Image import Image, new as new_image
 from numpy import ndarray
@@ -12,6 +12,7 @@ from src.utilities.utils import format_sig_figs
 class FieldType(Enum):
     BOOLEAN = "boolean"
     DISCRETE = "discrete"
+    ENUM = "enum"
     SCALAR = "scalar"
     VECTOR_2D = "2D vector"
     VECTOR_3D = "3D vector"
@@ -32,7 +33,7 @@ class FieldType(Enum):
 
     @property
     def serializable(self) -> bool:
-        return self in (FieldType.BOOLEAN, FieldType.DISCRETE, FieldType.SCALAR, FieldType.VECTOR_2D, FieldType.VECTOR_3D)
+        return self in (FieldType.BOOLEAN, FieldType.DISCRETE, FieldType.ENUM, FieldType.SCALAR, FieldType.VECTOR_2D, FieldType.VECTOR_3D)
 
     @property
     def roundable(self) -> bool:
@@ -43,6 +44,7 @@ class FieldType(Enum):
         match self:
             case self.BOOLEAN: return bool
             case self.DISCRETE: return int
+            case self.ENUM: return IntEnum
             case self.SCALAR: return float
             case self.VECTOR_2D: return tuple
             case self.VECTOR_3D: return tuple
@@ -54,6 +56,7 @@ class FieldType(Enum):
         match self:
             case self.BOOLEAN: return 1
             case self.DISCRETE: return 1
+            case self.ENUM: return 1
             case self.SCALAR: return 1
             case self.VECTOR_2D: return 2
             case self.VECTOR_3D: return 3

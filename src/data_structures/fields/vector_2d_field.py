@@ -7,6 +7,7 @@ from src.data_structures.fields.array_backed_field import ArrayBackedField
 
 
 class Vector2DField(ArrayBackedField[tuple[float, float]]):
+    _FIELD_TYPE = FieldType.VECTOR_2D
     _ARRAY_TYPE = dtype(float64)
     _NULL_VALUE = array((nan, nan), dtype=_ARRAY_TYPE)
     _SHAPE = (2,)
@@ -18,7 +19,7 @@ class Vector2DField(ArrayBackedField[tuple[float, float]]):
             default_value: tuple[float, float] | None,
             nullable: bool = False,
     ):
-        super().__init__(width, height, FieldType.VECTOR_2D, self._ARRAY_TYPE, default_value, nullable, self._SHAPE)
+        super().__init__(width, height, self._FIELD_TYPE, self._ARRAY_TYPE, default_value, nullable, self._SHAPE)
 
     @property
     def null_value(self) -> ndarray:
@@ -37,9 +38,8 @@ class Vector2DField(ArrayBackedField[tuple[float, float]]):
             height: int,
             values: ndarray,
             nullable: bool = False,
-            **kwargs,
     ) -> Self:
-        cls._assert_valid_array(values, width, height, nullable, cls._NULL_VALUE, lambda _: True, cls._SHAPE)
+        cls._assert_valid_array(values, width, height, cls._FIELD_TYPE, nullable, cls._NULL_VALUE, lambda _: True, cls._SHAPE)
         field = Vector2DField(width, height, default_value=None, nullable=True)
         field._values = values
         field.nullable = nullable
@@ -52,7 +52,6 @@ class Vector2DField(ArrayBackedField[tuple[float, float]]):
             height: int,
             values: list[list[tuple[float, float] | None]],
             nullable: bool = False,
-            **kwargs,
     ) -> Self:
         array_values = cls._list_to_array(width, height, values, cls._NULL_VALUE, cls._ARRAY_TYPE, cls._SHAPE)
-        return cls.from_array(width, height, array_values, nullable=nullable, **kwargs)
+        return cls.from_array(width, height, array_values, nullable=nullable)

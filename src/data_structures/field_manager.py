@@ -3,7 +3,6 @@
 from random import Random
 from numpy import ndarray
 from src.algorithms.field_transforms import (
-    reduced_matrix,
     ipf_coordinates,
     average_misorientation,
     misrotation_tensor,
@@ -12,8 +11,12 @@ from src.algorithms.field_transforms import (
     channelling_fraction,
     orientation_cluster,
 )
+from src.algorithms.new_field_transforms.crystal_family import crystal_family
+from src.algorithms.new_field_transforms.lattice_type import lattice_type
 from src.algorithms.new_field_transforms.orientation_matrix import orientation_matrix
+from src.algorithms.new_field_transforms.reduced_matrix import reduced_matrix
 from src.data_structures.fields.discrete_field import DiscreteField
+from src.data_structures.fields.enum_field import EnumField
 from src.data_structures.fields.matrix_field import MatrixField
 from src.data_structures.fields.scalar_field import ScalarField
 from src.data_structures.fields.vector_2d_field import Vector2DField
@@ -21,7 +24,7 @@ from src.data_structures.fields.vector_3d_field import Vector3DField
 from src.utilities.config import Config
 from src.data_structures.field import FieldType, Field, DiscreteFieldMapper, FunctionalFieldMapper, FieldNullError
 from src.utilities.geometry import Axis
-from src.data_structures.phase import Phase
+from src.data_structures.phase import Phase, BravaisLattice, CrystalFamily
 from src.algorithms.clustering.dbscan import ClusterCategory
 from src.data_structures.parameter_groups import ScanParams
 from src.utilities.logging import Logger
@@ -50,6 +53,8 @@ class FieldManager:
         self.pattern_quality: ScalarField = ScalarField.from_list(self._scan_params.width, self._scan_params.height, pattern_quality_values)
         self.index_quality: ScalarField = ScalarField.from_list(self._scan_params.width, self._scan_params.height, index_quality_values)
         self._orientation_matrix: MatrixField | None = None
+        self._lattice_type: EnumField[BravaisLattice] | None = None
+        self._crystal_family: EnumField[CrystalFamily] | None = None
         self._reduced_matrix: MatrixField | None = None
         self._ipf_coordinates: dict[Axis, Vector2DField] = dict()
         self._average_misorientation_rad: ScalarField  | None = None
@@ -89,10 +94,26 @@ class FieldManager:
         return self._orientation_matrix
 
     @property
-    def reduced_matrix(self) -> Field[ndarray]:
+    def lattice_type(self) -> EnumField[BravaisLattice]:
+        if self._lattice_type is None:
+            self._logger.debug("Generating lattice type field...")
+            self._lattice_type = lattice_type(self.phase_id, self._scan_params.phases)
+
+        return self._lattice_type
+
+    @property
+    def crystal_family(self) -> EnumField[CrystalFamily]:
+        if self._crystal_family is None:
+            self._logger.debug("Generating crystal family field...")
+            self._crystal_family = crystal_family(self.lattice_type)
+
+        return self._crystal_family
+
+    @property
+    def reduced_matrix(self) -> MatrixField:
         if self._reduced_matrix is None:
             self._logger.debug("Generating reduced matrix field...")
-            self._reduced_matrix = reduced_matrix(self.orientation_matrix, self.phase)
+            self._reduced_matrix = reduced_matrix(self.orientation_matrix, self.crystal_family)
 
         return self._reduced_matrix
 

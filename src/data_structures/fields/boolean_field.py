@@ -7,6 +7,7 @@ from src.data_structures.fields.array_backed_field import ArrayBackedField
 
 
 class BooleanField(ArrayBackedField[bool]):
+    _FIELD_TYPE = FieldType.BOOLEAN
     _ARRAY_TYPE = int8
     _NULL_VALUE = array(-1, dtype=_ARRAY_TYPE)
     _TRUE_VALUE = array(1, dtype=_ARRAY_TYPE)
@@ -19,7 +20,7 @@ class BooleanField(ArrayBackedField[bool]):
             default_value: bool | None,
             nullable: bool = False,
     ):
-        super().__init__(width, height, FieldType.BOOLEAN, self._ARRAY_TYPE, default_value, nullable)
+        super().__init__(width, height, self._FIELD_TYPE, self._ARRAY_TYPE, default_value, nullable)
 
     @property
     def null_value(self) -> ndarray:
@@ -38,12 +39,11 @@ class BooleanField(ArrayBackedField[bool]):
             height: int,
             values: ndarray,
             nullable: bool = False,
-            **kwargs,
     ) -> Self:
         def value_validator(value: ndarray) -> bool:
             return not issubdtype(value.dtype, floating) and array_all((value >= -1) & (value <= 1))
 
-        cls._assert_valid_array(values, width, height, nullable, cls._NULL_VALUE, value_validator)
+        cls._assert_valid_array(values, width, height, cls._FIELD_TYPE, nullable, cls._NULL_VALUE, value_validator)
         field = BooleanField(width, height, default_value=None, nullable=True)
         field._values = values
         field.nullable = nullable
@@ -56,7 +56,6 @@ class BooleanField(ArrayBackedField[bool]):
             height: int,
             values: list[list[bool | None]],
             nullable: bool = False,
-            **kwargs,
     ) -> Self:
         array_values = cls._list_to_array(width, height, values, cls._NULL_VALUE, cls._ARRAY_TYPE)
-        return cls.from_array(width, height, array_values, nullable=nullable, **kwargs)
+        return cls.from_array(width, height, array_values, nullable=nullable)

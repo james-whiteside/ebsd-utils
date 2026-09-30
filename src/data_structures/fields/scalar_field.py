@@ -7,6 +7,7 @@ from src.data_structures.fields.array_backed_field import ArrayBackedField
 
 
 class ScalarField(ArrayBackedField[float]):
+    _FIELD_TYPE = FieldType.SCALAR
     _ARRAY_TYPE = dtype(float64)
     _NULL_VALUE = array(nan, dtype=_ARRAY_TYPE)
 
@@ -17,7 +18,7 @@ class ScalarField(ArrayBackedField[float]):
             default_value: float | None,
             nullable: bool = False,
     ):
-        super().__init__(width, height, FieldType.SCALAR, self._ARRAY_TYPE, default_value, nullable)
+        super().__init__(width, height, self._FIELD_TYPE, self._ARRAY_TYPE, default_value, nullable)
 
     @property
     def null_value(self) -> ndarray:
@@ -36,9 +37,8 @@ class ScalarField(ArrayBackedField[float]):
             height: int,
             values: ndarray,
             nullable: bool = False,
-            **kwargs,
     ) -> Self:
-        cls._assert_valid_array(values, width, height, nullable, cls._NULL_VALUE, lambda _: True)
+        cls._assert_valid_array(values, width, height, cls._FIELD_TYPE, nullable, cls._NULL_VALUE, lambda _: True)
         field = ScalarField(width, height, default_value=None, nullable=True)
         field._values = values
         field.nullable = nullable
@@ -51,7 +51,6 @@ class ScalarField(ArrayBackedField[float]):
             height: int,
             values: list[list[float | None]],
             nullable: bool = False,
-            **kwargs,
     ) -> Self:
         array_values = cls._list_to_array(width, height, values, cls._NULL_VALUE, cls._ARRAY_TYPE)
-        return cls.from_array(width, height, array_values, nullable=nullable, **kwargs)
+        return cls.from_array(width, height, array_values, nullable=nullable)

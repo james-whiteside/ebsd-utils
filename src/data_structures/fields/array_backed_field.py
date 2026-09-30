@@ -73,21 +73,12 @@ class ArrayBackedField[VALUE_TYPE](FieldLike[VALUE_TYPE]):
     def _cast_array(self, value: ndarray) -> VALUE_TYPE | None:
         ...
 
-    @classmethod
-    @abstractmethod
-    def from_array(cls, width: int, height: int, values: ndarray, nullable: bool = False, **kwargs) -> Self:
-        ...
-
-    @classmethod
-    @abstractmethod
-    def from_list(cls, width: int, height: int, values: ndarray, nullable: bool = False, **kwargs) -> Self:
-        ...
-
     @staticmethod
     def _assert_valid_array(
             arr: ndarray,
             width: int,
             height: int,
+            field_type: FieldType,
             nullable: bool,
             null_value: ndarray,
             value_validator: Callable[[ndarray], bool],
@@ -103,7 +94,7 @@ class ArrayBackedField[VALUE_TYPE](FieldLike[VALUE_TYPE]):
             raise FieldSizeMismatchError.height((height, arr.shape[1]))
 
         if not value_validator(arr):
-            raise FieldValueError.wrong_array_type(arr, super().field_type)
+            raise FieldValueError.wrong_array_type(arr, field_type)
 
         if not nullable:
             if isnan(null_value).any() and isnan(arr).any() or array_equal(arr, null_value):

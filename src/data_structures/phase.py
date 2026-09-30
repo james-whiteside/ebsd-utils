@@ -3,23 +3,29 @@
 from dataclasses import dataclass
 from math import pi, sqrt, sin, cos, tan, acos, atan2
 from copy import deepcopy
-from enum import Enum
+from enum import IntEnum
 from typing import Self, Type
+
+from numba import njit
 from numpy import ndarray, dot, array
 from src.utilities.geometry import reduce_vector
 from src.utilities.utils import tuple_radians, InvalidEncodingError
 
 
-class CrystalFamily(Enum):
+class CrystalFamily(IntEnum):
     """
     Enumeration of the crystal lattice types, as listed in Tab. A2.1.
     """
-    C = "c"
-    T = "t"
-    O = "o"
-    H = "h"
-    M = "m"
-    A = "a"
+    C = 1
+    T = 2
+    O = 3
+    H = 4
+    M = 5
+    A = 6
+
+    @property
+    def symbol(self) -> str:
+        return self.name.lower()
 
     @property
     def max_euler_angles(self) -> tuple[float, float, float]:
@@ -76,55 +82,72 @@ class CrystalFamily(Enum):
         return X, Y
 
 
-class BravaisLattice(Enum):
+@njit(inline="always")
+def reduce_matrix(crystal_family: int, R: ndarray) -> tuple[ndarray, bool]:
+    """
+    Reduces a lattice orientation matrix ``R`` into the fundamental region of its Bravais lattice by reflection.
+    :param crystal_family: The crystal family of the Bravais lattice.
+    :param R: The lattice orientation matrix ``R``.
+    :return: The reduced matrix and an error indicating if a ``SymmetryNotImplementedError`` should be raised.
+    """
+
+    reduced_R = R.copy()
+    symmetry_not_implemented_error = False
+
+    if crystal_family == CrystalFamily.C:
+        if reduced_R[2, 2] < 0.0:
+            reduced_R[2, 0] = -reduced_R[2, 0]
+            reduced_R[2, 1] = -reduced_R[2, 1]
+            reduced_R[2, 2] = -reduced_R[2, 2]
+
+        if reduced_R[1, 2] > 0.0:
+            reduced_R[1, 0] = -reduced_R[1, 0]
+            reduced_R[1, 1] = -reduced_R[1, 1]
+            reduced_R[1, 2] = -reduced_R[1, 2]
+
+        if reduced_R[0, 2] < 0.0:
+            reduced_R[0, 0] = -reduced_R[0, 0]
+            reduced_R[0, 1] = -reduced_R[0, 1]
+            reduced_R[0, 2] = -reduced_R[0, 2]
+
+        if reduced_R[1, 2] > reduced_R[0, 2]:
+            t0, t1, t2 = reduced_R[0, 0], reduced_R[0, 1], reduced_R[0, 2]
+            reduced_R[0, 0], reduced_R[0, 1], reduced_R[0, 2] = reduced_R[1, 0], reduced_R[1, 1], reduced_R[1, 2]
+            reduced_R[1, 0], reduced_R[1, 1], reduced_R[1, 2] = t0, t1, t2
+
+    else:
+        symmetry_not_implemented_error = True
+
+    return reduced_R, symmetry_not_implemented_error
+
+
+class BravaisLattice(IntEnum):
     """
     Enumeration of the Bravais lattice types, as listed in Tab. A2.1.
     """
 
-    CP = "cP"
-    CI = "cI"
-    CF = "cF"
-    TP = "tP"
-    TI = "tI"
-    OP = "oP"
-    OI = "oI"
-    OF = "oF"
-    OS = "oS"
-    HP = "hP"
-    HR = "hR"
-    MP = "mP"
-    MS = "mS"
-    AP = "aP"
+    CP = 1
+    CI = 2
+    CF = 3
+    TP = 4
+    TI = 5
+    OP = 6
+    OI = 7
+    OF = 8
+    OS = 9
+    HP = 10
+    HR = 11
+    MP = 12
+    MS = 13
+    AP = 14
+
+    @property
+    def symbol(self) -> str:
+        return self.name[0].lower() + self.name[1].upper()
 
     @property
     def family(self) -> CrystalFamily:
-        return CrystalFamily(self.value[0])
-
-    @property
-    def code(self) -> int:
-        match self:
-            case BravaisLattice.CP: return 1
-            case BravaisLattice.CI: return 2
-            case BravaisLattice.CF: return 3
-            case BravaisLattice.TP: return 4
-            case BravaisLattice.TI: return 5
-            case BravaisLattice.OP: return 6
-            case BravaisLattice.OI: return 7
-            case BravaisLattice.OS: return 8
-            case BravaisLattice.OF: return 9
-            case BravaisLattice.HR: return 10
-            case BravaisLattice.HP: return 11
-            case BravaisLattice.MP: return 12
-            case BravaisLattice.MS: return 13
-            case BravaisLattice.AP: return 14
-
-    @classmethod
-    def from_code(cls, code: int) -> Self:
-        for lattice in BravaisLattice:
-            if lattice.code == code:
-                return lattice
-
-        raise InvalidEncodingError(code, BravaisLattice)
+        return CrystalFamily[self.name[0]]
 
 
 class Phase:

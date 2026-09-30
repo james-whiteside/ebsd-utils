@@ -13,7 +13,7 @@ def add_phase(global_id: int, config: Config, logger: Logger) -> int:
         database_entry = load_phase_database_entry(global_id, config.project.database_path)
         logger.info(f"Database entry found for phase {global_id}:")
         logger.info(f"Name: {database_entry.name}")
-        logger.info(f"Lattice type: {database_entry.lattice_type.value}")
+        logger.info(f"Lattice type: {database_entry.lattice_type.symbol}")
         logger.info(f"Lattice constants: {", ".join(f"{constant} nm" for constant in database_entry.lattice_constants_nm)}")
         logger.info(f"Lattice angles: {", ".join(f"{angle} deg" for angle in database_entry.lattice_angles_deg)}")
     except FileNotFoundError:

@@ -319,7 +319,7 @@ def load_phase(global_id: int, dir: str) -> Phase:
             "atomic_weight": json_rep["atomic_weight"],
             "density_cgs": json_rep["density_cgs"],
             "vibration_amplitude_nm": json_rep["vibration_amplitude_nm"],
-            "lattice_type": BravaisLattice(json_rep["lattice_type"]),
+            "lattice_type": BravaisLattice[json_rep["lattice_type"].upper()],
             "lattice_constants_nm": tuple(json_rep["lattice_constants_nm"]),
             "lattice_angles_deg": tuple(json_rep["lattice_angles_deg"]),
             "diamond_structure": json_rep["diamond_structure"],
@@ -354,7 +354,7 @@ def load_phase_database_entry(global_id: int, path: str) -> Phase.DatabaseEntry:
     for phase_info in database.iter("CrystalPhaseInfo"):
         if int(phase_info.find("CrystalID").text) == global_id:
             name = phase_info.find("ElementName").text
-            lattice_type = BravaisLattice.from_code(int(phase_info.find("BravaisLatticeID").text))
+            lattice_type = BravaisLattice(int(phase_info.find("BravaisLatticeID").text))
             a = float(phase_info.find("Cell_A").text)
             b = float(phase_info.find("Cell_B").text)
             c = float(phase_info.find("Cell_C").text)
@@ -388,7 +388,7 @@ def load_orientation_relationships(dir: str) -> list[OrientationRelationship]:
                     for line in file:
                         data = line.rstrip("\n").split(",")
                         id = data[0]
-                        lattice_type = BravaisLattice(data[1])
+                        lattice_type = BravaisLattice[data[1].upper()]
                         plane = int(data[2]), int(data[3]), int(data[4])
                         relationship = TwinOrientationRelationship(id, lattice_type, plane)
                         relationships.append(relationship)
@@ -396,8 +396,8 @@ def load_orientation_relationships(dir: str) -> list[OrientationRelationship]:
                     for line in file:
                         data = line.rstrip("\n").split(",")
                         id = data[0]
-                        lattice_type_1 = BravaisLattice(data[1])
-                        lattice_type_2 = BravaisLattice(data[2])
+                        lattice_type_1 = BravaisLattice[data[1].upper()]
+                        lattice_type_2 = BravaisLattice[data[2].upper()]
                         vector_pair_1 = (int(data[3]), int(data[4]), int(data[5])), (int(data[6]), int(data[7]), int(data[8]))
                         vector_pair_2 = (int(data[9]), int(data[10]), int(data[11])), (int(data[12]), int(data[13]), int(data[14]))
                         relationship = HeterophaseOrientationRelationship(id, lattice_type_1, lattice_type_2, vector_pair_1, vector_pair_2)

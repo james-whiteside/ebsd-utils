@@ -22,29 +22,6 @@ from src.utilities.logging import Logger
 from src.utilities.utils import maximise_brightness
 
 
-def reduced_matrix(
-    orientation_matrix_field: FieldLike[ndarray],
-    phase_field: FieldLike[Phase],
-) -> Field[ndarray]:
-    input_fields = [orientation_matrix_field, phase_field]
-    width, height, nullable = FieldLike.get_combined_params(input_fields)
-    output_field = MatrixField(width, height, default_value=None, nullable=True)
-
-    for y in range(height):
-        for x in range(width):
-            try:
-                orientation_matrix = orientation_matrix_field.get_value_at(x, y)
-                crystal_family = phase_field.get_value_at(x, y).lattice_type.family
-            except FieldNullError:
-                continue
-
-            value = crystal_family.reduce_matrix(orientation_matrix)
-            output_field.set_value_at(x, y, value)
-
-    output_field.nullable = nullable
-    return output_field
-
-
 def ipf_coordinates(
     axis: Axis,
     reduced_matrix_field: FieldLike[ndarray],
