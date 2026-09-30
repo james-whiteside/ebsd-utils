@@ -1,13 +1,17 @@
 from typing import Self
 
-from numpy import ndarray, dtype, issubdtype, floating, all as array_all, int8
+from numpy import ndarray, issubdtype, floating, all as array_all, int8, array, array_equal
 
 from src.data_structures.field import FieldType
 from src.data_structures.fields.array_backed_field import ArrayBackedField
-from src.utilities.utils import classproperty
 
 
-class BooleanField(ArrayBackedField[bool, int]):
+class BooleanField(ArrayBackedField[bool]):
+    _ARRAY_TYPE = int8
+    _NULL_VALUE = array(-1, dtype=_ARRAY_TYPE)
+    _TRUE_VALUE = array(1, dtype=_ARRAY_TYPE)
+    _FALSE_VALUE = array(0, dtype=_ARRAY_TYPE)
+
     def __init__(
             self,
             width: int,
@@ -15,30 +19,17 @@ class BooleanField(ArrayBackedField[bool, int]):
             default_value: bool | None,
             nullable: bool = False,
     ):
-        super().__init__(width, height, FieldType.BOOLEAN, default_value, nullable)
+        super().__init__(width, height, FieldType.BOOLEAN, self._ARRAY_TYPE, default_value, nullable)
 
-    @classproperty
-    def _array_type(cls) -> dtype:
-        return int8
+    @property
+    def null_value(self) -> ndarray:
+        return self._NULL_VALUE
 
-    @classproperty
-    def _value_dimensions(cls) -> int:
-        return 0
+    def _cast_value(self, value: bool | None) -> ndarray:
+        return self._TRUE_VALUE if value else self._FALSE_VALUE if value is not None else self._NULL_VALUE
 
-    @classproperty
-    def _null_value(cls) -> int:
-        return -1
-
-    @classmethod
-    def _is_valid_type(cls, array: ndarray) -> bool:
-        return not issubdtype(array.dtype, floating) and array_all((array >= -1) & (array <= 1))
-
-    def _cast_value(self, value: bool | None) -> int:
-        return 1 if value else 0 if value is not None else -1
-
-    @classmethod
-    def _cast_array(cls, value: ndarray) -> bool | None:
-        return value == 1 if value != -1 else None
+    def _cast_array(self, value: ndarray) -> bool | None:
+        return array_equal(value, self._TRUE_VALUE) if not array_equal(value, self._NULL_VALUE) else None
 
     @classmethod
     def from_array(
@@ -49,7 +40,10 @@ class BooleanField(ArrayBackedField[bool, int]):
             nullable: bool = False,
             **kwargs,
     ) -> Self:
-        cls._assert_valid_array(values, width, height, nullable)
+        def value_validator(value: ndarray) -> bool:
+            return not issubdtype(value.dtype, floating) and array_all((value >= -1) & (value <= 1))
+
+        cls._assert_valid_array(values, width, height, nullable, cls._NULL_VALUE, value_validator)
         field = BooleanField(width, height, default_value=None, nullable=True)
         field._values = values
         field.nullable = nullable
@@ -64,5 +58,5 @@ class BooleanField(ArrayBackedField[bool, int]):
             nullable: bool = False,
             **kwargs,
     ) -> Self:
-        array_values = cls._list_to_array(width, height, values)
+        array_values = cls._list_to_array(width, height, values, cls._NULL_VALUE, cls._ARRAY_TYPE)
         return cls.from_array(width, height, array_values, nullable=nullable, **kwargs)

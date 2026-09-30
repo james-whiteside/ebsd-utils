@@ -1,13 +1,15 @@
 from typing import Self, override
 
-from numpy import ndarray, dtype, issubdtype, floating, all as array_all, any as array_any, int32, iinfo
+from numpy import ndarray, issubdtype, floating, all as array_all, int32, iinfo, array
 
 from src.data_structures.field import FieldType, FieldValueError
 from src.data_structures.fields.array_backed_field import ArrayBackedField
-from src.utilities.utils import classproperty
 
 
-class DiscreteField(ArrayBackedField[int, int]):
+class DiscreteField(ArrayBackedField[int]):
+    _ARRAY_TYPE = int32
+    _NULL_VALUE = array(-1, dtype=_ARRAY_TYPE)
+
     def __init__(
             self,
             width: int,
@@ -15,29 +17,16 @@ class DiscreteField(ArrayBackedField[int, int]):
             default_value: int | None,
             nullable: bool = False,
     ):
-        super().__init__(width, height, FieldType.DISCRETE, default_value, nullable)
+        super().__init__(width, height, FieldType.DISCRETE, self._ARRAY_TYPE, default_value, nullable)
 
-    @classproperty
-    def _array_type(cls) -> dtype:
-        return int32
+    @property
+    def null_value(self) -> ndarray:
+        return self._NULL_VALUE
 
-    @classproperty
-    def _value_dimensions(cls) -> int:
-        return 0
+    def _cast_value(self, value: bool | None) -> ndarray:
+        return array(value, dtype=self._ARRAY_TYPE) if value is not None else self._NULL_VALUE
 
-    @classproperty
-    def _null_value(cls) -> int:
-        return -1
-
-    @classmethod
-    def _is_valid_type(cls, array: ndarray) -> bool:
-        return not issubdtype(array.dtype, floating) and array_all((array >= -1) & (array <= iinfo(int32).max))
-
-    def _cast_value(self, value: bool | None) -> int:
-        return value if value is not None else -1
-
-    @classmethod
-    def _cast_array(cls, value: ndarray) -> bool | None:
+    def _cast_array(self, value: ndarray) -> bool | None:
         return value if value != -1 else None
 
     @override
@@ -56,7 +45,10 @@ class DiscreteField(ArrayBackedField[int, int]):
             nullable: bool = False,
             **kwargs,
     ) -> Self:
-        cls._assert_valid_array(values, width, height, nullable)
+        def value_validator(value: ndarray) -> bool:
+            return not issubdtype(value.dtype, floating) and array_all((value >= -1) & (value <= iinfo(int32).max))
+
+        cls._assert_valid_array(values, width, height, nullable, cls._NULL_VALUE, value_validator)
         field = DiscreteField(width, height, default_value=None, nullable=True)
         field._values = values
         field.nullable = nullable
@@ -71,5 +63,5 @@ class DiscreteField(ArrayBackedField[int, int]):
             nullable: bool = False,
             **kwargs,
     ) -> Self:
-        array_values = cls._list_to_array(width, height, values)
+        array_values = cls._list_to_array(width, height, values, cls._NULL_VALUE, cls._ARRAY_TYPE)
         return cls.from_array(width, height, array_values, nullable=nullable, **kwargs)

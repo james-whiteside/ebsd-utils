@@ -1,19 +1,20 @@
 from abc import abstractmethod
+from collections.abc import Callable
 from typing import Self
 
-from numpy import full, ndarray, dtype, isnan, any as array_any, array
+from numpy import full, ndarray, dtype, isnan, array, array_equal
 
 from src.data_structures.field import FieldLike, FieldType, FieldValueError, FieldLookupError, FieldNullError, \
     FieldSizeMismatchError
-from src.utilities.utils import classproperty
 
 
-class ArrayBackedField[VALUE_TYPE, ARRAY_TYPE](FieldLike[VALUE_TYPE]):
+class ArrayBackedField[VALUE_TYPE](FieldLike[VALUE_TYPE]):
     def __init__(
             self,
             width: int,
             height: int,
             field_type: FieldType,
+            array_type: dtype,
             default_value: VALUE_TYPE | None,
             nullable: bool = False,
             value_shape: tuple[int, ...] = (),
@@ -22,7 +23,7 @@ class ArrayBackedField[VALUE_TYPE, ARRAY_TYPE](FieldLike[VALUE_TYPE]):
         self._value_shape = value_shape
         self._assert_value_permitted(default_value)
         self.default_value = self._cast_value(default_value)
-        self._values = full((width, height) + self._value_shape, self.default_value, dtype=self._array_type)
+        self._values = full((width, height) + self._value_shape, self.default_value, dtype=array_type)
 
     @property
     def array(self):
@@ -32,7 +33,7 @@ class ArrayBackedField[VALUE_TYPE, ARRAY_TYPE](FieldLike[VALUE_TYPE]):
         if not 0 <= x < self.width or not 0 <= y < self.height:
             raise FieldLookupError(x, y)
         else:
-            value = self._cast_array(self._values[x][y])
+            value = self._cast_array(self._values[x, y])
 
             if value is None:
                 raise FieldNullError(x, y)
@@ -44,31 +45,7 @@ class ArrayBackedField[VALUE_TYPE, ARRAY_TYPE](FieldLike[VALUE_TYPE]):
             raise FieldLookupError(x, y)
         else:
             self._assert_value_permitted(value)
-            self._values[x][y] = self._cast_value(value)
-
-    @classmethod
-    def _has_null_value(cls, array: ndarray) -> bool:
-        if isnan(cls._null_value):
-            return isnan(array).any()
-        else:
-            return array_any((array == cls._null_value))
-
-    @classmethod
-    def _assert_valid_array(cls, array: ndarray, width: int, height: int, nullable: bool) -> None:
-        if array.ndim != 2 + cls._value_dimensions:
-            raise FieldSizeMismatchError.dimensions((2 + cls._value_dimensions, array.ndim))
-
-        if array.shape[0] != width:
-            raise FieldSizeMismatchError.width((width, array.shape[0]))
-
-        if array.shape[1] != height:
-            raise FieldSizeMismatchError.height((height, array.shape[1]))
-
-        if not cls._is_valid_type(array):
-            raise FieldValueError.wrong_array_type(array, super().field_type)
-
-        if not nullable and cls._has_null_value(array):
-            raise FieldValueError.null_value()
+            self._values[x, y] = self._cast_value(value)
 
     def _assert_value_permitted(self, value: VALUE_TYPE | None) -> None:
         if value is None:
@@ -83,33 +60,17 @@ class ArrayBackedField[VALUE_TYPE, ARRAY_TYPE](FieldLike[VALUE_TYPE]):
         if self.field_type.type is tuple and len(value) != self.field_type.size:
             raise FieldValueError.wrong_length(value, self.field_type)
 
-    @classproperty
+    @property
     @abstractmethod
-    def _array_type(cls) -> dtype:
-        ...
-
-    @classproperty
-    @abstractmethod
-    def _value_dimensions(cls) -> int:
-        ...
-
-    @classproperty
-    @abstractmethod
-    def _null_value(cls) -> ARRAY_TYPE:
-        ...
-
-    @classmethod
-    @abstractmethod
-    def _is_valid_type(cls, array: ndarray) -> bool:
+    def null_value(self) -> ndarray:
         ...
 
     @abstractmethod
-    def _cast_value(self, value: VALUE_TYPE | None) -> ARRAY_TYPE:
+    def _cast_value(self, value: VALUE_TYPE | None) -> ndarray:
         ...
 
-    @classmethod
     @abstractmethod
-    def _cast_array(cls, value: ndarray) -> VALUE_TYPE | None:
+    def _cast_array(self, value: ndarray) -> VALUE_TYPE | None:
         ...
 
     @classmethod
@@ -122,19 +83,46 @@ class ArrayBackedField[VALUE_TYPE, ARRAY_TYPE](FieldLike[VALUE_TYPE]):
     def from_list(cls, width: int, height: int, values: ndarray, nullable: bool = False, **kwargs) -> Self:
         ...
 
-    @classmethod
+    @staticmethod
+    def _assert_valid_array(
+            arr: ndarray,
+            width: int,
+            height: int,
+            nullable: bool,
+            null_value: ndarray,
+            value_validator: Callable[[ndarray], bool],
+            value_shape: tuple[int, ...] = (),
+    ) -> None:
+        if arr.ndim != 2 + len(value_shape):
+            raise FieldSizeMismatchError.dimensions((2 + len(value_shape), arr.ndim))
+
+        if arr.shape[0] != width:
+            raise FieldSizeMismatchError.width((width, arr.shape[0]))
+
+        if arr.shape[1] != height:
+            raise FieldSizeMismatchError.height((height, arr.shape[1]))
+
+        if not value_validator(arr):
+            raise FieldValueError.wrong_array_type(arr, super().field_type)
+
+        if not nullable:
+            if isnan(null_value).any() and isnan(arr).any() or array_equal(arr, null_value):
+                raise FieldValueError.null_value()
+
+    @staticmethod
     def _list_to_array(
-            cls,
             width: int,
             height: int,
             values: list[list[VALUE_TYPE | None]],
+            null_value: ndarray,
+            array_type: dtype,
             value_shape: tuple[int, ...] = (),
     ) -> ndarray:
-        array_values = full((width, height) + value_shape, cls._null_value, dtype=cls._array_type)
+        array_values = full((width, height) + value_shape, null_value, dtype=array_type)
 
         for y in range(height):
             for x in range(width):
                 if values[y][x] is not None:
-                    array_values[x][y] = array(values[y][x])
+                    array_values[x, y] = array(values[y][x], dtype=array_type)
 
         return array_values

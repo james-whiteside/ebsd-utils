@@ -4,10 +4,13 @@ from numpy import ndarray, dtype, float64, nan, isnan, array
 
 from src.data_structures.field import FieldType
 from src.data_structures.fields.array_backed_field import ArrayBackedField
-from src.utilities.utils import classproperty
 
 
-class Vector2DField(ArrayBackedField[tuple[float, float], float]):
+class Vector2DField(ArrayBackedField[tuple[float, float]]):
+    _ARRAY_TYPE = dtype(float64)
+    _NULL_VALUE = array((nan, nan), dtype=_ARRAY_TYPE)
+    _SHAPE = (2,)
+
     def __init__(
             self,
             width: int,
@@ -15,29 +18,16 @@ class Vector2DField(ArrayBackedField[tuple[float, float], float]):
             default_value: tuple[float, float] | None,
             nullable: bool = False,
     ):
-        super().__init__(width, height, FieldType.VECTOR_2D, default_value, nullable, value_shape=(2,))
+        super().__init__(width, height, FieldType.VECTOR_2D, self._ARRAY_TYPE, default_value, nullable, self._SHAPE)
 
-    @classproperty
-    def _array_type(cls) -> dtype:
-        return dtype(float64)
-
-    @classproperty
-    def _value_dimensions(cls) -> int:
-        return 1
-
-    @classproperty
-    def _null_value(cls) -> float:
-        return nan
-
-    @classmethod
-    def _is_valid_type(cls, array: ndarray) -> bool:
-        return True
+    @property
+    def null_value(self) -> ndarray:
+        return self._NULL_VALUE
 
     def _cast_value(self, value: tuple[float, float] | None) -> ndarray:
-        return array(value) if value is not None else array((nan, nan))
+        return array(value, dtype=self._ARRAY_TYPE) if value is not None else self._NULL_VALUE
 
-    @classmethod
-    def _cast_array(cls, value: ndarray) -> tuple[float, float] | None:
+    def _cast_array(self, value: ndarray) -> tuple[float, float] | None:
         return value if not isnan(value).any() else None
 
     @classmethod
@@ -49,7 +39,7 @@ class Vector2DField(ArrayBackedField[tuple[float, float], float]):
             nullable: bool = False,
             **kwargs,
     ) -> Self:
-        cls._assert_valid_array(values, width, height, nullable)
+        cls._assert_valid_array(values, width, height, nullable, cls._NULL_VALUE, lambda _: True, cls._SHAPE)
         field = Vector2DField(width, height, default_value=None, nullable=True)
         field._values = values
         field.nullable = nullable
@@ -64,5 +54,5 @@ class Vector2DField(ArrayBackedField[tuple[float, float], float]):
             nullable: bool = False,
             **kwargs,
     ) -> Self:
-        array_values = cls._list_to_array(width, height, values, value_shape=(2,))
+        array_values = cls._list_to_array(width, height, values, cls._NULL_VALUE, cls._ARRAY_TYPE, cls._SHAPE)
         return cls.from_array(width, height, array_values, nullable=nullable, **kwargs)
