@@ -1,15 +1,16 @@
 # -*- coding: utf-8 -*-
 
 from dataclasses import dataclass
-from math import pi, sqrt, sin, cos, tan, acos, atan2
-from copy import deepcopy
+from math import pi, sqrt, acos
 from enum import IntEnum
 from typing import Self, Type
 
 from numba import njit
-from numpy import ndarray, dot, array
+from numpy import ndarray, sqrt as array_sqrt, sin as array_sin, cos as array_cos, tan as array_tan, acos as array_acos, \
+    atan2 as array_atan2, float64, empty
+
 from src.utilities.geometry import reduce_vector
-from src.utilities.utils import tuple_radians, InvalidEncodingError
+from src.utilities.utils import tuple_radians
 
 
 class CrystalFamily(IntEnum):
@@ -35,52 +36,6 @@ class CrystalFamily(IntEnum):
             case _:
                 raise SymmetryNotImplementedError(self)
 
-    def reduce_matrix(self, R: ndarray) -> ndarray:
-        """
-        Reduces a lattice orientation matrix ``R`` into the fundamental region of its Bravais lattice by reflection.
-        :param R: The lattice orientation matrix ``R``.
-        :return: The reduced matrix.
-        """
-        reduced_R = deepcopy(R)
-
-        match self:
-            case CrystalFamily.C:
-                if reduced_R[2][2] < 0:
-                    reduced_R = dot(array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, -1.0]]), reduced_R)
-
-                if reduced_R[1][2] > 0:
-                    reduced_R = dot(array([[1.0, 0.0, 0.0], [0.0, -1.0, 0.0], [0.0, 0.0, 1.0]]), reduced_R)
-
-                if reduced_R[0][2] < 0:
-                    reduced_R = dot(array([[-1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]), reduced_R)
-
-                if reduced_R[1][2] > reduced_R[0][2]:
-                    reduced_R = dot(array([[0.0, 1.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0, 1.0]]), reduced_R)
-            case _:
-                raise SymmetryNotImplementedError(self)
-
-        return reduced_R
-
-    def ipf_coordinates(self, vector: tuple[float, float, float]) -> tuple[float, float]:
-        """
-        Computes the inverse pole figure coordinates ``(X, Y)`` of a lattice vector ``(u, v, w)`` for the given lattice symmetry.
-        :param vector: The lattice vector ``(u, v, w)``.
-        :return: The inverse pole figure coordinates ``(X, Y)``.
-        """
-        match self:
-            case CrystalFamily.C:
-                u, v, w = reduce_vector(vector)
-                r = sqrt(u ** 2 + v ** 2 + w ** 2)
-                theta = acos(w / r)
-                phi = atan2(v, u)
-                rho = tan(theta / 2)
-                X = rho * cos(phi)
-                Y = rho * sin(phi)
-            case _:
-                raise SymmetryNotImplementedError(self)
-
-        return X, Y
-
 
 @njit(inline="always")
 def reduce_matrix(crystal_family: int, R: ndarray) -> tuple[ndarray, bool]:
@@ -88,11 +43,11 @@ def reduce_matrix(crystal_family: int, R: ndarray) -> tuple[ndarray, bool]:
     Reduces a lattice orientation matrix ``R`` into the fundamental region of its Bravais lattice by reflection.
     :param crystal_family: The crystal family of the Bravais lattice.
     :param R: The lattice orientation matrix ``R``.
-    :return: The reduced matrix and an error indicating if a ``SymmetryNotImplementedError`` should be raised.
+    :return: The reduced matrix and a boolean indicating if a ``SymmetryNotImplementedError`` should be raised.
     """
 
     reduced_R = R.copy()
-    symmetry_not_implemented_error = False
+    symmetry_not_implemented = False
 
     if crystal_family == CrystalFamily.C:
         if reduced_R[2, 2] < 0.0:
@@ -116,9 +71,36 @@ def reduce_matrix(crystal_family: int, R: ndarray) -> tuple[ndarray, bool]:
             reduced_R[1, 0], reduced_R[1, 1], reduced_R[1, 2] = t0, t1, t2
 
     else:
-        symmetry_not_implemented_error = True
+        symmetry_not_implemented = True
 
-    return reduced_R, symmetry_not_implemented_error
+    return reduced_R, symmetry_not_implemented
+
+
+@njit(inline="always")
+def vector_ipf_coordinates(crystal_family: int, vector: ndarray) -> tuple[ndarray, bool]:
+    """
+    Computes the inverse pole figure coordinates ``(X, Y)`` of a lattice vector ``(u, v, w)`` for the given lattice symmetry.
+    :param crystal_family: The crystal family of the Bravais lattice.
+    :param vector: The lattice vector ``(u, v, w)``.
+    :return: The inverse pole figure coordinates ``(X, Y)`` and a boolean indicating if a ``SymmetryNotImplementedError`` should be raised.
+    """
+
+    coordinates = empty(2, dtype=float64)
+    symmetry_not_implemented = False
+
+    if crystal_family == CrystalFamily.C:
+        u, v, w = reduce_vector(vector)
+        r = array_sqrt(u ** 2 + v ** 2 + w ** 2)
+        theta = array_acos(w / r)
+        phi = array_atan2(v, u)
+        rho = array_tan(theta / 2)
+        coordinates[0] = rho * array_cos(phi)
+        coordinates[1] = rho * array_sin(phi)
+
+    else:
+        symmetry_not_implemented = True
+
+    return coordinates, symmetry_not_implemented
 
 
 class BravaisLattice(IntEnum):

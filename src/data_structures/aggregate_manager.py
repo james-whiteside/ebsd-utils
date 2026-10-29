@@ -16,7 +16,7 @@ from src.data_structures.aggregate import (
 from src.data_structures.field import FieldType, FieldLike
 from src.data_structures.field_manager import FieldManager
 from src.utilities.geometry import euler_angles, Axis
-from src.data_structures.phase import Phase
+from src.data_structures.phase import Phase, vector_ipf_coordinates, SymmetryNotImplementedError
 from src.utilities.logging import Logger
 from src.utilities.utils import float_degrees, tuple_degrees, log_or_zero
 
@@ -96,9 +96,13 @@ class AggregateManager:
                     values[id] = None
                     continue
 
-                vector = dot(rotation_matrix, array(axis.vector)).tolist()
-                value = crystal_family.ipf_coordinates(vector)
-                values[id] = value
+                vector = dot(rotation_matrix, axis.vector)
+                value, symmetry_not_implemented = vector_ipf_coordinates(crystal_family.value, vector)
+
+                if symmetry_not_implemented:
+                    raise SymmetryNotImplementedError(crystal_family)
+
+                values[id] = float(value[0]), float(value[1])
 
             self._ipf_coordinates = CustomAggregate(
                 aggregate_type=AggregateType.AVERAGE,

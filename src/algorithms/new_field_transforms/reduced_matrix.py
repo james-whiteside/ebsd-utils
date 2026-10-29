@@ -62,9 +62,9 @@ def _reduced_matrix(
             elif array_equal(crystal_family, crystal_family_null_value):
                 pass
             else:
-                output[x, y], symmetry_not_implemented_error = reduce_matrix(int(crystal_family), orientation_matrix)
+                output[x, y], symmetry_not_implemented = reduce_matrix(int(crystal_family), orientation_matrix)
 
-                if symmetry_not_implemented_error:
+                if symmetry_not_implemented:
                      unimplemented_symmetry = int(crystal_family)
 
     return output, unimplemented_symmetry
@@ -90,10 +90,11 @@ def _reduced_matrix_parallel(
                 pass
             elif array_equal(crystal_family, crystal_family_null_value):
                 pass
+                # TODO: eliminate temporary array creation during field transforms
             else:
-                output[x, y], symmetry_not_implemented_error = reduce_matrix(int(crystal_family), orientation_matrix)
+                output[x, y], symmetry_not_implemented = reduce_matrix(int(crystal_family), orientation_matrix)
 
-                if symmetry_not_implemented_error:
+                if symmetry_not_implemented:
                      unimplemented_symmetry = int(crystal_family)
 
     return output, unimplemented_symmetry

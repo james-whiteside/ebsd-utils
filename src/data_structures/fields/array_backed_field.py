@@ -1,6 +1,5 @@
 from abc import abstractmethod
 from collections.abc import Callable
-from typing import Self
 
 from numpy import full, ndarray, dtype, isnan, array, array_equal
 
@@ -23,6 +22,7 @@ class ArrayBackedField[VALUE_TYPE](FieldLike[VALUE_TYPE]):
         self._value_shape = value_shape
         self._assert_value_permitted(default_value)
         self.default_value = self._cast_value(default_value)
+        # TODO: eliminate empty field initialisation when providing values
         self._values = full((width, height) + self._value_shape, self.default_value, dtype=array_type)
 
     @property

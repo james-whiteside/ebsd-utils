@@ -3,7 +3,6 @@
 from random import Random
 from numpy import ndarray
 from src.algorithms.field_transforms import (
-    ipf_coordinates,
     average_misorientation,
     misrotation_tensor,
     nye_tensor,
@@ -12,6 +11,7 @@ from src.algorithms.field_transforms import (
     orientation_cluster,
 )
 from src.algorithms.new_field_transforms.crystal_family import crystal_family
+from src.algorithms.new_field_transforms.ipf_coordinates import ipf_coordinates
 from src.algorithms.new_field_transforms.lattice_type import lattice_type
 from src.algorithms.new_field_transforms.orientation_matrix import orientation_matrix
 from src.algorithms.new_field_transforms.reduced_matrix import reduced_matrix
@@ -117,10 +117,10 @@ class FieldManager:
 
         return self._reduced_matrix
 
-    def ipf_coordinates(self, axis: Axis) -> Field[tuple[float, float]]:
+    def ipf_coordinates(self, axis: Axis) -> Vector2DField:
         if axis not in self._ipf_coordinates:
             self._logger.debug("Generating IPF coordinate field...")
-            self._ipf_coordinates[axis] = ipf_coordinates(axis, self.reduced_matrix, self.phase)
+            self._ipf_coordinates[axis] = ipf_coordinates(axis, self.reduced_matrix, self.crystal_family)
 
         return self._ipf_coordinates[axis]
 

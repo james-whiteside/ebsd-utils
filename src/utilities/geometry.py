@@ -128,7 +128,8 @@ def euler_rotation_matrix(axis_set: tuple[ndarray, ndarray, ndarray], angles: nd
     return R3 @ R2 @ R1
 
 
-def reduce_vector(vector: tuple[float, float, float]) -> tuple[float, float, float]:
+@njit(inline="always")
+def reduce_vector(vector: ndarray) -> tuple[ndarray, ndarray, ndarray]:
     """
     Reflects a lattice vector ``(u, v, w)`` into the positive-axis region.
     Satisfies the constraint ``0 ≤ u ≤ v ≤ w``.
@@ -136,8 +137,19 @@ def reduce_vector(vector: tuple[float, float, float]) -> tuple[float, float, flo
     :return: The reflected vector.
     """
 
-    u, v, w = vector
-    u, v, w = sorted((abs(u), abs(v), abs(w)))
+    u = abs(vector[0])
+    v = abs(vector[1])
+    w = abs(vector[2])
+
+    if u > v:
+        u, v = v, u
+
+    if v > w:
+        v, w = w, v
+
+        if u > v:
+            u, v = v, u
+
     return u, v, w
 
 
