@@ -9,11 +9,14 @@ from src.utilities.utils import delete_dir
 
 
 def test_analysis(data_path: str, analysis_path: str, map_dir: str, config: Config, logger: Logger) -> str:
+    test_success = False
+
     try:
         config.project.analysis_dir = f"{config.project.test_cache_dir}/{config.project.analysis_dir}"
         config.project.map_dir = f"{config.project.test_cache_dir}/{config.project.map_dir}"
-        config.analysis.use_cache = False
+        config.analysis.use_cache = True # TODO: change back to false
         analysis_ref = analyse(data_path, config, logger)
+        cache_location_message = f"Test files have been preserved under: {config.project.test_cache_dir}"
 
         with (
             open(analysis_path) as control_analysis,
@@ -30,7 +33,8 @@ def test_analysis(data_path: str, analysis_path: str, map_dir: str, config: Conf
                     message = (
                         f"Lines in analysis files differ:\n"
                         f"Control: {control_line.rstrip("\n")}\n"
-                        f"Test: {test_line.rstrip("\n")}"
+                        f"Test: {test_line.rstrip("\n")}\n"
+                        + cache_location_message
                     )
 
                     raise AssertionError(message)
@@ -47,6 +51,7 @@ def test_analysis(data_path: str, analysis_path: str, map_dir: str, config: Conf
                         f"Map dimensions differ for {map_ref}.png:\n"
                         f"Control: {control_map.size}\n"
                         f"Test: {test_map.size}"
+                        + cache_location_message
                     )
 
                     raise AssertionError(message)
@@ -58,10 +63,13 @@ def test_analysis(data_path: str, analysis_path: str, map_dir: str, config: Conf
                                 f"Map pixel {(x, y)} differs for {map_ref}.png\n"
                                 f"Control: {control_map.getpixel((x, y))}\n"
                                 f"Test: {test_map.getpixel((x, y))}\n"
+                                + cache_location_message
                             )
 
                             raise AssertionError(message)
 
+        test_success = True
         return analysis_ref
     finally:
-        delete_dir(config.project.test_cache_dir)
+        if test_success:
+            delete_dir(config.project.test_cache_dir)
